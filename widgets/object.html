@@ -90,21 +90,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UIView 是所有控件的基类：SetPosition / SetSize / Add 与 lv_obj 基本对齐；差异集中在样式与布局。</p>
+      <p class="stage-tip">UIView 是所有控件的基类：SetPosition / SetSize / Add 与 lv_obj 基本对齐；差异集中在 Style 固定字段与布局宏。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>宽度 width<output id="o-uw">190 px</output><span class="api">SetWidth(int16_t)：另有 SetPositionPercent / SetWidthPercent 百分比接口</span></label>
-            <input type="range" id="uw" min="120" max="260" step="1" value="190">
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_view.cpp</code> / <code>ui_view_group.cpp</code> ——
-          <code>SetPosition / SetSize / Add / Remove</code> 与 lv_obj 一致；
-          布局需 <code>FlexLayout / GridLayout</code>（宏开启），样式为固定字段的 Style 集合，无状态选择器。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -378,49 +374,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIView 操作绑定 + 实时生成代码
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-
-  var u = { w: 190 };
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_view.h） */</span>');
-    L.push('UIView * view = <span class="fn">new</span> UIViewGroup();');
-    L.push('view-&gt;<span class="fn">SetPosition</span>(<span class="num">85</span>, <span class="num">50</span>);');
-    L.push('view-&gt;<span class="fn">SetWidth</span>(<span class="num">' + u.w + '</span>);');
-    L.push('view-&gt;<span class="fn">SetHeight</span>(<span class="num">120</span>);');
-    L.push('<span class="cm">// 百分比接口（与 lv_pct 对应）：</span>');
-    L.push('<span class="cm">// view-&gt;SetPositionPercent(X, Y); view-&gt;SetWidthPercent(w);</span>');
-    L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_OPA, <span class="num">255</span>);');
-    L.push('view-&gt;<span class="fn">Add</span>(child);  <span class="cm">// 子对象 Add / Remove 与 lv_obj 一致</span>');
-    L.push('<span class="cm">// 布局需 FlexLayout / GridLayout（宏开启），样式为固定 Style 字段</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  function init(){
-    var api = (window.LV2 && window.LV2.api) || {};
-    if(api.setWidth) api.setWidth(u.w);
-    $("uw").addEventListener("input", function(){
-      u.w = Number(this.value);
-      $("o-uw").textContent = u.w + " px";
-      if(api.setWidth) api.setWidth(u.w);
-      renderCode();
-    });
-    renderCode();
-  }
-
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
 })();
 </script>
 

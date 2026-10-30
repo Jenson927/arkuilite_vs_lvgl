@@ -81,7 +81,11 @@
           </div>
           <div class="field">
             <label>文字渐变 text gradient<span class="api">背景渐变 + 文字混色（ArkUI lite 无）</span></label>
-            <div class="check"><input type="checkbox" id="gradient"><span>启用纵向渐变</span></div>
+            <div class="check"><input type="checkbox" id="gradient" checked><span>启用纵向渐变</span></div>
+          </div>
+          <div class="field">
+            <label>渐变终点色 grad color<span class="api">lv_obj_set_style_bg_grad_color()</span></label>
+            <input type="color" id="gradColor" value="#2b7de9">
           </div>
 
           <div class="field wide">
@@ -102,29 +106,24 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UILabel</code>
-        <span class="cmp-tag ui">SpannableString 富文本 · 无自动尺寸</span>
+        <span class="cmp-tag ui">默认白字 16px · 富文本需开宏</span>
       </div>
 
       <div class="stage stage--ui">
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">下方调整字号会实时作用到 ud-label 示意；尺寸需手动 Resize，没有 LV_SIZE_CONTENT。</p>
+      <p class="stage-tip">默认 16px 白字、透明底、ELLIPSIS 省略；6 种断行模式，MARQUEE 跑马灯仅在文本宽度大于控件宽度时按 SetRollSpeed(px/s) 滚动（默认 35，起始先等 50 帧）；右列默认以 MARQUEE 演示便于观察，没有自动尺寸；SpannableString 需开 ENABLE_SPANNABLE_STRING（默认关闭）。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>字号 size<output id="o-usize">17 px</output><span class="api">UILabel::SetFont(DEFAULT_VECTOR_FONT_ID, size)</span></label>
-            <input type="range" id="usize" min="12" max="28" step="1" value="17">
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_label.cpp</code> / <code>style.cpp</code> ——
-          默认字号 <code>17</code>（DEFAULT_VECTOR_FONT_ID），文字色 <code>#1c2128</code>（Style 默认）；
-          换行 <code>SetLineBreakMode(LINE_BREAK_MODE_WRAP)</code>，长文滚动 <code>SetRollSpeed()</code>；
-          富文本走 <code>SetText(SpannableString*)</code>。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -182,7 +181,8 @@
     align: "left",          // left | center | right
     width: 200,
     content: false,         // LV_SIZE_CONTENT
-    gradient: false,        // 文字渐变
+    gradient: true,         // 文字渐变
+    gradColor: "#2b7de9",   // 渐变终点色
     autoScroll: true
   };
 
@@ -201,16 +201,6 @@
   function lineHeight(){ return Math.round(state.size * 1.5); }
 
   function fontString(){ return "400 " + state.size + "px " + FAMILY; }
-
-  function rgbOf(hex){
-    var h = hex.replace("#", "");
-    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
-  }
-
-  function shade(hex, k){
-    var c = rgbOf(hex);
-    return "rgb(" + Math.round(c[0] * (1 - k)) + "," + Math.round(c[1] * (1 - k)) + "," + Math.round(c[2] * (1 - k)) + ")";
-  }
 
   /* 逐字换行：英文尽量在空格处断开，中文任意位置可断 */
   function wrapLines(c, text, maxW){
@@ -283,12 +273,14 @@
     c.strokeRect(bx + 0.5, by + 0.5, maxW - 1, boxH - 1);
     c.restore();
 
-    /* 文字填充：纯色或纵向渐变 */
+    /* 文字填充：纯色或纵向渐变（由 color → gradColor）；渐变范围贴合字形区域，两端色差肉眼可辨 */
     var fill = state.color;
     if(state.gradient){
-      var g = c.createLinearGradient(0, by, 0, by + boxH);
+      var gTop = by + Math.max(0, (lh - state.size) / 2);
+      var gBot = gTop + (lines.length > 1 ? (lines.length - 1) * lh : 0) + state.size;
+      var g = c.createLinearGradient(0, gTop, 0, gBot);
       g.addColorStop(0, state.color);
-      g.addColorStop(1, shade(state.color, 0.55));
+      g.addColorStop(1, state.gradColor);
       fill = g;
     }
 
@@ -378,12 +370,9 @@
     L.push('<span class="fn">lv_obj_set_style_text_align</span>(label, ' + ALIGN[state.align] + ', <span class="num">0</span>);');
 
     if(state.gradient){
-      L.push('<span class="cm">/* 文字渐变：背景渐变 + 文字色混色（ArkUI lite 无） */</span>');
+      L.push('<span class="cm">/* 文字渐变：LVGL 无原生文字渐变，常用“背景渐变 + 文字混色”近似（ArkUI lite 两者都无） */</span>');
       L.push('<span class="fn">lv_obj_set_style_bg_color</span>(label, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.color) + '</span>), LV_PART_MAIN);');
-      L.push('<span class="fn">lv_obj_set_style_bg_grad_color</span>(label, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(shade(state.color, 0.55)).replace(/rgb\((\d+),(\d+),(\d+)\)/, function(m, r, g, b){
-        function p(v){ v = Number(v); return (v < 16 ? "0" : "") + v.toString(16); }
-        return "#" + p(r) + p(g) + p(b);
-      }) + '</span>), LV_PART_MAIN);');
+      L.push('<span class="fn">lv_obj_set_style_bg_grad_color</span>(label, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.gradColor) + '</span>), LV_PART_MAIN);');
       L.push('<span class="fn">lv_obj_set_style_bg_grad_dir</span>(label, LV_GRAD_DIR_VER, LV_PART_MAIN);');
     }
 
@@ -443,8 +432,19 @@
   });
   document.getElementById("gradient").addEventListener("change", function(e){
     state.gradient = e.target.checked;
+    syncGradColor();
     renderCode();
   });
+  var gradColorEl = document.getElementById("gradColor");
+  gradColorEl.addEventListener("input", function(e){
+    state.gradColor = e.target.value;
+    renderCode();
+  });
+  function syncGradColor(){
+    gradColorEl.disabled = !state.gradient;
+    gradColorEl.style.opacity = state.gradient ? "" : ".45";
+  }
+  syncGradColor();
 
   /* ---------- 下载 ---------- */
   function download(blob, name){
@@ -558,45 +558,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UILabel 操作绑定 + 实时生成等价 C++ 代码
-   演示组件由 cmp2.js 自动挂进 #udemo（LV2.api.setSize）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return (window.LV2 && window.LV2.api) || {}; }
-
-  var u = { size: 17 };
-
-  function renderUCode(){
-    var v = u.size;
-    var w = Math.round(v * 5.2) + 8;      /* "Label text" 估算宽度 */
-    var h = Math.round(v * 1.5);
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_label.h / style.cpp） */</span>');
-    L.push('UILabel * label = <span class="fn">new</span> UILabel();');
-    L.push('label-&gt;<span class="fn">SetPosition</span>(<span class="num">70</span>, <span class="num">96</span>);');
-    L.push('label-&gt;<span class="fn">SetText</span>("Label text");');
-    L.push('label-&gt;<span class="fn">SetFont</span>(DEFAULT_VECTOR_FONT_ID, <span class="num">' + v + '</span>);');
-    L.push('label-&gt;<span class="fn">Resize</span>(<span class="num">' + w + '</span>, <span class="num">' + h + '</span>);  <span class="cm">/* 无 LV_SIZE_CONTENT：需手动测量后设尺寸 */</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("usize").addEventListener("input", function(){
-    u.size = Number(this.value);
-    $("o-usize").textContent = u.size + " px";
-    var a = api();
-    if(a.setSize) a.setSize(u.size);
-    renderUCode();
-  });
-
-  renderUCode();
 })();
 </script>
 

@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Arc：lv_arc vs 无对应组件</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（起止角、背景弧/指示弧分离配色、旋钮拖拽、对称模式与圆头线帽），右列为
-      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>（起止角、背景弧/指示弧分离配色、旋钮拖拽、对称模式与圆头线帽）。<b>ArkUI lite 没有可拖拽的弧形控件</b>（UICircleProgress 只是只读进度环），本页判定为<b>无对应组件</b>。页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -116,7 +115,7 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">ArkUI lite 只有只读的 UICircleProgress 进度环；可交互弧形滑块要在 UIView::OnDraw 里自绘弧并处理拖动角度。</p>
+      <p class="stage-tip">UICircleProgress 只是只读圆环进度（0° 在 12 点、顺时针），不能拖动改值，也没有背景弧/指示弧分离与对称模式，故不作为对应组件。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）</h2>
@@ -464,46 +463,6 @@
   syncRangeUI();
   renderCode();
   K.status("在圆环上按住拖动改值，或用滑杆调整");
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js arc.alt：UIView::OnDraw 自绘弧 + 拖动角度处理
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_arc，以下为替代自绘骨架（静态示例） */"));
-  L.push(cm("/* UICircleProgress 只读：SetStartAngle/SetEndAngle 仅展示进度，不能拖拽 */"));
-  L.push("");
-  L.push("class ArcView : " + fn("public") + " UIView {");
-  L.push("public:");
-  L.push("    void " + fn("OnDraw") + "(const Rect&amp; invalidatedArea) " + fn("override") + " {");
-  L.push("        " + cm("/* 背景弧：Canvas 画圆弧（线宽/颜色自定，无圆头线帽参数） */"));
-  L.push("        canvas_-&gt;" + fn("DrawArc") + "(" + num(140) + ", " + num(140) + ", " + num(100) + ", startAngle_, sweep_, " + num(18) + ", bgColor_);");
-  L.push("        " + cm("/* 指示弧：按 value 比例计算终止角后单独画 */"));
-  L.push("        canvas_-&gt;" + fn("DrawArc") + "(" + num(140) + ", " + num(140) + ", " + num(100) + ", startAngle_, indSweep_, " + num(18) + ", fgColor_);");
-  L.push("        " + cm("/* 旋钮：在指示弧末端画一个实心圆 */"));
-  L.push("        canvas_-&gt;" + fn("DrawCircle") + "(knobX_, knobY_, " + num(11) + ", fgColor_);");
-  L.push("    }");
-  L.push("");
-  L.push("    bool " + fn("OnTouchEvent") + "(const TouchEvent&amp; event) " + fn("override") + " {");
-  L.push("        " + cm("/* PRESS/MOVE：atan2 求触点角度，换算比例后 Invalidate() 重绘 */"));
-  L.push("        value_ = " + fn("AngleToValue") + "(" + fn("atan2") + "(y - cy, x - cx));");
-  L.push("        " + fn("Invalidate") + "();   " + cm("/* 无 VALUE_CHANGED 事件，需自己回调 */"));
-  L.push("        " + fn("return") + " " + num("true") + ";");
-  L.push("    }");
-  L.push("};");
-  L.push("");
-  L.push(cm("/* 对称模式：指示弧起止角改为 mid ± sweep/2 * ratio，同样自己算。 */"));
-  document.getElementById("ucode").innerHTML = L.join("\n");
 })();
 </script>
 

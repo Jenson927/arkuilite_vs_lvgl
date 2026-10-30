@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Line：lv_line vs 无对应组件</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（任意点集折线、虚线、连接样式、点集增删），右列为
-      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，仅展示能力缺口与最接近的替代思路。页面最下方为差异对照。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>（任意点集折线、虚线、连接样式、点集增删）。<b>ArkUI lite 无对应组件</b>：没有折线控件，只能用 UICanvas 的路径接口逐点自绘。页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -112,7 +111,7 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">ArkUI lite 没有折线组件：只能在 UIView::OnDraw 里用 DrawLine 逐段自绘，虚线要手动拆段，圆角连接要自己在拐点补圆。</p>
+      <p class="stage-tip">没有折线控件；UICanvas 只能提供 BeginPath / MoveTo / LineTo / DrawPath 等绘制原语，虚线、连接样式与自动尺寸都要自写。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）</h2>
@@ -461,48 +460,6 @@
   syncCount();
   renderCode();
   K.status("「+ 点 / − 点」进入点集编辑模式");
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js line.alt：UIView::OnDraw 自绘折线
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_line，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：自定义 UIView，在 OnDraw 里用 DrawLine 逐段画折线 */"));
-  L.push("");
-  L.push("class LineView : public UIView {");
-  L.push("public:");
-  L.push("    LineView() { " + fn("SetPosition") + "(" + num(0) + ", " + num(0) + "); " + fn("SetSize") + "(" + num(360) + ", " + num(240) + "); }");
-  L.push("    virtual ~LineView() {}");
-  L.push("");
-  L.push("    bool " + fn("OnDraw") + "(const Canvas &canvas, const Rect &dirty) override");
-  L.push("    {");
-  L.push("        static const Point pts[] = { {" + num(30) + ", " + num(160) + "}, {" + num(100) + ", " + num(60) + "},");
-  L.push("            {" + num(180) + ", " + num(130) + "}, {" + num(260) + ", " + num(40) + "}, {" + num(330) + ", " + num(110) + "} };");
-  L.push("        ColorType color = Color::" + fn("GetColorFromRGB") + "(" + num("0x2b") + ", " + num("0x7d") + ", " + num("0xe9") + ").full;");
-  L.push("        for (int i = " + num(0) + "; i &lt; " + num(4) + "; i++) {");
-  L.push("            canvas." + fn("DrawLine") + "(pts[i], pts[i + " + num(1) + "], color, " + num(3) + ");");
-  L.push("        }");
-  L.push(cm("        /* 虚线：DrawLine 无 dash 参数，须把每段手动切成短线段数组 */"));
-  L.push(cm("        /* 圆角连接：无 join 样式，只能在拐点处补画 FillCircle 近似 */"));
-  L.push("        return true;");
-  L.push("    }");
-  L.push("};");
-  L.push("");
-  L.push("LineView * line = " + fn("new") + " LineView();");
-  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(line);");
-  L.push(cm("/* 点集变化时调用 line-&gt;InvalidateRect(rect) 触发重绘，无自动尺寸 */"));
-  document.getElementById("ucode").innerHTML = L.join("\n");
 })();
 </script>
 

@@ -97,31 +97,24 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIChart</code>
-        <span class="cmp-tag ui">折线 + 填充 · 无坐标轴</span>
+        <span class="cmp-tag ui">自带轴线 · 无刻度文字</span>
       </div>
 
       <div class="stage stage--ui">
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UIChart 只画折线与渐变填充，没有坐标轴、刻度与图例；切换序列查看两条数据各自的效果。</p>
+      <p class="stage-tip">UIChart 自带 X/Y 轴线与刻度线，但没有刻度文字；折线支持平滑与渐变填充（默认关闭），没有过渡动画。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>显示序列 series<span class="api">AddPoints(seriesId, points) / SetLineColor(seriesId, color)：按序列号切换</span></label>
-            <div class="seg" id="useries">
-              <button type="button" data-v="0" class="active">数据 A</button>
-              <button type="button" data-v="1">数据 B</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>frameworks/components/ui_chart.cpp</code> ——
-          <code>AddPoints</code> 追加数据点，<code>SetLineColor</code> / <code>SetFillColor</code> 配折线与渐变填充，
-          <code>SetMaxDataCount</code> 限制点数；坐标轴、刻度文字、图例与多序列叠加样式均需自绘，无数据更新动画。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -610,50 +603,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIChart 操作绑定 + 实时代码
-   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.chart）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  var u = { series: 0 };
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return window.LV2 && window.LV2.api; }
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 frameworks/components/ui_chart.cpp） */</span>');
-    L.push('UIChart * chart = <span class="fn">new</span> UIChart();');
-    L.push('chart-&gt;<span class="fn">SetPosition</span>(<span class="num">40</span>, <span class="num">40</span>, <span class="num">230</span>, <span class="num">120</span>);');
-    L.push('chart-&gt;<span class="fn">SetMaxDataCount</span>(<span class="num">11</span>);');
-    L.push('chart-&gt;<span class="fn">SetLineColor</span>(<span class="num">' + u.series + '</span>, <span class="num">0x007dff</span>);');
-    L.push('chart-&gt;<span class="fn">SetFillColor</span>(<span class="num">' + u.series + '</span>, <span class="num">0x007dff</span>, <span class="num">0x00</span>);');
-    L.push('<span class="cm">/* 当前显示：序列 ' + (u.series === 0 ? "A" : "B") + ' */</span>');
-    L.push('chart-&gt;<span class="fn">AddPoints</span>(<span class="num">' + u.series + '</span>, points);');
-    L.push('<span class="cm">/* 无坐标轴 / 刻度 / 图例；无多序列叠加样式；无更新动画 */</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("useries").addEventListener("click", function(e){
-    var btn = e.target.closest ? e.target.closest("button") : null;
-    if(!btn || btn.parentNode !== this) return;
-    u.series = Number(btn.getAttribute("data-v"));
-    var btns = this.getElementsByTagName("button");
-    for(var i = 0; i < btns.length; i++){
-      btns[i].className = btns[i] === btn ? "active" : "";
-    }
-    var a = api();
-    if(a && a.setSeries) a.setSeries(u.series);
-    renderCode();
-  });
-
-  renderCode();
 })();
 </script>
 

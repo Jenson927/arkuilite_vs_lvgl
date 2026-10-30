@@ -13,7 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Slider：lv_slider vs UISlider</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>，支持双滑块区间与刻度；右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，支持双滑块区间、刻度标签与<b>数值过渡动画</b>（LV_ANIM_ON / 时长可调）；右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
       <code>ui_slider.cpp</code> 渲染的单滑块 UISlider。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
@@ -22,17 +22,37 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_slider</code>
-        <span class="cmp-tag lv">双滑块区间 · 刻度标签</span>
+        <span class="cmp-tag lv">双滑块 · 刻度 · 过渡动画</span>
       </div>
 
       <div class="stage stage--lv">
         <div class="stage-canvas-box"><canvas id="view"></canvas></div>
         <div class="lv-gaps" id="lgaps"></div>
       </div>
-      <p class="stage-tip">画布上按住拖动可改值；勾选「双滑块 range 模式」后出现第二个滑块取区间，勾选「刻度」显示刻线与数值标签（UISlider 均无）。</p>
+      <p class="stage-tip">画布上按住拖动可改值（拖动手柄即时跟手）；调「当前值」滑块或点「跳变」按钮时按 LV_ANIM_ON / LV_ANIM_OFF 决定是否过渡。「双滑块 range 模式」「刻度」也都是 ArkUI lite 没有的能力。</p>
 
       <section class="panel">
-        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <h2>ArkUI lite 缺失能力 · 重点演示</h2>
+        <div class="grid">
+          <div class="field">
+            <label>数值过渡动画<span class="api">lv_slider_set_value(slider, v, LV_ANIM_ON / LV_ANIM_OFF)</span></label>
+            <div class="seg" id="animseg">
+              <button type="button" data-anim="1" class="active">LV_ANIM_ON</button>
+              <button type="button" data-anim="0">LV_ANIM_OFF</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>过渡时长 anim_duration<output id="o-duration">1200 ms</output><span class="api">lv_obj_set_style_anim_duration(slider, ms, LV_PART_INDICATOR)</span></label>
+            <input type="range" id="duration" min="300" max="4000" step="50" value="1200">
+          </div>
+          <div class="field wide">
+            <div class="actions">
+              <button type="button" class="btn" id="btn-jump">跳变到 90%（再点回 15%）</button>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="sub">常规参数（对应 LVGL 接口）</h2>
         <div class="grid">
           <div class="field">
             <label>双滑块 range 模式<span class="api">lv_slider_set_mode(slider, LV_SLIDER_MODE_RANGE)：第二个滑块取区间（ArkUI lite 无）</span></label>
@@ -88,7 +108,7 @@
           </div>
           <div class="field">
             <label>自动往返演示<span class="api">当前值在 min~max 之间来回滑动</span></label>
-            <div class="check"><input type="checkbox" id="auto" checked><span>自动来回滑动</span></div>
+            <div class="check"><input type="checkbox" id="auto"><span>自动来回滑动</span></div>
           </div>
         </div>
 
@@ -111,22 +131,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">拖动下方滑杆实时调用 SetValue；UISlider 只有一个 knob，无法表达区间与刻度。</p>
+      <p class="stage-tip">UISlider 可交互：在右列轨道上点击或拖动，会按触点位置改值（OnClickEvent / OnDragEvent / OnDragEndEvent）。默认 knobWidth=0 不画滑块，轨道黑底、填充白条；只有一个 knob，无区间、刻度与数值动画。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>当前值 value<output id="o-uvalue">62</output><span class="api">UISlider::SetValue(int32_t)：单值即时跳变，无区间/刻度/数值动画</span></label>
-            <input type="range" id="uvalue" min="0" max="100" step="1" value="62">
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_slider.cpp</code> / <code>style.cpp</code> ——
-          轨道底槽 <code>#d9dee6</code>、填充与滑块 <code>#007dff</code>（style.cpp 默认色值）；
-          单滑块 <code>SetValue</code> 即时生效，<code>SetRange</code> 设范围；
-          无第二个 knob、无刻度绘制、无数值过渡动画。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -172,7 +187,9 @@
     knobSize: 26,
     indic: "#2b7de9",
     knobColor: "#ffffff",
-    auto: true
+    auto: false,
+    anim: true,        // 对应 LV_ANIM_ON / LV_ANIM_OFF
+    duration: 1200     // 对应 anim_duration（过渡时长）
   };
 
   var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
@@ -183,6 +200,39 @@
   var t0 = performance.now();
   var dragging = false;
   var dragWhich = "value";
+
+  /* 显示值（含过渡动画中间态）与每个旋钮的动画状态 */
+  var disp = { value: state.value, start: state.start };
+  var anims = { value: null, start: null };
+
+  function easeInOut(t){ return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+  /* 对应 lv_slider_set_value(slider, v, LV_ANIM_ON / LV_ANIM_OFF) */
+  function setKnob(key, v, animate){
+    v = Math.round(clamp(v, state.min, state.max));
+    state[key] = v;
+    if(!animate || state.duration <= 0){
+      disp[key] = v;
+      anims[key] = null;
+    }else{
+      anims[key] = { from: disp[key], to: v, start: performance.now(), dur: state.duration };
+    }
+    /* 数值显示立即跟上目标值，动画只影响旋钮/进度段的绘制 */
+    if(key === "value") syncValueUI(v);
+    else document.getElementById("o-start").textContent = v;
+    renderCode();
+  }
+
+  function tickAnims(now){
+    var keys = ["value", "start"];
+    for(var i = 0; i < keys.length; i++){
+      var a = anims[keys[i]];
+      if(!a) continue;
+      var p = clamp((now - a.start) / a.dur, 0, 1);
+      disp[keys[i]] = a.from + (a.to - a.from) * easeInOut(p);
+      if(p >= 1){ disp[keys[i]] = a.to; anims[keys[i]] = null; }
+    }
+  }
 
   /* ---------- 工具 ---------- */
   function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
@@ -233,9 +283,8 @@
     return state.dir === "h" ? pad + p * span : pad + (1 - p) * span;
   }
 
-  /* 自动演示时，t 时刻的数值 */
-  function valueAt(t){
-    if(!state.auto) return state.value;
+  /* 自动演示时，t 时刻的数值（连续往返，不经过渡） */
+  function waveValue(t){
     var cycle = AUTO_MS * 2;
     var p = (t % cycle) / cycle;
     var k = p < 0.5 ? p * 2 : (1 - p) * 2;
@@ -310,13 +359,13 @@
     c.restore();
   }
 
-  function draw(c, tMs){
+  function draw(c, v, sv){
     var m = metrics();
     var pad = padSize();
     var t = state.thickness;
     var cy = m.cross / 2;
-    var pv = ratio(valueAt(tMs));
-    var ps = ratio(state.start);
+    var pv = ratio(v);
+    var ps = ratio(sv);
     var span = m.along - pad * 2;
 
     c.clearRect(0, 0, m.w, m.h);
@@ -375,8 +424,15 @@
   function loop(now){
     var t = now - t0;
     if(t < 0) t = 0;
-    draw(ctx, t);
-    if(state.auto) syncValueUI(valueAt(t));
+    if(state.auto){
+      disp.value = waveValue(t);
+      state.value = Math.round(disp.value);
+      anims.value = null;
+      syncValueUI(state.value);
+    }else{
+      tickAnims(now);
+    }
+    draw(ctx, disp.value, disp.start);
     requestAnimationFrame(loop);
   }
 
@@ -422,10 +478,14 @@
     }
 
     L.push('<span class="fn">lv_slider_set_range</span>(slider, <span class="num">' + state.min + '</span>, <span class="num">' + state.max + '</span>);');
-    L.push('<span class="fn">lv_slider_set_value</span>(slider, <span class="num">' + Math.round(state.value) + '</span>, LV_ANIM_OFF);');
+    L.push('');
+    L.push('<span class="cm">/* 数值过渡动画：时长来自 anim_duration，取值 LV_ANIM_ON / LV_ANIM_OFF */</span>');
+    L.push('<span class="fn">lv_obj_set_style_anim_duration</span>(slider, <span class="num">' + state.duration + '</span>, LV_PART_INDICATOR);');
+    L.push('<span class="fn">lv_slider_set_value</span>(slider, <span class="num">' + Math.round(state.value) + '</span>, ' + (state.anim ? 'LV_ANIM_ON' : 'LV_ANIM_OFF') + ');');
     if(state.range){
-      L.push('<span class="fn">lv_slider_set_start_value</span>(slider, <span class="num">' + Math.round(state.start) + '</span>, LV_ANIM_OFF);');
+      L.push('<span class="fn">lv_slider_set_start_value</span>(slider, <span class="num">' + Math.round(state.start) + '</span>, ' + (state.anim ? 'LV_ANIM_ON' : 'LV_ANIM_OFF') + ');');
     }
+    L.push('<span class="cm">/* 手势拖动时用 LV_ANIM_OFF 跟手，程序化改值用 LV_ANIM_ON */</span>');
 
     L.push('<span class="fn">lv_obj_set_style_bg_color</span>(slider, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.indic) + '</span>), LV_PART_INDICATOR);');
     L.push('<span class="fn">lv_obj_set_style_radius</span>(slider, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);');
@@ -489,20 +549,47 @@
   document.getElementById("value").addEventListener("input", function(){
     var v = clamp(Number(this.value), state.min, state.max);
     if(state.range) v = Math.max(v, Math.round(state.start));
-    state.value = v;
     this.value = v;
     document.getElementById("o-value").textContent = v;
     state.auto = false;
     document.getElementById("auto").checked = false;
-    renderCode();
+    setKnob("value", v, state.anim);
   });
 
   document.getElementById("start").addEventListener("input", function(){
-    var v = clamp(Number(this.value), state.min, state.max);
-    state.start = Math.min(v, Math.round(state.value));
-    this.value = state.start;
-    document.getElementById("o-start").textContent = state.start;
+    var v = Math.min(clamp(Number(this.value), state.min, state.max), Math.round(state.value));
+    this.value = v;
+    document.getElementById("o-start").textContent = v;
+    state.auto = false;
+    document.getElementById("auto").checked = false;
+    setKnob("start", v, state.anim);
+  });
+
+  /* 数值过渡动画开关 + 过渡时长 */
+  document.getElementById("animseg").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.anim = btn.getAttribute("data-anim") === "1";
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
     renderCode();
+  });
+
+  document.getElementById("duration").addEventListener("input", function(){
+    state.duration = Number(this.value);
+    document.getElementById("o-duration").textContent = state.duration + " ms";
+    renderCode();
+  });
+
+  /* 跳变按钮：在 90 与 15 之间来回，用来看 LV_ANIM_ON 的过渡 */
+  document.getElementById("btn-jump").addEventListener("click", function(){
+    state.auto = false;
+    document.getElementById("auto").checked = false;
+    var target = state.value >= 52 ? 15 : 90;
+    if(state.range) target = Math.max(target, Math.round(state.start));
+    setKnob("value", target, state.anim);
   });
 
   (function(){
@@ -518,6 +605,10 @@
         }
         state.value = clamp(state.value, state.min, state.max);
         state.start = clamp(state.start, state.min, state.value);
+        disp.value = state.value;
+        disp.start = state.start;
+        anims.value = null;
+        anims.start = null;
         refreshInputs();
         refreshOutputs();
         renderCode();
@@ -550,7 +641,13 @@
 
   document.getElementById("auto").addEventListener("change", function(e){
     state.auto = e.target.checked;
-    if(!state.auto) syncValueUI(state.value);
+    if(state.auto){
+      t0 = performance.now();
+      anims.value = null;
+    }else{
+      disp.value = state.value;
+      syncValueUI(state.value);
+    }
   });
 
   /* ---------- 画布拖动改值 ---------- */
@@ -567,11 +664,15 @@
     var v = Math.round(state.min + p * (state.max - state.min));
     if(state.range && dragWhich === "start"){
       state.start = Math.min(v, Math.round(state.value));
+      disp.start = state.start;
+      anims.start = null;
       document.getElementById("o-start").textContent = state.start;
       document.getElementById("start").value = state.start;
     }else{
       state.value = v;
       if(state.range) state.value = Math.max(state.value, Math.round(state.start));
+      disp.value = state.value;
+      anims.value = null;
       document.getElementById("o-value").textContent = state.value;
       document.getElementById("value").value = state.value;
     }
@@ -653,7 +754,7 @@
 
       function step(){
         if(i < frames){
-          draw(octx, i / fps * 1000);
+          draw(octx, waveValue(i / fps * 1000), state.start);
           gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
           setStatus("渲染帧 " + (i + 1) + "/" + frames);
           i++;
@@ -721,44 +822,10 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
 
-<script>
-/* =====================================================================
-   右列：ArkUI lite UISlider 操作绑定 + 实时生成等价 C++ 代码
-   演示组件由 cmp2.js 自动挂进 #udemo（LV2.api.setValue）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return (window.LV2 && window.LV2.api) || {}; }
-
-  var u = { value: 62 };
-
-  function renderUCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_slider.h / style.cpp） */</span>');
-    L.push('UISlider * slider = <span class="fn">new</span> UISlider();');
-    L.push('slider-&gt;<span class="fn">SetPosition</span>(<span class="num">70</span>, <span class="num">100</span>);');
-    L.push('slider-&gt;<span class="fn">SetRange</span>(<span class="num">0</span>, <span class="num">100</span>);');
-    L.push('slider-&gt;<span class="fn">SetValue</span>(<span class="num">' + u.value + '</span>);  <span class="cm">// 单滑块，即时跳变</span>');
-    L.push('slider-&gt;<span class="fn">SetSliderColor</span>(Color::<span class="fn">GetColorFromRGB</span>(0x00, 0x7d, 0xff).full);');
-    L.push('slider-&gt;<span class="fn">SetKnobColor</span>(Color::<span class="fn">GetColorFromRGB</span>(0x00, 0x7d, 0xff).full);');
-    L.push('<span class="cm">/* 无第二个 knob：区间选择与刻度在 UI_Lite 无法表达 */</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("uvalue").addEventListener("input", function(){
-    u.value = Number(this.value);
-    $("o-uvalue").textContent = u.value;
-    var a = api();
-    if(a.setValue) a.setValue(u.value);
-    renderUCode();
-  });
-
-  renderUCode();
+  /* 首屏用一次过渡动画演示「LV_ANIM_ON」：从 min 缓动到当前值 */
+  disp.value = state.min;
+  setTimeout(function(){ setKnob("value", state.value, true); }, 150);
 })();
 </script>
 

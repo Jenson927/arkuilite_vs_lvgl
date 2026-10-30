@@ -537,47 +537,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js table.alt：UIViewGroup + UILabel 手工排布
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_table，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：UIViewGroup 当容器，每格一个 UILabel 手动排布 */"));
-  L.push("");
-  L.push("static const int16_t COLS = " + num(4) + ", ROWS = " + num(5) + ", CW = " + num(74) + ", RH = " + num(28) + ";");
-  L.push("UIViewGroup * grid = " + fn("new") + " UIViewGroup();");
-  L.push("grid-&gt;" + fn("SetPosition") + "(" + num(12) + ", " + num(12) + ");");
-  L.push("grid-&gt;" + fn("Resize") + "(" + num(296) + ", " + num(140) + ");   " + cm("/* 可视区 */"));
-  L.push("");
-  L.push(cm("/* 逐格创建 UILabel 并手动定位（无行列自动排布） */"));
-  L.push("for (int16_t r = " + num(0) + "; r &lt; ROWS; r++) {");
-  L.push("    for (int16_t c = " + num(0) + "; c &lt; COLS; c++) {");
-  L.push("        UILabel * cell = " + fn("new") + " UILabel();");
-  L.push("        cell-&gt;" + fn("SetPosition") + "(c * CW, r * RH);");
-  L.push("        cell-&gt;" + fn("Resize") + "(CW, RH);");
-  L.push("        cell-&gt;" + fn("SetText") + "(CellText(r, c));");
-  L.push("        grid-&gt;" + fn("Add") + "(cell);");
-  L.push("    }");
-  L.push("}");
-  L.push("");
-  L.push(cm("/* 合并单元格：没有 MERGE_RIGHT，只能让某个 label 跨列 Resize 并跳过被合并格 */"));
-  L.push(cm("/* 双向滚动：UIList 只支持单方向；双向需自管偏移："));
-  L.push("   grid-&gt;SetPosition(baseX - offsetX, baseY - offsetY);   // 拖动时手动改容器位置");
-  L.push("   并自行裁剪越界子控件。 */");
-  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(grid);");
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>

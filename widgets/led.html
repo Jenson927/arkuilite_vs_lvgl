@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>LED：lv_led vs 无对应组件</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（径向渐变指示灯 + 5×7 点阵字符 + 亮度 / 闪烁），右列为
-      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，仅展示能力缺口与最接近的替代思路。页面最下方为差异对照。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>（径向渐变指示灯 + 5×7 点阵字符 + 亮度 / 闪烁）。<b>ArkUI lite 无对应组件</b>：没有 LED 控件，UICanvas::DrawCircle 只能画一个圆点。页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -78,7 +77,7 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">ArkUI lite 没有指示灯：最接近的做法是 UIView 自绘一个圆点，亮度渐变、闪烁定时、点阵字符全部要手写。</p>
+      <p class="stage-tip">没有 LED 控件；UICanvas::DrawCircle 只能画实心圆点，亮度、闪烁与点阵字符都需要应用层自绘。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）</h2>
@@ -375,45 +374,6 @@
 
   renderCode();
   syncState();
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js led.alt：UIView 自绘圆点；亮度/闪烁/点阵全无
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_led，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：自定义 UIView 用 FillCircle 自绘圆点；亮度渐变与闪烁都没有现成实现 */"));
-  L.push("");
-  L.push("class LedView : public UIView {");
-  L.push("public:");
-  L.push("    LedView() { " + fn("SetPosition") + "(" + num(0) + ", " + num(0) + "); " + fn("SetSize") + "(" + num(84) + ", " + num(84) + "); }");
-  L.push("    virtual ~LedView() {}");
-  L.push("");
-  L.push("    bool " + fn("OnDraw") + "(const Canvas &canvas, const Rect &dirty) override");
-  L.push("    {");
-  L.push("        ColorType c = Color::" + fn("GetColorFromRGB") + "(" + num("0xe0") + ", " + num("0x4b") + ", " + num("0x4b") + ").full;");
-  L.push("        canvas." + fn("FillCircle") + "({" + num(42) + ", " + num(42) + "}, " + num(42) + ", c, " + num(0) + ");");
-  L.push(cm("        /* 亮度：自己把颜色向黑色插值，无 lv_led_set_brightness 语义 */"));
-  L.push("        return true;");
-  L.push("    }");
-  L.push("};");
-  L.push("");
-  L.push(cm("/* 闪烁：注册 Animator 或定时器回调，周期性 InvalidateRect 切换颜色 */"));
-  L.push("LedView * led = " + fn("new") + " LedView();");
-  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(led);");
-  L.push("");
-  L.push(cm("/* 5×7 点阵：要自己维护字模位图并逐点 FillCircle，没有字符渲染能力 */"));
-  document.getElementById("ucode").innerHTML = L.join("\n");
 })();
 </script>
 

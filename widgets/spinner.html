@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Spinner：lv_spinner vs 无对应组件</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（不定长旋转弧，弧长 / 速度 / 中心文字实时可调），右列为
-      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，仅展示能力缺口与最接近的替代思路。页面最下方为差异对照。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>（不定长旋转弧，弧长 / 速度 / 中心文字实时可调）。<b>ArkUI lite 无对应组件</b>：没有旋转加载控件。页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -99,7 +98,7 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">ArkUI lite 没有旋转加载控件：UICircleProgress 是定值进度环，不定长旋转动画要自己写定时器 + DrawArc，中心文字还得另挂 UILabel。</p>
+      <p class="stage-tip">没有旋转加载组件；只能用 UICircleProgress 改起止角 + 定时器自己驱动，或播放 UIImageAnimator 帧序列。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）</h2>
@@ -264,57 +263,6 @@
   });
 
   renderCode();
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js spinner.alt：UICircleProgress + 定时器自绘旋转弧
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_spinner，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：自定义 UIView + Animator 定时回调，每帧推进起始角并 DrawArc */"));
-  L.push("");
-  L.push("class SpinnerView : public UIView, public AnimatorCallback {");
-  L.push("public:");
-  L.push("    SpinnerView() { " + fn("SetPosition") + "(" + num(0) + ", " + num(0) + "); " + fn("SetSize") + "(" + num(160) + ", " + num(160) + "); }");
-  L.push("    virtual ~SpinnerView() {}");
-  L.push("");
-  L.push("    void " + fn("Callback") + "() override");
-  L.push("    {");
-  L.push("        startAngle_ = (startAngle_ + " + num(6) + ") % " + num(360) + ";");
-  L.push(cm("        /* 弧长 200° 固定写死，无法像 lv_spinner 一样设参数 */"));
-  L.push("        " + fn("InvalidateRect") + "(rect_);");
-  L.push("    }");
-  L.push("");
-  L.push("    bool " + fn("OnDraw") + "(const Canvas &canvas, const Rect &dirty) override");
-  L.push("    {");
-  L.push(cm("        /* 静态底环 */"));
-  L.push("        canvas." + fn("DrawArc") + "(center_, radius_, " + num(0) + ", " + num(360) + ", track_, " + num(8) + ", " + num(0) + ");");
-  L.push(cm("        /* 旋转指示弧 */"));
-  L.push("        canvas." + fn("DrawArc") + "(center_, radius_, startAngle_, " + num(200) + ", indicator_, " + num(8) + ", " + num(0) + ");");
-  L.push("        return true;");
-  L.push("    }");
-  L.push("private:");
-  L.push("    Point center_ = {" + num(80) + ", " + num(80) + "};");
-  L.push("    int16_t radius_ = " + num(70) + ";");
-  L.push("    int16_t startAngle_ = " + num(0) + ";");
-  L.push("    ColorType track_ = Color::" + fn("GetColorFromRGB") + "(" + num("0xe3") + ", " + num("0xe6") + ", " + num("0xea") + ").full;");
-  L.push("    ColorType indicator_ = Color::" + fn("GetColorFromRGB") + "(" + num("0x2b") + ", " + num("0x7d") + ", " + num("0xe9") + ").full;");
-  L.push("};");
-  L.push("");
-  L.push("SpinnerView * spinner = " + fn("new") + " SpinnerView();");
-  L.push("AnimatorManager::" + fn("GetInstance") + "().Start(spinner, " + num(0) + ", " + num(10000) + ");");
-  L.push(cm("/* 中心文字：另挂 UILabel 并手动居中，与旋转弧完全脱钩 */"));
-  document.getElementById("ucode").innerHTML = L.join("\n");
 })();
 </script>
 

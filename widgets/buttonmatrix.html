@@ -442,46 +442,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js buttonmatrix.alt：多个 UIButton 手动 SetPosition 排网格
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_buttonmatrix，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：3×3 = 9 个 UIButton，手动 SetPosition 排成网格 */"));
-  L.push("");
-  L.push("static const int16_t GRID = " + num(3) + ", GAP = " + num(8) + ", BW = " + num(80) + ", BH = " + num(56) + ";");
-  L.push("UIButton * keys[GRID * GRID];");
-  L.push("");
-  L.push(cm("/* 逐键创建 + 手动排版（无映射表，无 \\n 换行控制符） */"));
-  L.push("for (int16_t id = " + num(0) + "; id &lt; GRID * GRID; id++) {");
-  L.push("    keys[id] = " + fn("new") + " UIButton();");
-  L.push("    keys[id]-&gt;" + fn("SetPosition") + "(" + num(24) + " + (id % GRID) * (BW + GAP),");
-  L.push("                                 " + num(22) + " + (id / GRID) * (BH + GAP));");
-  L.push("    keys[id]-&gt;" + fn("SetWidth") + "(BW);   " + cm("/* 列宽比例要自己算，无 set_button_width */"));
-  L.push("    keys[id]-&gt;" + fn("SetHeight") + "(BH);");
-  L.push("    UILabel * t = " + fn("new") + " UILabel();");
-  L.push("    t-&gt;" + fn("SetText") + "(LabelOf(id));   " + cm("/* 文本映射自己维护 */"));
-  L.push("    keys[id]-&gt;" + fn("Add") + "(t);");
-  L.push("    keys[id]-&gt;" + fn("SetOnClickListener") + "(" + num("&keyListener") + ");");
-  L.push("    UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(keys[id]);");
-  L.push("}");
-  L.push("");
-  L.push(cm("/* 禁用 / 单选 / 行列样式："));
-  L.push("   keys[id]-&gt;SetState(UIButton::INACTIVE);      // 禁用");
-  L.push("   选中态与整行整列高亮需在 keyListener 里逐键改样式，无 CTRL 位可用。 */");
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>

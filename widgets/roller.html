@@ -83,25 +83,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UIPicker 只有单列：选中项用 SetSelectIndex 设置，循环滚动用 SetLoopState，多列级联要自己组合多个 UIPicker。</p>
+      <p class="stage-tip">UIPicker 单列滚轮：SetValues + SetItemHeight（默认 0，必须设置）；高亮只改字号 18 与文字色 #45a5ff，没有高亮背景条。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>选中项<span class="api">UIPicker::SetSelectIndex(uint16_t)：选项为 北京 / 上海 / 广州 / 深圳</span></label>
-            <div class="seg" id="usel">
-              <button type="button" data-v="0">北京</button>
-              <button type="button" data-v="1" class="active">上海</button>
-              <button type="button" data-v="2">广州</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          依据 <code>ui_picker.h</code>：UIPicker 为单列滚轮，提供
-          <code>SetSelectIndex()</code> / <code>SetLoopState()</code> / <code>SetTextColor()</code> /
-          <code>SetTextFormatter()</code>；没有可见行数与多列联动接口，年-月-日这类级联需自建多个 Picker 并手动同步。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -560,58 +552,6 @@
   syncSelUI();
   renderCode();
   K.status("拖动滚轮或点击某一行，松开后自动吸附");
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：UIPicker 操作绑定 + 等价 C++ 代码生成
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  var OPTS = ["北京", "上海", "广州", "深圳"];
-  var sel = 1;   /* 与 cmp2.js 中 picker 演示的初始 setSel(1) 一致 */
-
-  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  function renderUCode(){
-    var L = [];
-    L.push(cm("/* 由右列参数实时生成（UIPicker 仅单列） */"));
-    L.push("UIPicker * picker = " + fn("new") + " UIPickerView();");
-    L.push("picker-&gt;" + fn("SetPosition") + "(" + num(100) + ", " + num(47) + ");");
-    L.push("picker-&gt;" + fn("SetSize") + "(" + num(160) + ", " + num(126) + ");");
-    L.push("");
-    L.push("static const char * OPTS[] = { " +
-      OPTS.map(function(t){ return '"' + esc(t) + '"'; }).join(", ") + " };");
-    L.push("for (int i = 0; i &lt; " + num(OPTS.length) + "; i++) {");
-    L.push("    UILabel * item = " + fn("new") + " UILabel();");
-    L.push("    item-&gt;" + fn("SetText") + "(OPTS[i]);");
-    L.push("    picker-&gt;" + fn("Add") + "(item);");
-    L.push("}");
-    L.push("");
-    L.push("picker-&gt;" + fn("SetSelectIndex") + "(" + num(sel) + ");   " + cm("/* 当前选中：" + OPTS[sel] + " */"));
-    L.push("picker-&gt;" + fn("SetLoopState") + "(true);");
-    L.push(cm("/* 多列联动：需再建一个 UIPickerView，并在第一列的选中回调里手动重建第二列选项 */"));
-    document.getElementById("ucode").innerHTML = L.join("\n");
-  }
-
-  document.getElementById("usel").addEventListener("click", function(e){
-    var btn = e.target.closest ? e.target.closest("button") : null;
-    if(!btn || btn.parentNode !== this) return;
-    sel = Number(btn.getAttribute("data-v"));
-    var btns = this.getElementsByTagName("button");
-    for(var i = 0; i < btns.length; i++){
-      btns[i].className = btns[i] === btn ? "active" : "";
-    }
-    if(window.LV2 && LV2.api && LV2.api.setSel) LV2.api.setSel(sel);
-    renderUCode();
-  });
-
-  renderUCode();
 })();
 </script>
 

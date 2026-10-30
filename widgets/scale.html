@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Scale：lv_scale vs 无对应组件</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（水平/垂直/圆盘三种模式、主次刻度与标签自动排布、区间角度、彩色分段与指针联动），右列为
-      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>（水平/垂直/圆盘三种模式、主次刻度与标签自动排布、区间角度、彩色分段与指针联动）。<b>ArkUI lite 无对应组件</b>：UIAxis 只是 UIChart 的轴，只有轴线与刻度线、没有刻度文字，也没有环形刻度与指针。页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -107,7 +106,7 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">ArkUI lite 没有刻度尺/表盘：UILabel 放数值 + 在 UIView::OnDraw 里自绘刻线，刻度排布与指针联动全部自己算。</p>
+      <p class="stage-tip">UIAxis 仅服务于 UIChart：只有轴线与刻度线，没有刻度文字，也没有环形/扇区刻度与指针联动，故不作为对应组件。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）</h2>
@@ -605,46 +604,6 @@
   renderCode();
   canvas.style.cursor = "default";
   K.status("刻度与标签自动排布；圆盘模式可拖动改指针值");
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js scale.alt：UILabel + 自绘刻线
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_scale，以下为替代自绘骨架（静态示例） */"));
-  L.push(cm("/* 思路：UIView::OnDraw 自绘刻线，UILabel 放数值文本 */"));
-  L.push("");
-  L.push("class ScaleView : " + fn("public") + " UIView {");
-  L.push("public:");
-  L.push("    void " + fn("OnDraw") + "(const Rect&amp; invalidatedArea) " + fn("override") + " {");
-  L.push("        " + cm("/* 逐刻度画线：位置/长度/粗细全部自己算，无自动排布 */"));
-  L.push("        " + fn("for") + " (int16_t i = " + num(0) + "; i &lt; tickCount_; i++) {");
-  L.push("            int16_t x = " + fn("Lerp") + "(x0_, x1_, i / (tickCount_ - " + num(1) + "));");
-  L.push("            bool major = (i % majorEvery_ == " + num(0) + ");");
-  L.push("            canvas_-&gt;" + fn("DrawLine") + "(x, y0_, x, y0_ - (major ? " + num(17) + " : " + num(9) + "),");
-  L.push("                                   major ? " + num(2) + " : " + num(1) + ", tickColor_);");
-  L.push("        }");
-  L.push("        " + cm("/* 标签：主刻度处挂 UILabel（数量/间距自己控制，无跳标签逻辑） */"));
-  L.push("    }");
-  L.push("};");
-  L.push("");
-  L.push("UILabel * valueText = " + fn("new") + " UILabel();");
-  L.push("valueText-&gt;" + fn("SetText") + "(\"45\");   " + cm("/* 数值显示 */"));
-  L.push("");
-  L.push(cm("/* 圆盘模式：角度区间/起始角换算成弧度自绘；"));
-  L.push("   指针联动：value 变化时重算指针终点坐标并 Invalidate()，无现成 needle 组件。 */");
-  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(" + fn("new") + " ScaleView());");
-  document.getElementById("ucode").innerHTML = L.join("\n");
 })();
 </script>
 

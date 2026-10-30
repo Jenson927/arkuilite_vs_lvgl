@@ -91,25 +91,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">按 SetTimeOfUpdate 的间隔轮播预制帧；循环、反向、填充模式都有接口，但播放期间无法缩放 / 旋转。</p>
+      <p class="stage-tip">按 SetTimeOfUpdate（默认 16ms）轮播预制帧，默认无限循环；循环、反向、暂停、填充模式都有接口，但播放期间无法缩放 / 旋转。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>播放状态 playing<span class="api">继承 UIViewAnimator：Start() 播放 / Stop() 暂停</span></label>
-            <div class="seg" id="uplay">
-              <button type="button" data-v="on" class="active">播放</button>
-              <button type="button" data-v="off">暂停</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>frameworks/components/ui_image_animator.cpp</code> ——
-          <code>SetImageAnimatorSrc</code> 挂预制帧序列，<code>SetTimeOfUpdate</code> 控制帧间隔，
-          <code>SetRepeatTimes</code> / <code>SetReverse</code> / <code>SetFillMode</code> 控制循环方式，
-          <code>SetAnimatorStopListener</code> 监听停止；没有逐帧缩放 / 旋转变换接口。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -664,53 +656,6 @@
   renderCode();
   syncPlayBtn();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIImageAnimator 操作绑定 + 实时代码
-   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.imageanim）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  var u = { playing: true };
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return window.LV2 && window.LV2.api; }
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_image_animator.cpp） */</span>');
-    L.push('UIImageAnimator * animator = <span class="fn">new</span> UIImageAnimator();');
-    L.push('<span class="cm">/* 预制帧序列：每帧间隔 420 ms */</span>');
-    L.push('animator-&gt;<span class="fn">SetImageAnimatorSrc</span>(&amp;frameInfo);');
-    L.push('animator-&gt;<span class="fn">SetTimeOfUpdate</span>(<span class="num">420</span>);');
-    L.push('animator-&gt;<span class="fn">SetRepeatTimes</span>(<span class="num">REPEAT_INFINITE</span>);');
-    L.push('<span class="cm">/* SetReverse(true) 反向 · SetFillMode 填充模式 */</span>');
-    if(u.playing){
-      L.push('animator-&gt;<span class="fn">Start</span>();   <span class="cm">// 播放</span>');
-    }else{
-      L.push('animator-&gt;<span class="fn">Stop</span>();    <span class="cm">// 已暂停（无缩放/旋转变换接口）</span>');
-    }
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("uplay").addEventListener("click", function(e){
-    var btn = e.target.closest ? e.target.closest("button") : null;
-    if(!btn || btn.parentNode !== this) return;
-    u.playing = btn.getAttribute("data-v") === "on";
-    var btns = this.getElementsByTagName("button");
-    for(var i = 0; i < btns.length; i++){
-      btns[i].className = btns[i] === btn ? "active" : "";
-    }
-    var a = api();
-    if(a && a.setPlaying) a.setPlaying(u.playing);
-    renderCode();
-  });
-
-  renderCode();
 })();
 </script>
 

@@ -85,26 +85,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UIList 本身只是滚动容器：列表项、按钮、分组头都要在 AbstractAdapter 里自建子控件。</p>
+      <p class="stage-tip">UIList 只是滚动容器：item 高度由子 View 决定，滚动条默认隐藏，选中态没有任何默认视觉。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>选中项<span class="api">SetSelectPosition(uint16_t index)：选中项高亮（需 Adapter 配合渲染）</span></label>
-            <div class="seg" id="usel">
-              <button type="button" data-v="0">第 1 项</button>
-              <button type="button" data-v="1" class="active">第 2 项</button>
-              <button type="button" data-v="2">第 3 项</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_list.cpp</code> / <code>ui_list.h</code> ——
-          UIList 继承 UIScrollView，通过 <code>SetAdapter(AbstractAdapter*)</code> 绑定数据；
-          <code>SetLoopState</code> 循环、<code>SetSelectPosition</code> 选中、
-          <code>SetYScrollBarVisible</code> 滚动条；没有内置按钮/文本/分组项，也没有增删动画。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -635,52 +626,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIList 操作绑定 + 实时生成代码
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-
-  var u = { sel: 1 };
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_list.h） */</span>');
-    L.push('UIList * list = <span class="fn">new</span> UIList();');
-    L.push('list-&gt;<span class="fn">SetPosition</span>(<span class="num">70</span>, <span class="num">16</span>);');
-    L.push('list-&gt;<span class="fn">SetWidth</span>(<span class="num">220</span>);');
-    L.push('list-&gt;<span class="fn">SetHeight</span>(<span class="num">190</span>);');
-    L.push('<span class="cm">// 列表项必须自建：Adapter + 子控件</span>');
-    L.push('list-&gt;<span class="fn">SetAdapter</span>(<span class="fn">new</span> ListAdapter(<span class="num">4</span>));');
-    L.push('list-&gt;<span class="fn">SetSelectPosition</span>(<span class="num">' + u.sel + '</span>);');
-    L.push('list-&gt;<span class="fn">SetYScrollBarVisible</span>(true);');
-    L.push('<span class="cm">// 无内置按钮/文本/分组项，也无增删动画</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  function init(){
-    var api = (window.LV2 && window.LV2.api) || {};
-    if(api.setSel) api.setSel(u.sel);
-    $("usel").addEventListener("click", function(e){
-      var btn = e.target.closest ? e.target.closest("button") : null;
-      if(!btn || btn.parentNode !== this) return;
-      u.sel = Number(btn.getAttribute("data-v"));
-      var btns = this.getElementsByTagName("button");
-      for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
-      if(api.setSel) api.setSel(u.sel);
-      renderCode();
-    });
-    renderCode();
-  }
-
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
 })();
 </script>
 

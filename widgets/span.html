@@ -96,31 +96,24 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UILabel + SpannableString</code>
-        <span class="cmp-tag ui">颜色/字号/背景 Span</span>
+        <span class="cmp-tag ui">Span 需开宏 · 无行内图片</span>
       </div>
 
       <div class="stage stage--ui">
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UILabel 用 SpannableString 实现颜色 / 字号 / 背景 Span；行内图片与逐字变换无法表达。</p>
+      <p class="stage-tip">UILabel 用 SpannableString 做颜色 / 字号 / 背景 Span，但需开 ENABLE_SPANNABLE_STRING（默认关闭）；行内图片与逐字变换无法表达。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>样式模式（模拟 Span 组合）<span class="api">UILabel::SetText(SpannableString*)：SpannableString::SetForegroundColorSpan / SetBackgroundColorSpan / SetAbsoluteSizeSpan</span></label>
-            <div class="seg" id="ustyle">
-              <button type="button" data-v="normal" class="active">普通</button>
-              <button type="button" data-v="accent">强调</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          依据 <code>spannable_string.h</code>：支持
-          <code>SetForegroundColorSpan()</code> / <code>SetAbsoluteSizeSpan()</code> /
-          <code>SetBackgroundColorSpan()</code> 等 Span；没有行内图片对象，也没有逐字旋转/位移接口。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -503,56 +496,6 @@
   });
 
   renderCode();
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：UILabel + SpannableString 操作绑定 + 等价 C++ 代码生成
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  var mode = "normal";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  function renderUCode(){
-    var accent = mode === "accent";
-    var fg = accent ? "0x00, 0x7d, 0xff" : "0x1c, 0x21, 0x28";
-    var bg = accent ? "0xff, 0xd3, 0x4d" : "0xff, 0xe0, 0x8a";
-    var size = accent ? 20 : 16;
-    var L = [];
-    L.push(cm("/* 由右列参数实时生成（模式：" + (accent ? "强调" : "普通") + "） */"));
-    L.push("SpannableString * rich = " + fn("new") + " SpannableString();");
-    L.push("rich-&gt;" + fn("Append") + "(\"Rich \");");
-    L.push("rich-&gt;" + fn("SetForegroundColorSpan") + "(Color{" + fg + "}, " + num(0) + ", " + num(4) + ");");
-    L.push("rich-&gt;" + fn("Append") + "(\"Span \");");
-    L.push("rich-&gt;" + fn("SetBackgroundColorSpan") + "(Color{" + bg + "}, " + num(5) + ", " + num(9) + ");");
-    L.push("rich-&gt;" + fn("SetAbsoluteSizeSpan") + "(" + num(size) + ", " + num(0) + ", " + num(4) + ");");
-    L.push("rich-&gt;" + fn("Append") + "(\" text\");");
-    L.push("");
-    L.push("UILabel * label = " + fn("new") + " UILabel();");
-    L.push("label-&gt;" + fn("SetText") + "(rich);");
-    L.push(cm("/* 无行内图片对象、无逐字旋转/位移接口（lv_span 可做到） */"));
-    document.getElementById("ucode").innerHTML = L.join("\n");
-  }
-
-  document.getElementById("ustyle").addEventListener("click", function(e){
-    var btn = e.target.closest ? e.target.closest("button") : null;
-    if(!btn || btn.parentNode !== this) return;
-    mode = btn.getAttribute("data-v");
-    var btns = this.getElementsByTagName("button");
-    for(var i = 0; i < btns.length; i++){
-      btns[i].className = btns[i] === btn ? "active" : "";
-    }
-    if(window.LV2 && LV2.api && LV2.api.setStyle) LV2.api.setStyle(mode);
-    renderUCode();
-  });
-
-  renderUCode();
 })();
 </script>
 

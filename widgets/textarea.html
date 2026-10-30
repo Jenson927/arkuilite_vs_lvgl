@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Textarea：lv_textarea vs UIEditText</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（多行编辑 + 滚动条 + 拖动选区反色），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b>
-      源码 <code>ui_edit_text.cpp</code> 能力渲染的 UIEditText（以单行输入为主）。左右各自独立操作，页面最下方为差异对照。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>（多行编辑 + 滚动条 + 拖动选区反色），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码 <code>ui_edit_text.cpp</code> 严格单行输入渲染的 <b>UIEditText</b>（无多行、无选区）。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -96,22 +95,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UIEditText 以单行输入为主：占位符、光标、长度限制可用；多行滚动与选中/剪贴板能力弱。</p>
+      <p class="stage-tip">UIEditText 严格单行：透明底 + 白边 2px + 圆角 5，光标白 2px / 650ms 闪烁；仅 TEXT / PASSWORD，无多行、选区与剪贴板。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>文本内容 text<span class="api">SetText(const char*)：清空时自动回退到占位符显示</span></label>
-            <input type="text" id="utext" value="UIEditText">
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_edit_text.cpp</code> / <code>ui_edit_text.h</code> ——
-          默认单行输入；<code>SetPlaceholder</code> 占位文本、<code>SetMaxLength</code> 长度限制、
-          <code>SetInputType</code> 输入类型、<code>SetOnChangeListener</code> 变更回调；
-          选区、复制粘贴与多行滚动未完整实现（见右上角红色标注）。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -635,53 +629,6 @@
   afterEdit();
   setStatus("点击画布聚焦输入框，然后直接键入");
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIEditText 操作绑定 + 实时生成代码
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-
-  var u = { text: "UIEditText" };
-
-  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-  function cstr(s){
-    return '"' + esc(String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")) + '"';
-  }
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_edit_text.h） */</span>');
-    L.push('UIEditText * edit = <span class="fn">new</span> UIEditText();');
-    L.push('edit-&gt;<span class="fn">SetPosition</span>(<span class="num">70</span>, <span class="num">88</span>);');
-    L.push('edit-&gt;<span class="fn">SetWidth</span>(<span class="num">220</span>);');
-    L.push('edit-&gt;<span class="fn">SetHeight</span>(<span class="num">38</span>);');
-    L.push('edit-&gt;<span class="fn">SetText</span>(' + cstr(u.text) + ');');
-    L.push('edit-&gt;<span class="fn">SetPlaceholder</span>("请输入内容");');
-    L.push('edit-&gt;<span class="fn">SetMaxLength</span>(<span class="num">32</span>);');
-    L.push('edit-&gt;<span class="fn">SetInputType</span>(UIEditText::UI_TEXT_INPUT_TYPE_NORMAL);');
-    L.push('<span class="cm">// 单行为主：多行滚动、选区与复制粘贴未完整实现</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  function init(){
-    var api = (window.LV2 && window.LV2.api) || {};
-    if(api.setText) api.setText(u.text);
-    $("utext").addEventListener("input", function(){
-      u.text = this.value;
-      if(api.setText) api.setText(u.text);
-      renderCode();
-    });
-    renderCode();
-  }
-
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
 })();
 </script>
 

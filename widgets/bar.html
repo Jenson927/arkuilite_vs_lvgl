@@ -13,8 +13,9 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Bar：lv_bar vs UIBoxProgress</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>，支持正常 / 对称 / 区间三种进度模式；右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
-      <code>ui_box_progress.cpp</code> 渲染的单向填充 UIBoxProgress。左右各自独立操作，页面最下方为差异对照。</p>
+    <p class="lead">左列 <b>LVGL 复刻演示</b>重点展示 ArkUI lite 缺失的三项能力：<b>反向填充</b>（RANGE + start_value）、
+      <b>数值过渡动画</b>（LV_ANIM_ON + anim_duration）、<b>可拖动指示器</b>（LV_PART_KNOB）。右列为按
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码 <code>ui_box_progress.cpp</code> 渲染的 UIBoxProgress。</p>
   </header>
 
   <div class="cmp-grid">
@@ -22,26 +23,54 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_bar</code>
-        <span class="cmp-tag lv">三种模式 · 起点值反向填充</span>
+        <span class="cmp-tag lv">反向填充 · 过渡动画 · 可拖动</span>
       </div>
 
       <div class="stage stage--lv">
         <div class="stage-canvas-box"><canvas id="view"></canvas></div>
         <div class="lv-gaps" id="lgaps"></div>
       </div>
-      <p class="stage-tip">画布上拖动可改值；切换「对称 / 区间」模式后填充从中心或 start_value 起算——这两种模式 UIBoxProgress 完全无法表达。</p>
+      <p class="stage-tip">三项重点：① 切「反向」后指示条从 max 端向当前值收缩（RANGE + start_value）；② 切 LV_ANIM_ON 后调值会按过渡时长缓动，LV_ANIM_OFF 立即跳变；③ 勾选手柄后可直接拖动圆点改值。</p>
 
       <section class="panel">
-        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <h2>ArkUI lite 缺失能力 · 重点演示</h2>
         <div class="grid">
-          <div class="field">
-            <label>模式 set_mode<span class="api">lv_bar_set_mode：NORMAL / SYMMETRICAL / RANGE</span></label>
+          <div class="field wide">
+            <label>① 填充模式 set_mode<span class="api">lv_bar_set_mode：NORMAL / RANGE（反向、区间）/ SYMMETRICAL</span></label>
             <div class="seg" id="mode">
               <button type="button" data-mode="normal" class="active">正常</button>
+              <button type="button" data-mode="reverse">反向</button>
               <button type="button" data-mode="sym">对称</button>
               <button type="button" data-mode="range">区间</button>
             </div>
           </div>
+
+          <div class="field">
+            <label>② 数值过渡动画<span class="api">lv_bar_set_value(bar, v, LV_ANIM_ON / LV_ANIM_OFF)</span></label>
+            <div class="seg" id="animseg">
+              <button type="button" data-anim="1" class="active">LV_ANIM_ON</button>
+              <button type="button" data-anim="0">LV_ANIM_OFF</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>过渡时长 anim_duration<output id="o-duration">1200 ms</output><span class="api">lv_obj_set_style_anim_duration(bar, ms, LV_PART_INDICATOR)</span></label>
+            <input type="range" id="duration" min="300" max="4000" step="50" value="1200">
+          </div>
+
+          <div class="field wide">
+            <div class="actions">
+              <button type="button" class="btn" id="btn-jump">跳变到 90%（再点回 15%）</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>③ 可拖动指示器 knob<span class="api">LV_PART_KNOB 样式 + LV_OBJ_FLAG_CLICKABLE + LV_EVENT_PRESSING → lv_bar_set_value</span></label>
+            <div class="check"><input type="checkbox" id="knob" checked><span>显示手柄圆点，按住拖动即可改值</span></div>
+          </div>
+        </div>
+
+        <h2 class="sub">常规参数（对应 LVGL 接口）</h2>
+        <div class="grid">
           <div class="field">
             <label>方向 orientation<span class="api">lv_bar_set_orientation</span></label>
             <div class="seg" id="dir">
@@ -49,32 +78,36 @@
               <button type="button" data-dir="v">垂直</button>
             </div>
           </div>
-
           <div class="field">
             <label>当前值 value<output id="o-value">65</output><span class="api">lv_bar_set_value</span></label>
             <input type="range" id="value" min="0" max="100" step="1" value="65">
           </div>
+
           <div class="field">
-            <label>起始值 start_value<output id="o-start">20</output><span class="api">lv_bar_set_start_value：RANGE 模式区间另一端</span></label>
+            <label>起始值 start_value<output id="o-start">20</output><span class="api">lv_bar_set_start_value：RANGE 模式的另一端</span></label>
             <input type="range" id="start" min="0" max="100" step="1" value="20">
           </div>
-
           <div class="field">
             <label>最小值 min<output id="o-min">0</output><span class="api">lv_bar_set_range</span></label>
             <input type="range" id="min" min="0" max="100" step="1" value="0">
           </div>
+
           <div class="field">
             <label>最大值 max<output id="o-max">100</output><span class="api">lv_bar_set_range</span></label>
             <input type="range" id="max" min="100" max="255" step="1" value="100">
           </div>
-
           <div class="field">
             <label>粗细 thickness<output id="o-thick">14 px</output><span class="api">lv_obj_set_height</span></label>
             <input type="range" id="thick" min="4" max="48" step="1" value="14">
           </div>
+
           <div class="field">
             <label>圆角 radius<output id="o-radius">100%</output><span class="api">lv_obj_set_style_radius</span></label>
             <input type="range" id="radius" min="0" max="100" step="1" value="100">
+          </div>
+          <div class="field">
+            <label>自动来回<span class="api">数值在 min~max 之间连续变化（不经过渡）</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>自动来回填充</span></div>
           </div>
 
           <div class="field">
@@ -84,15 +117,6 @@
           <div class="field">
             <label>轨道颜色 MAIN<span class="api">lv_obj_set_style_bg_color(…, LV_PART_MAIN)</span></label>
             <input type="color" id="track" value="#e3e6ea">
-          </div>
-
-          <div class="field">
-            <label>单程时长<output id="o-duration">1200 ms</output><span class="api">lv_bar_set_value(bar, v, LV_ANIM_ON) 的过渡时长</span></label>
-            <input type="range" id="duration" min="300" max="4000" step="50" value="1200">
-          </div>
-          <div class="field">
-            <label>自动演示<span class="api">数值在 min~max 之间来回</span></label>
-            <div class="check"><input type="checkbox" id="auto" checked><span>自动来回填充</span></div>
           </div>
         </div>
 
@@ -115,22 +139,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">拖动下方滑杆实时调用 SetValue；UIBoxProgress 只能从一端单向填充，没有对称 / 区间模式与起点值。</p>
+      <p class="stage-tip">UIBoxProgress 没有起点值：SetDirection 只能把整条进度整体翻转，做不到以 max 为锚的反向填充；SetValue 立即跳变、无过渡动画；也没有任何可拖动的指示器。底槽默认黑、前景默认白。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>当前值 value<output id="o-uvalue">62</output><span class="api">UIBoxProgress::SetValue(int32_t)：仅单向填充，无模式/起点值</span></label>
-            <input type="range" id="uvalue" min="0" max="100" step="1" value="62">
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_box_progress.cpp</code> / <code>style.cpp</code> ——
-          底槽 <code>#e3e6ea</code>、前景填充 <code>#007dff</code>（style.cpp 默认色值）；
-          <code>SetRange</code> 设范围、<code>SetDirection</code> 仅改填充方向；
-          无 SYMMETRICAL / RANGE 模式、无 start_value、无数值过渡动画。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -156,13 +175,16 @@
 
 <script>
 /* =====================================================================
-   左列：LVGL lv_bar 复刻（迁移自旧页，保留三模式 / 起点值 / 方向）
+   左列：LVGL lv_bar 复刻
+   重点演示 ArkUI lite 缺失的三项能力：
+   ① 反向填充（RANGE + start_value = max）② 数值过渡动画（LV_ANIM_ON）
+   ③ 可拖动指示器（LV_PART_KNOB）
    ===================================================================== */
 (function(){
   "use strict";
 
   var state = {
-    mode: "normal",     // normal | sym | range
+    mode: "normal",     // normal | reverse | sym | range
     dir: "h",           // h | v
     value: 65,
     start: 20,
@@ -172,15 +194,24 @@
     radius: 100,        // 百分比
     indic: "#2b7de9",
     track: "#e3e6ea",
-    auto: true,
-    duration: 1200
+    auto: false,
+    duration: 1200,
+    anim: true,
+    knob: true
   };
 
-  var LEN = 280;              // 进度条长度（固定）
+  var LEN = 280;        // 水平方向条长
+  var PAD = 13;         // 为 LV_PART_KNOB 手柄留出的边距（保证垂直方向画布高度不超过 280）
+
   var canvas = document.getElementById("view");
   var ctx = canvas.getContext("2d");
   var statusEl = document.getElementById("status");
+  var jumpBtn = document.getElementById("btn-jump");
   var t0 = performance.now();
+
+  /* 显示值与过渡动画状态 */
+  var disp = state.value;
+  var animFrom = disp, animTo = disp, animStart = 0, animDur = 0;
 
   /* ---------- 工具 ---------- */
   function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
@@ -197,10 +228,14 @@
     c.closePath();
   }
 
+  /* 垂直方向扣掉手柄留白，保证画布总高 = 280（与右列舞台等高） */
+  function barLen(){ return state.dir === "h" ? LEN : LEN - PAD * 2; }
+
   function metrics(){
+    var len = barLen();
     return state.dir === "h"
-      ? { w: LEN, h: state.thickness }
-      : { w: state.thickness, h: LEN };
+      ? { w: len + PAD * 2, h: state.thickness + PAD * 2, bw: len, bh: state.thickness }
+      : { w: state.thickness + PAD * 2, h: len + PAD * 2, bw: state.thickness, bh: len };
   }
 
   /* 归一化位置 0..1 */
@@ -210,61 +245,61 @@
     return clamp((v - state.min) / span, 0, 1);
   }
 
-  /* 自动演示时，t 时刻的数值 */
-  function valueAt(t){
-    if(!state.auto) return state.value;
-    var cycle = state.duration * 2;
-    var p = (t % cycle) / cycle;
-    var k = p < 0.5 ? p * 2 : (1 - p) * 2;
-    return state.min + k * (state.max - state.min);
+  /* 填充区间 [pa, pb]（沿条的低端→高端） */
+  function spanOf(v){
+    var pv = ratio(v);
+    if(state.mode === "reverse") return [pv, 1];                       /* RANGE + start_value = max：从高端向当前值收缩 */
+    if(state.mode === "sym") return [Math.min(0.5, pv), Math.max(0.5, pv)];
+    if(state.mode === "range"){
+      var ps = ratio(state.start);
+      return [Math.min(ps, pv), Math.max(ps, pv)];
+    }
+    return [0, pv];
   }
 
   /* ---------- 绘制 ---------- */
-  function draw(c, tMs){
+  function draw(c, v){
     var m = metrics();
-    var W = m.w, H = m.h;
+    var W = m.w, H = m.h, bw = m.bw, bh = m.bh;
 
     c.clearRect(0, 0, W, H);
 
-    /* 轨道 */
-    var r = (state.radius / 100) * Math.min(W, H) / 2;
-    roundRect(c, 0, 0, W, H, r);
+    /* 轨道 MAIN */
+    var r = (state.radius / 100) * Math.min(bw, bh) / 2;
+    roundRect(c, PAD, PAD, bw, bh, r);
     c.fillStyle = state.track;
     c.fill();
 
-    /* 计算填充区间 */
-    var v = valueAt(tMs);
-    var pv = ratio(v);
-    var pa = pv, pb = pv;
-
-    if(state.mode === "normal"){
-      pa = 0; pb = pv;
-    }else if(state.mode === "sym"){
-      pa = Math.min(0.5, pv);
-      pb = Math.max(0.5, pv);
-    }else{ /* range */
-      var ps = ratio(state.start);
-      pa = Math.min(ps, pv);
-      pb = Math.max(ps, pv);
-    }
-
+    /* 指示条 INDICATOR */
+    var sp = spanOf(v), pa = sp[0], pb = sp[1];
     if(pb - pa > 0.0001){
-      var ir = Math.min(r, Math.min(W, H) / 2);
+      var ir = Math.min(r, Math.min(bw, bh) / 2);
       if(state.dir === "h"){
-        var x = pa * W;
-        var w = (pb - pa) * W;
-        roundRect(c, x, 0, w, H, ir);
+        roundRect(c, PAD + pa * bw, PAD, (pb - pa) * bw, bh, ir);
       }else{
-        var y = H - pb * H;
-        var h = (pb - pa) * H;
-        roundRect(c, 0, y, W, h, ir);
+        roundRect(c, PAD, PAD + (1 - pb) * bh, bw, (pb - pa) * bh, ir);
       }
       c.fillStyle = state.indic;
       c.fill();
     }
+
+    /* 可拖动指示器 KNOB：位于当前值对应的活动端 */
+    if(state.knob){
+      var pv = ratio(v);
+      var kr = Math.min(bh / 2 + 5, 12);
+      var kx = state.dir === "h" ? PAD + pv * bw : PAD + bw / 2;
+      var ky = state.dir === "h" ? PAD + bh / 2 : PAD + (1 - pv) * bh;
+      c.beginPath();
+      c.arc(kx, ky, kr, 0, Math.PI * 2);
+      c.fillStyle = "#ffffff";
+      c.fill();
+      c.lineWidth = 2;
+      c.strokeStyle = state.indic;
+      c.stroke();
+    }
   }
 
-  /* ---------- 高清适配 + 主循环 ---------- */
+  /* ---------- 高清适配 ---------- */
   function fitCanvas(){
     var m = metrics();
     var dpr = window.devicePixelRatio || 1;
@@ -276,9 +311,40 @@
     canvas.style.cursor = state.dir === "h" ? "ew-resize" : "ns-resize";
   }
 
+  /* ---------- 过渡动画（对应 LV_ANIM_ON） ---------- */
+  function easeInOut(t){ return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+  function setValue(v, animate){
+    v = clamp(Math.round(v), state.min, state.max);
+    if(!animate || state.duration <= 0){
+      state.value = v; disp = v; animDur = 0;
+    }else{
+      animFrom = disp; animTo = v; animStart = performance.now(); animDur = state.duration;
+      state.value = v;
+    }
+    syncValueUI(state.value);
+    renderCode();
+  }
+
+  function waveValue(tMs){
+    var cycle = state.duration * 2;
+    var p = (tMs % cycle) / cycle;
+    var k = p < 0.5 ? p * 2 : (1 - p) * 2;
+    return state.min + k * (state.max - state.min);
+  }
+
   function loop(now){
-    draw(ctx, now - t0);
-    if(state.auto) syncValueUI(valueAt(now - t0));
+    if(state.auto){
+      disp = waveValue(now - t0);
+      state.value = Math.round(disp);
+      animDur = 0;
+      syncValueUI(state.value);
+    }else if(animDur > 0){
+      var p = clamp((now - animStart) / animDur, 0, 1);
+      disp = animFrom + (animTo - animFrom) * easeInOut(p);
+      if(p >= 1){ disp = animTo; animDur = 0; }
+    }
+    draw(ctx, disp);
     requestAnimationFrame(loop);
   }
 
@@ -289,6 +355,7 @@
     document.getElementById("value").value = n;
   }
 
+  /* ---------- 生成代码 ---------- */
   function renderCode(){
     var m = metrics();
     var hex = function(c){ return "0x" + c.replace("#", ""); };
@@ -296,21 +363,35 @@
 
     L.push('<span class="cm">/* 由页面参数实时生成 */</span>');
     L.push('lv_obj_t * bar = <span class="fn">lv_bar_create</span>(lv_screen_active());');
-    L.push('<span class="fn">lv_obj_set_size</span>(bar, <span class="num">' + m.w + '</span>, <span class="num">' + m.h + '</span>);');
+    L.push('<span class="fn">lv_obj_set_size</span>(bar, <span class="num">' + m.bw + '</span>, <span class="num">' + m.bh + '</span>);');
     L.push('<span class="fn">lv_obj_center</span>(bar);');
+    L.push('');
 
     if(state.dir === "v"){
       L.push('<span class="fn">lv_bar_set_orientation</span>(bar, LV_BAR_ORIENTATION_VERTICAL);');
     }
+
     if(state.mode === "sym"){
+      L.push('<span class="cm">/* 对称：指示条从中心向两侧 */</span>');
       L.push('<span class="fn">lv_bar_set_mode</span>(bar, LV_BAR_MODE_SYMMETRICAL);');
-    }else if(state.mode === "range"){
+    }else if(state.mode === "reverse"){
+      L.push('<span class="cm">/* 反向填充：起点值取 max，指示条从 max 端向当前值收缩 */</span>');
       L.push('<span class="fn">lv_bar_set_mode</span>(bar, LV_BAR_MODE_RANGE);');
+      L.push('<span class="fn">lv_bar_set_range</span>(bar, <span class="num">' + state.min + '</span>, <span class="num">' + state.max + '</span>);');
+      L.push('<span class="fn">lv_bar_set_start_value</span>(bar, <span class="num">' + state.max + '</span>, LV_ANIM_OFF);');
+    }else if(state.mode === "range"){
+      L.push('<span class="cm">/* 区间：start_value 与 value 是填充的两端 */</span>');
+      L.push('<span class="fn">lv_bar_set_mode</span>(bar, LV_BAR_MODE_RANGE);');
+      L.push('<span class="fn">lv_bar_set_range</span>(bar, <span class="num">' + state.min + '</span>, <span class="num">' + state.max + '</span>);');
       L.push('<span class="fn">lv_bar_set_start_value</span>(bar, <span class="num">' + state.start + '</span>, LV_ANIM_OFF);');
     }
 
     L.push('<span class="fn">lv_bar_set_range</span>(bar, <span class="num">' + state.min + '</span>, <span class="num">' + state.max + '</span>);');
-    L.push('<span class="fn">lv_bar_set_value</span>(bar, <span class="num">' + Math.round(state.value) + '</span>, LV_ANIM_ON);');
+    L.push('');
+    L.push('<span class="cm">/* 数值过渡动画：时长来自 anim_duration，取值 LV_ANIM_ON / LV_ANIM_OFF */</span>');
+    L.push('<span class="fn">lv_obj_set_style_anim_duration</span>(bar, <span class="num">' + state.duration + '</span>, LV_PART_INDICATOR);');
+    L.push('<span class="fn">lv_bar_set_value</span>(bar, <span class="num">' + Math.round(state.value) + '</span>, ' + (state.anim ? 'LV_ANIM_ON' : 'LV_ANIM_OFF') + ');');
+    L.push('');
 
     var radiusArg = state.radius >= 100 ? "LV_RADIUS_CIRCLE" : state.radius;
     L.push('<span class="fn">lv_obj_set_style_radius</span>(bar, <span class="num">' + radiusArg + '</span>, LV_PART_MAIN);');
@@ -318,7 +399,18 @@
     L.push('<span class="fn">lv_obj_set_style_bg_color</span>(bar, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.indic) + '</span>), LV_PART_INDICATOR);');
     L.push('<span class="fn">lv_obj_set_style_radius</span>(bar, <span class="num">' + radiusArg + '</span>, LV_PART_INDICATOR);');
 
+    if(state.knob){
+      L.push('');
+      L.push('<span class="cm">/* 可拖动指示器：LV_PART_KNOB 手柄 + 按压事件改值 */</span>');
+      L.push('<span class="fn">lv_obj_set_style_bg_color</span>(bar, <span class="fn">lv_color_hex</span>(<span class="num">0xffffff</span>), LV_PART_KNOB);');
+      L.push('<span class="fn">lv_obj_set_style_radius</span>(bar, LV_RADIUS_CIRCLE, LV_PART_KNOB);');
+      L.push('<span class="fn">lv_obj_set_style_pad_all</span>(bar, <span class="num">6</span>, LV_PART_KNOB);');
+      L.push('<span class="fn">lv_obj_add_flag</span>(bar, LV_OBJ_FLAG_CLICKABLE);');
+      L.push('<span class="fn">lv_obj_add_event_cb</span>(bar, bar_pressing_cb, LV_EVENT_PRESSING, NULL);');
+    }
+
     document.getElementById("code").innerHTML = L.join("\n");
+    jumpBtn.textContent = "跳变到 " + (state.value >= 52 ? 15 : 90) + "%";
   }
 
   /* ---------- 控件绑定 ---------- */
@@ -333,30 +425,30 @@
     el.addEventListener("input", function(){
       state[key] = Number(el.value);
       if(key === "min" || key === "max"){
-        /* 保证 min < max */
         if(state.min >= state.max) state.max = state.min + 1;
         document.getElementById("o-min").textContent = state.min;
         document.getElementById("o-max").textContent = state.max;
       }else{
         out.textContent = fmt(Number(el.value));
       }
-      /* 手动调值即视为接管演示，关掉自动循环 */
-      if(key === "value"){
-        state.auto = false;
-        document.getElementById("auto").checked = false;
-      }
       if(key === "thick") fitCanvas();
       renderCode();
     });
   }
 
-  bindRange("value",   "value",   "o-value",   function(v){ return v; });
   bindRange("start",   "start",   "o-start",   function(v){ return v; });
   bindRange("min",     "min",     "o-min",     function(v){ return v; });
   bindRange("max",     "max",     "o-max",     function(v){ return v; });
   bindRange("thick",   "thickness","o-thick",  function(v){ return v + " px"; });
   bindRange("radius",  "radius",  "o-radius",  function(v){ return v + "%"; });
   bindRange("duration","duration","o-duration",function(v){ return v + " ms"; });
+
+  /* 当前值滑块：经过渡动画（LV_ANIM_ON）或立即跳变（LV_ANIM_OFF） */
+  document.getElementById("value").addEventListener("input", function(e){
+    state.auto = false;
+    document.getElementById("auto").checked = false;
+    setValue(Number(e.target.value), state.anim);
+  });
 
   document.getElementById("indic").addEventListener("input", function(e){
     state.indic = e.target.value; renderCode();
@@ -366,7 +458,12 @@
   });
   document.getElementById("auto").addEventListener("change", function(e){
     state.auto = e.target.checked;
-    if(!state.auto) syncValueUI(state.value);
+    if(state.auto){
+      t0 = performance.now();
+      animDur = 0;
+    }else{
+      syncValueUI(state.value);
+    }
   });
 
   document.getElementById("mode").addEventListener("click", function(e){
@@ -392,20 +489,41 @@
     renderCode();
   });
 
-  /* ---------- 画布拖动改值 ---------- */
+  document.getElementById("animseg").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.anim = btn.getAttribute("data-anim") === "1";
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    renderCode();
+  });
+
+  document.getElementById("knob").addEventListener("change", function(e){
+    state.knob = e.target.checked;
+    renderCode();
+  });
+
+  /* 跳变按钮：在 90% 与 15% 之间来回，用来看过渡动画 */
+  jumpBtn.addEventListener("click", function(){
+    state.auto = false;
+    document.getElementById("auto").checked = false;
+    setValue(state.value >= 52 ? 15 : 90, state.anim);
+  });
+
+  /* ---------- 画布拖动改值（含拖动指示器） ---------- */
   (function(){
     var dragging = false;
     function apply(e){
       var r = canvas.getBoundingClientRect();
       var p = state.dir === "h"
-        ? (e.clientX - r.left) / r.width
-        : 1 - (e.clientY - r.top) / r.height;
+        ? (e.clientX - r.left - PAD) / (r.width - PAD * 2)
+        : 1 - (e.clientY - r.top - PAD) / (r.height - PAD * 2);
       p = clamp(p, 0, 1);
-      state.value = Math.round(state.min + p * (state.max - state.min));
-      syncValueUI(state.value);
       state.auto = false;
       document.getElementById("auto").checked = false;
-      renderCode();
+      setValue(state.min + p * (state.max - state.min), state.anim);
     }
     canvas.addEventListener("pointerdown", function(e){
       dragging = true;
@@ -464,24 +582,20 @@
       off.width = m.w; off.height = m.h;
       var octx = off.getContext("2d");
       var i = 0;
-      var prevAuto = state.auto;
-      state.auto = true;
 
       function step(){
         if(i < frames){
-          draw(octx, i / fps * 1000);
+          draw(octx, waveValue(i / fps * 1000));
           gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
           setStatus("渲染帧 " + (i + 1) + "/" + frames);
           i++;
           setTimeout(step, 0);
         }else{
           function fail(msg){
-            state.auto = prevAuto;
             setStatus(msg);
             btn.disabled = false;
           }
           gif.on("finished", function(blob){
-            state.auto = prevAuto;
             download(blob, "bar.gif");
             setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
             btn.disabled = false;
@@ -512,6 +626,7 @@
     btn.disabled = true;
     var prevAuto = state.auto;
     state.auto = true;
+    t0 = performance.now();
     var cycle = state.duration * 2;
 
     var stream = canvas.captureStream(30);
@@ -520,6 +635,7 @@
     rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
     rec.onstop = function(){
       state.auto = prevAuto;
+      document.getElementById("auto").checked = prevAuto;
       download(new Blob(chunks, { type: "video/webm" }), "bar.webm");
       setStatus("WebM 已保存（一个来回 " + cycle + " ms）", true);
       btn.disabled = false;
@@ -530,46 +646,12 @@
   });
 
   fitCanvas();
+  disp = state.min;
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
 
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIBoxProgress 操作绑定 + 实时生成等价 C++ 代码
-   演示组件由 cmp2.js 自动挂进 #udemo（LV2.api.setValue）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return (window.LV2 && window.LV2.api) || {}; }
-
-  var u = { value: 62 };
-
-  function renderUCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_box_progress.h / style.cpp） */</span>');
-    L.push('UIBoxProgress * progress = <span class="fn">new</span> UIBoxProgress();');
-    L.push('progress-&gt;<span class="fn">SetPosition</span>(<span class="num">70</span>, <span class="num">104</span>);');
-    L.push('progress-&gt;<span class="fn">SetRange</span>(<span class="num">0</span>, <span class="num">100</span>);');
-    L.push('progress-&gt;<span class="fn">SetValue</span>(<span class="num">' + u.value + '</span>);  <span class="cm">// 仅单向填充</span>');
-    L.push('progress-&gt;<span class="fn">SetForegroundStyle</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(0x00, 0x7d, 0xff).full);');
-    L.push('progress-&gt;<span class="fn">SetBackgroundStyle</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(0xe3, 0xe6, 0xea).full);');
-    L.push('<span class="cm">/* 无 SYMMETRICAL / RANGE 模式，无 start_value 与数值动画 */</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("uvalue").addEventListener("input", function(){
-    u.value = Number(this.value);
-    $("o-uvalue").textContent = u.value;
-    var a = api();
-    if(a.setValue) a.setValue(u.value);
-    renderUCode();
-  });
-
-  renderUCode();
+  /* 首屏用一次过渡动画演示「LV_ANIM_ON」 */
+  setTimeout(function(){ setValue(state.value, true); }, 150);
 })();
 </script>
 

@@ -247,32 +247,47 @@
     K.text(c, ENCODE_NAME[state.encode], W - 26, 24, { size: 11, color: K.theme.textFaint, align: "right" });
 
     var pattern = buildPattern();
+
+    /* 舞台可用区域 */
+    var ax = 20, ay = 40, aw = W - 40, ah = 146;
+    var horiz = state.dir === "h";
+    var maxSpan = (horiz ? aw : ah) - 2;
+
+    /* 模块宽度优先用 set_scale 的值；超出舞台时等比缩小，保证整条码完整可见 */
     var unit = state.scale;
+    var autoFit = false;
+    if(pattern.modules * unit > maxSpan){
+      unit = maxSpan / pattern.modules;
+      autoFit = true;
+    }
     var patternW = pattern.modules * unit;
 
-    var vx = 20, vy = 40, vw = W - 40, vh = 146;
-    var horiz = state.dir === "h";
-    var span = horiz ? vw : vh;
+    /* 条码矩形 = 内容尺寸（lv_barcode 对象随 scale 与数据自适应），整体居中完整显示 */
+    var boxW = horiz ? patternW : state.height;
+    var boxH = horiz ? state.height : patternW;
+    var vx = ax + (aw - boxW) / 2, vy = ay + (ah - boxH) / 2;
 
-    K.box(c, vx, vy, vw, vh, { bg: state.light, radius: 10, borderWidth: 1, border: "#e3e8ef" });
+    K.box(c, vx, vy, boxW, boxH, { bg: state.light, radius: 10, borderWidth: 1, border: "#e3e8ef" });
 
     c.save();
-    K.roundRectPath(c, vx, vy, vw, vh, 10);
+    K.roundRectPath(c, vx, vy, boxW, boxH, 10);
     c.clip();
 
     function paintBars(base, barHeight){
       for(var i = 0; i < pattern.bars.length; i++){
         var b = pattern.bars[i];
+        var x1 = base + Math.round(b.x * unit);
+        var x2 = base + Math.round((b.x + b.w) * unit);
+        if(x2 <= x1) x2 = x1 + 1;
         c.fillStyle = state.dark;
-        c.fillRect(base + b.x * unit, -barHeight / 2, b.w * unit, barHeight);
+        c.fillRect(x1, -barHeight / 2, x2 - x1, barHeight);
       }
     }
 
     c.save();
-    c.translate(vx + vw / 2, vy + vh / 2);
+    c.translate(vx + boxW / 2, vy + boxH / 2);
     if(!horiz) c.rotate(-Math.PI / 2);
-    var startX = (span - patternW) / 2;
-    paintBars(startX, state.height);
+    paintBars(-patternW / 2, state.height);
     c.restore();
     c.restore();
 
@@ -282,9 +297,9 @@
       });
     }
 
-    var clipped = patternW > span;
-    var info = "模块 " + unit + " px · " + pattern.modules + " 模块 · 图示" + (horiz ? "宽 " : "高 ") + Math.round(patternW) + " px";
-    if(clipped) info += "（超出画布，已裁剪）";
+    var unitTxt = unit >= 1 ? String(Math.round(unit * 10) / 10) : unit.toFixed(2);
+    var info = "模块 " + unitTxt + " px · " + pattern.modules + " 模块 · 图示" + (horiz ? "宽 " : "高 ") + Math.round(patternW) + " px";
+    if(autoFit) info += "（超出舞台，已自动缩小）";
     K.text(c, info, W / 2, 214, { size: 10.5, color: K.theme.textMuted, align: "center" });
     K.text(c, "演示用示意编码（EAN13 码表与校验位真实）", W / 2, 227, {
       size: 9.5, color: K.theme.textFaint, align: "center"
@@ -368,52 +383,6 @@
 
   syncLen();
   renderCode();
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js barcode.alt：UI_Lite 只有 UIQRCode，无一维条码
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_barcode，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* UI_Lite 只有 UIQRCode（二维矩阵），一维码的编码与绘制必须自己实现 */"));
-  L.push("");
-  L.push("class BarcodeView : public UIView {");
-  L.push("public:");
-  L.push("    BarcodeView() { " + fn("SetPosition") + "(" + num(0) + ", " + num(0) + "); " + fn("SetSize") + "(" + num(320) + ", " + num(120) + "); }");
-  L.push("    virtual ~BarcodeView() {}");
-  L.push("");
-  L.push("    bool " + fn("OnDraw") + "(const Canvas &canvas, const Rect &dirty) override");
-  L.push("    {");
-  L.push(cm("        /* 1. 编码：Code128 / EAN13 算法要自己移植（或引入第三方库） */"));
-  L.push("        const uint8_t *widths = " + fn("EncodeData") + "(data_);");
-  L.push(cm("        /* 2. 绘制：逐条 FillRect，模块宽度自行换算 */"));
-  L.push("        int16_t x = " + num(0) + ";");
-  L.push("        for (int i = " + num(0) + "; widths[i] != " + num(0) + "; i += " + num(2) + ") {");
-  L.push("            canvas." + fn("FillRect") + "({x, " + num(0) + ", x + widths[i] * scale_, " + num(90) + "}, dark_, " + num(0) + ");");
-  L.push("            x += (widths[i] + widths[i + " + num(1) + "]) * scale_;");
-  L.push("        }");
-  L.push("        return true;");
-  L.push("    }");
-  L.push("private:");
-  L.push("    const char *data_ = \"LVGL\";");
-  L.push("    int16_t scale_ = " + num(2) + ";");
-  L.push("    ColorType dark_ = Color::" + fn("GetColorFromRGB") + "(" + num("0x1c") + ", " + num("0x21") + ", " + num("0x28") + ").full;");
-  L.push("};");
-  L.push("");
-  L.push("BarcodeView * bc = " + fn("new") + " BarcodeView();");
-  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(bc);");
-  L.push(cm("/* 条码下方文本：另挂 UILabel；对照参考：UIQRCode 只需 SetQrcodeInfo() 一行 */"));
-  document.getElementById("ucode").innerHTML = L.join("\n");
 })();
 </script>
 

@@ -122,22 +122,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">拖动角度滑杆实时改变弧形文字的终止角；UIArcLabel 以整体 Style 为主，无法逐字配色或镜像翻转。</p>
+      <p class="stage-tip">拖动角度滑杆实时改终止角；radius 默认 0 必须显式 SetArcTextRadius；整体 Style 为主，无法逐字配色或镜像翻转。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>弧形角度 angle<output id="o-uangle">292°</output><span class="api">SetArcTextAngle(int16_t)：终止角，单位 °</span></label>
-            <input type="range" id="uangle" min="200" max="340" step="1" value="292">
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>frameworks/components/ui_arc_label.cpp</code> ——
-          <code>SetText</code> 设置弧形文本，<code>SetArcTextRadius</code> / <code>SetArcTextAngle</code> 配半径与角度，
-          <code>SetArcTextOrientation</code> 配整体朝向，<code>SetRollCount</code> / <code>SetRollSpeed</code> 配滚动；
-          逐字独立样式与镜像方向没有接口。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -572,47 +567,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIArcLabel 操作绑定 + 实时代码
-   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.arclabel）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  var u = { angle: 292 };
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return window.LV2 && window.LV2.api; }
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 frameworks/components/ui_arc_label.cpp） */</span>');
-    L.push('UIArcLabel * label = <span class="fn">new</span> UIArcLabel();');
-    L.push('label-&gt;<span class="fn">SetText</span>(<span class="num">"ARC LABEL TEXT"</span>);');
-    L.push('label-&gt;<span class="fn">SetArcTextRadius</span>(<span class="num">62</span>);');
-    L.push('label-&gt;<span class="fn">SetArcTextAngle</span>(<span class="num">' + u.angle + '</span>);   <span class="cm">// 终止角 ' + u.angle + '°</span>');
-    L.push('label-&gt;<span class="fn">SetArcTextOrientation</span>(<span class="num">ORIENTATION_NORMAL</span>);');
-    L.push('<span class="cm">/* 逐字样式 / 镜像方向无接口，以整体 Style 为主 */</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  (function(){
-    var el = $("uangle");
-    var out = $("o-uangle");
-    el.addEventListener("input", function(){
-      u.angle = Number(el.value);
-      out.textContent = u.angle + "°";
-      var a = api();
-      if(a && a.setAngle) a.setAngle(u.angle);
-      renderCode();
-    });
-  })();
-
-  renderCode();
 })();
 </script>
 

@@ -13,7 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Lottie：lv_lottie vs 无对应组件</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（JSON 矢量动画：脉冲同心圆 + 旋转星形，矢量缩放不失真），右列为
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（JSON 矢量动画：深空光核在圆 / 五角星 / 圆角方之间路径变形，三层修剪路径圆环、椭圆轨道粒子拖尾、高光扫过与时间轴进度，矢量缩放不失真），右列为
       <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只有位图序列替代，仅展示能力缺口与最接近的替代思路。页面最下方为差异对照。</p>
   </header>
 
@@ -29,14 +29,14 @@
         <div class="stage-canvas-box"><canvas id="view"></canvas></div>
         <div class="lv-gaps" id="lgaps"></div>
       </div>
-      <p class="stage-tip">拉动「缩放」：矢量动画放大到 200% 依然锐利（路径按新尺寸重绘）——换成 UIImageAnimator 位图序列，同样放大就会糊。</p>
+      <p class="stage-tip">拉动「缩放」：矢量动画放大到 130% 依然锐利（路径按新尺寸重绘）——换成 UIImageAnimator 位图序列，同样放大就会糊。</p>
 
       <section class="panel">
         <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
         <div class="grid">
           <div class="field">
-            <label>缩放 zoom<output id="o-zoom">100%</output><span class="api">矢量路径重绘，任意放大不失真（位图序列做不到）</span></label>
-            <input type="range" id="zoom" min="50" max="200" step="10" value="100">
+            <label>缩放 zoom<output id="o-zoom">120%</output><span class="api">矢量路径重绘，任意放大不失真（位图序列做不到）</span></label>
+            <input type="range" id="zoom" min="60" max="130" step="10" value="120">
           </div>
           <div class="field">
             <label>播放速度 speed<output id="o-speed">1.00×</output><span class="api">lv_anim_set_duration（基础时长 / 速度）</span></label>
@@ -116,14 +116,14 @@
 (function(){
   "use strict";
   var K = LVKit, W = 360, H = 240;
-  var LOOP = 2000;
-  var BASE_W = 160, BASE_H = 90;        // 100% 缩放时的动画缓冲尺寸
+  var LOOP = 3200;
+  var BASE_W = 199, BASE_H = 112;       // 100% 缩放时的动画缓冲尺寸（16:9）
 
   var state = {
     playing: true,
     speed: 1,
     loop: true,
-    zoom: 100
+    zoom: 120
   };
 
   var view = K.view(document.getElementById("view"));
@@ -134,19 +134,81 @@
   function boxW(){ return Math.round(BASE_W * state.zoom / 100); }
   function boxH(){ return Math.round(BASE_H * state.zoom / 100); }
 
-  function starPath(c, cx, cy, outer, inner, rot){
+  /* ---------- 缓动 / 关键帧（对齐 Lottie 的 ease-in-out 插值） ---------- */
+  function smooth(t){ return t * t * (3 - 2 * t); }
+  function clamp01(t){ return t < 0 ? 0 : t > 1 ? 1 : t; }
+
+  /* 形状权重关键帧：圆 → 五角星 → 圆角方 → 圆（路径变形） */
+  var MORPH_KEYS = [
+    { t: 0.00, w: [1, 0, 0] },
+    { t: 0.22, w: [0, 1, 0] },
+    { t: 0.44, w: [0, 1, 0] },
+    { t: 0.66, w: [0, 0, 1] },
+    { t: 0.86, w: [0, 0, 1] },
+    { t: 1.00, w: [1, 0, 0] }
+  ];
+  function morphWeights(p){
+    for(var i = 1; i < MORPH_KEYS.length; i++){
+      var a = MORPH_KEYS[i - 1], b = MORPH_KEYS[i];
+      if(p <= b.t){
+        var k = smooth(clamp01((p - a.t) / (b.t - a.t)));
+        return [a.w[0] + (b.w[0] - a.w[0]) * k,
+                a.w[1] + (b.w[1] - a.w[1]) * k,
+                a.w[2] + (b.w[2] - a.w[2]) * k];
+      }
+    }
+    return [1, 0, 0];
+  }
+
+  /* 极坐标半径：圆 / 五角星 / 圆角方，按权重混合 */
+  function starRadius(th, ri){
+    var seg = Math.PI * 2 / 5, half = seg / 2;
+    var t = th - seg * Math.floor(th / seg);
+    var x1, y1, x2, y2;
+    if(t <= half){
+      x1 = 1; y1 = 0;
+      x2 = ri * Math.cos(half); y2 = ri * Math.sin(half);
+    }else{
+      x1 = ri * Math.cos(half); y1 = ri * Math.sin(half);
+      x2 = Math.cos(seg); y2 = Math.sin(seg);
+    }
+    var den = (y2 - y1) * Math.cos(t) - (x2 - x1) * Math.sin(t);
+    var r = (x1 * y2 - y1 * x2) / den;
+    return r > 2 ? 2 : r < 0.2 ? 0.2 : r;
+  }
+  function shapeRadius(th, w){
+    var circle = 1;
+    var star = starRadius(th, 0.46);
+    var sq = 1 / Math.pow(Math.pow(Math.abs(Math.cos(th)), 4) + Math.pow(Math.abs(Math.sin(th)), 4), 0.25) / 1.1892;
+    return circle * w[0] + star * w[1] + sq * w[2];
+  }
+
+  function morphPath(c, cx, cy, R, rot, w, steps){
+    steps = steps || 132;
     c.beginPath();
-    for(var i = 0; i < 10; i++){
-      var a = rot + i * Math.PI / 5 - Math.PI / 2;
-      var r = (i % 2 === 0) ? outer : inner;
-      if(i === 0) c.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-      else c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    for(var i = 0; i <= steps; i++){
+      var th = i / steps * Math.PI * 2;
+      var r = R * shapeRadius(th - rot, w);
+      var x = cx + Math.cos(th) * r;
+      var y = cy + Math.sin(th) * r;
+      if(i === 0) c.moveTo(x, y); else c.lineTo(x, y);
     }
     c.closePath();
   }
 
+  /* 背景星点（固定种子，保证 GIF 逐帧一致） */
+  var SPARKS = [];
+  (function(){
+    var seed = 7;
+    function rnd(){ seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+    for(var i = 0; i < 22; i++){
+      SPARKS.push({ x: 0.04 + rnd() * 0.92, y: 0.06 + rnd() * 0.88, r: 0.6 + rnd() * 1.5, ph: rnd(), sp: 1 + Math.floor(rnd() * 2) });
+    }
+  })();
+
+  /* ---------- 场景：多图层矢量动画 ---------- */
   function drawScene(c, tMs, loop){
-    var p = loop ? (tMs % LOOP) / LOOP : K.clamp(tMs / LOOP, 0, 1);
+    var p = loop ? (tMs % LOOP) / LOOP : clamp01(tMs / LOOP);
 
     c.clearRect(0, 0, W, H);
     K.box(c, 12, 8, W - 24, H - 16, {
@@ -160,16 +222,16 @@
     var w2 = K.measure(c, l2, { size: 10.5 }) + 16;
     var total = w1 + 16 + w2;
     var sx = (W - total) / 2;
-    K.box(c, sx, 18, w1, 20, { bg: "#f2f5f9", radius: 6, borderWidth: 1, border: "#e3e8ef" });
-    K.text(c, l1, sx + w1 / 2, 28, { size: 10.5, mono: true, color: K.theme.textMuted, align: "center" });
-    K.text(c, "→", sx + w1 + 8, 28, { size: 12, color: K.theme.textFaint, align: "center" });
-    K.box(c, sx + w1 + 16, 18, w2, 20, { bg: "#eaf2fd", radius: 6, borderWidth: 1, border: "#c6dcf8" });
-    K.text(c, l2, sx + w1 + 16 + w2 / 2, 28, { size: 10.5, color: K.theme.primaryDark, align: "center" });
+    K.box(c, sx, 16, w1, 20, { bg: "#f2f5f9", radius: 6, borderWidth: 1, border: "#e3e8ef" });
+    K.text(c, l1, sx + w1 / 2, 26, { size: 10.5, mono: true, color: K.theme.textMuted, align: "center" });
+    K.text(c, "→", sx + w1 + 8, 26, { size: 12, color: K.theme.textFaint, align: "center" });
+    K.box(c, sx + w1 + 16, 16, w2, 20, { bg: "#eaf2fd", radius: 6, borderWidth: 1, border: "#c6dcf8" });
+    K.text(c, l2, sx + w1 + 16 + w2 / 2, 26, { size: 10.5, color: K.theme.primaryDark, align: "center" });
 
     var bw = boxW(), bh = boxH();
     var bx = (W - bw) / 2;
-    var by = 44 + (160 - bh) / 2;
-    var midY = by + bh / 2;
+    var by = 40 + (152 - bh) / 2;
+    var S = bw / BASE_W;
 
     /* 缓冲边界 */
     c.save();
@@ -180,78 +242,191 @@
     c.stroke();
     c.restore();
 
+    /* ========== 动画卡片 ========== */
     c.save();
-    K.roundRectPath(c, bx, by, bw, bh, 12);
+    K.roundRectPath(c, bx, by, bw, bh, 10 * S);
     c.clip();
 
-    var g = c.createLinearGradient(bx, by, bx, by + bh);
-    g.addColorStop(0, "#f8fbff");
-    g.addColorStop(1, "#eef4fd");
-    c.fillStyle = g;
+    var cx = bx + bw / 2;
+    var cy = by + bh * 0.46;
+    var R = bh * 0.245;
+
+    /* 图层 1：深空渐变底 + 点阵 */
+    var bg = c.createRadialGradient(cx, cy * 0.9, 0, cx, cy, Math.max(bw, bh) * 0.78);
+    bg.addColorStop(0, "#16304f");
+    bg.addColorStop(0.55, "#0b1a2c");
+    bg.addColorStop(1, "#060c15");
+    c.fillStyle = bg;
     c.fillRect(bx, by, bw, bh);
 
-    var cx = bx + bw / 2;
-    var cy = midY - bh * 0.05;
-    var base = Math.min(bw, bh) * 0.40;
-
-    /* 静态参考环 */
-    c.beginPath();
-    c.arc(cx, cy, base, 0, Math.PI * 2);
-    c.strokeStyle = "#dfe9f7";
-    c.lineWidth = 1.5;
-    c.stroke();
-
-    /* 脉冲同心圆 */
-    for(var i = 0; i < 3; i++){
-      var q = (p + i / 3) % 1;
-      var r = base * (0.22 + 0.78 * q);
-      c.save();
-      c.globalAlpha = (1 - q) * 0.55;
-      c.beginPath();
-      c.arc(cx, cy, r, 0, Math.PI * 2);
-      c.strokeStyle = i === 1 ? "#e6a23c" : K.theme.primary;
-      c.lineWidth = Math.max(1.5, 2 * state.zoom / 100);
-      c.stroke();
-      c.restore();
+    var gap = 12 * S;
+    c.fillStyle = "rgba(148,197,255,0.10)";
+    for(var gy = by + gap; gy < by + bh; gy += gap){
+      for(var gx = bx + gap; gx < bx + bw; gx += gap){
+        c.beginPath();
+        c.arc(gx, gy, 0.7 * S, 0, Math.PI * 2);
+        c.fill();
+      }
     }
 
-    /* 轨道点 + 旋转星形 */
-    var orbit = base * 0.62;
-    var oa = p * Math.PI * 2;
+    /* 图层 2：星点闪烁 */
+    for(var i = 0; i < SPARKS.length; i++){
+      var sp = SPARKS[i];
+      var tw = 0.5 + 0.5 * Math.sin(Math.PI * 2 * (p * sp.sp + sp.ph));
+      c.globalAlpha = 0.12 + 0.55 * tw;
+      c.fillStyle = "#bee1ff";
+      c.beginPath();
+      c.arc(bx + sp.x * bw, by + sp.y * bh, sp.r * S * (0.5 + 0.5 * tw), 0, Math.PI * 2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+
+    /* 图层 3：修剪路径圆环（trim path，弧长来回呼吸） */
+    var RINGS = [
+      { k: 1.68, dir: 1, ph: 0.00, col: "#22d3ee", span: 0.22 },
+      { k: 1.44, dir: -1, ph: 0.35, col: "#8b5cf6", span: 0.30 },
+      { k: 1.20, dir: 1, ph: 0.68, col: "#38bdf8", span: 0.38 }
+    ];
     c.save();
-    c.globalAlpha = 0.45;
+    c.globalCompositeOperation = "lighter";
+    for(var r = 0; r < RINGS.length; r++){
+      var rg = RINGS[r];
+      var rad = R * rg.k;
+      var a0 = Math.PI * 2 * (p * rg.dir + rg.ph);
+      var span = Math.PI * 2 * (rg.span - 0.10 * Math.cos(Math.PI * 2 * (p + rg.ph)));
+      if(span < 0.08) span = 0.08;
+      var grd = c.createLinearGradient(cx - rad, cy - rad, cx + rad, cy + rad);
+      grd.addColorStop(0, rg.col);
+      grd.addColorStop(1, "rgba(255,255,255,0.15)");
+      c.beginPath();
+      c.arc(cx, cy, rad, a0, a0 + span);
+      c.strokeStyle = grd;
+      c.lineWidth = 2.2 * S;
+      c.lineCap = "round";
+      c.globalAlpha = 0.85;
+      c.shadowColor = rg.col;
+      c.shadowBlur = 8 * S;
+      c.stroke();
+
+      var he = a0 + span;
+      c.globalAlpha = 1;
+      c.beginPath();
+      c.arc(cx + Math.cos(he) * rad, cy + Math.sin(he) * rad, 2.1 * S, 0, Math.PI * 2);
+      c.fillStyle = "#ffffff";
+      c.shadowBlur = 10 * S;
+      c.fill();
+    }
+    c.restore();
+
+    /* 图层 4：路径变形光核（圆 → 星 → 圆角方） */
+    var wts = morphWeights(p);
+    var rot = Math.PI * 2 * p * 0.5;
+    var pulse = 1 + 0.05 * Math.sin(Math.PI * 4 * p);
+
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    c.globalAlpha = 0.5;
+    morphPath(c, cx, cy, R * 1.16 * pulse, rot, wts);
+    c.strokeStyle = "#3b82f6";
+    c.lineWidth = 3 * S;
+    c.shadowColor = "#3b82f6";
+    c.shadowBlur = 16 * S;
+    c.stroke();
+    c.restore();
+
+    morphPath(c, cx, cy, R * pulse, rot, wts);
+    var fg = c.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+    fg.addColorStop(0, "#7dd3fc");
+    fg.addColorStop(0.45, "#3b82f6");
+    fg.addColorStop(1, "#8b5cf6");
+    c.fillStyle = fg;
+    c.shadowColor = "rgba(99,102,241,0.85)";
+    c.shadowBlur = 18 * S;
+    c.fill();
+    c.shadowBlur = 0;
+
+    c.save();
+    morphPath(c, cx, cy, R * pulse, rot, wts);
+    c.clip();
+    var hl = c.createLinearGradient(cx, cy - R, cx, cy + R * 0.2);
+    hl.addColorStop(0, "rgba(255,255,255,0.55)");
+    hl.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = hl;
+    c.fillRect(cx - R, cy - R, R * 2, R * 2);
+    c.restore();
+
+    morphPath(c, cx, cy, R * pulse, rot, wts);
+    c.strokeStyle = "rgba(255,255,255,0.35)";
+    c.lineWidth = 1 * S;
+    c.stroke();
+
+    /* 图层 5：椭圆轨道粒子 + 拖尾 */
+    var orbR = R * 1.68, tilt = -0.42, flat = 0.42;
+    var PCOL = ["#22d3ee", "#a78bfa", "#f59e0b", "#38bdf8", "#c084fc"];
+    for(var s = 0; s < 5; s++){
+      var ph2 = s / 5;
+      for(var k = 5; k >= 0; k--){
+        var a = Math.PI * 2 * (p * (s % 2 ? -1 : 1) + ph2) - k * 0.055;
+        var ex = Math.cos(a) * orbR;
+        var ey = Math.sin(a) * orbR * flat;
+        var px = cx + ex * Math.cos(tilt) - ey * Math.sin(tilt);
+        var py = cy + ex * Math.sin(tilt) + ey * Math.cos(tilt);
+        var fade = 1 - k / 6;
+        c.globalAlpha = k === 0 ? 1 : 0.32 * fade;
+        c.fillStyle = k === 0 ? PCOL[s] : "#7dd3fc";
+        if(k === 0){ c.shadowColor = PCOL[s]; c.shadowBlur = 8 * S; }
+        c.beginPath();
+        c.arc(px, py, (k === 0 ? 2.3 : 1.4 * fade) * S, 0, Math.PI * 2);
+        c.fill();
+        c.shadowBlur = 0;
+      }
+    }
+    c.globalAlpha = 1;
+
+    /* 图层 6：时间轴进度条 */
+    var barX = bx + bw * 0.10, barW = bw * 0.80;
+    var barY = by + bh * 0.905, barH = 2.6 * S;
+    K.box(c, barX, barY, barW, barH, { bg: "rgba(255,255,255,0.10)", radius: barH / 2 });
+    var pg = c.createLinearGradient(barX, 0, barX + barW, 0);
+    pg.addColorStop(0, "#22d3ee");
+    pg.addColorStop(1, "#8b5cf6");
+    K.box(c, barX, barY, Math.max(barH, barW * p), barH, { bg: pg, radius: barH / 2 });
     c.beginPath();
-    c.arc(cx, cy, orbit, 0, Math.PI * 2);
-    c.strokeStyle = "#cfe1f7";
+    c.arc(barX + Math.max(barH, barW * p), barY + barH / 2, 2.4 * S, 0, Math.PI * 2);
+    c.fillStyle = "#e0f2fe";
+    c.shadowColor = "#22d3ee";
+    c.shadowBlur = 10 * S;
+    c.fill();
+    c.shadowBlur = 0;
+
+    /* 高光扫过 + 暗角 */
+    var sweep = (p * 2) % 1;
+    var sxg = bx - bw * 0.35 + sweep * bw * 1.7;
+    var sheen = c.createLinearGradient(sxg - bw * 0.12, by + bh, sxg + bw * 0.12, by);
+    sheen.addColorStop(0, "rgba(255,255,255,0)");
+    sheen.addColorStop(0.5, "rgba(255,255,255,0.075)");
+    sheen.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = sheen;
+    c.fillRect(bx, by, bw, bh);
+
+    var vg = c.createRadialGradient(cx, cy, Math.min(bw, bh) * 0.30, cx, cy, Math.max(bw, bh) * 0.72);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,0.38)");
+    c.fillStyle = vg;
+    c.fillRect(bx, by, bw, bh);
+
+    c.restore();
+
+    /* 卡片描边 */
+    K.roundRectPath(c, bx + 0.5, by + 0.5, bw - 1, bh - 1, 10 * S);
+    c.strokeStyle = "rgba(120,170,255,0.25)";
     c.lineWidth = 1;
     c.stroke();
-    c.restore();
 
-    var sx2 = cx + Math.cos(oa) * orbit;
-    var sy2 = cy + Math.sin(oa) * orbit;
-    c.beginPath();
-    c.arc(sx2, sy2, Math.max(2.4, 3.2 * state.zoom / 100), 0, Math.PI * 2);
-    c.fillStyle = K.theme.primary;
-    c.fill();
-
-    starPath(c, cx, cy, base * 0.34, base * 0.15, p * Math.PI * 4);
-    c.fillStyle = "#e6a23c";
-    c.fill();
-    c.lineWidth = 1.4;
-    c.strokeStyle = "#ffffff";
-    c.stroke();
-
-    /* 进度条 */
-    var px = bx + bw * 0.08, pw = bw * 0.84, py = by + bh - bh * 0.16;
-    K.box(c, px, py, pw, Math.max(5, 7 * state.zoom / 100), { bg: "#dfe7f2", radius: 4 });
-    if(p > 0.002) K.box(c, px, py, Math.max(6, pw * p), Math.max(5, 7 * state.zoom / 100), { bg: K.theme.primary, radius: 4 });
-    c.restore();
-
-    K.text(c, "矢量缩放 " + state.zoom + "% · 缓冲 " + bw + " × " + bh + " px · 放大不失真",
-      W / 2, 214, { size: 11, color: K.theme.textMuted, align: "center" });
-    var dur = (LOOP / state.speed / 1000).toFixed(2);
-    K.text(c, (state.playing ? "播放中" : "已暂停") + " · 速度 " + state.speed.toFixed(2) + "× · " + dur + " s / 轮",
-      W / 2, 227, { size: 11, color: K.theme.textFaint, align: "center" });
+    K.text(c, "矢量缩放 " + state.zoom + "% · 缓冲 " + bw + " × " + bh + " px · 路径按新尺寸重绘",
+      W / 2, 207, { size: 10.5, color: K.theme.textMuted, align: "center" });
+    K.text(c, (state.playing ? "播放中" : "已暂停") + " · 形状变形 · 修剪路径 · 粒子拖尾 · 高光扫过",
+      W / 2, 220.5, { size: 10, color: K.theme.textFaint, align: "center" });
   }
 
   /* ---------- 主循环 ---------- */
@@ -371,43 +546,6 @@
 
   renderCode();
   syncPlayBtn();
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js lottie.alt：UIImageAnimator 播放位图序列
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_lottie，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：UIImageAnimator 播放预渲染的位图序列；无 JSON 解析、无矢量 */"));
-  L.push("");
-  L.push(cm("/* 1. 先在 PC 端把 Lottie 导出成帧图片（如 frame_000.png ~ frame_059.png） */"));
-  L.push("UIImageAnimator * anim = " + fn("new") + " UIImageAnimator();");
-  L.push("anim-&gt;" + fn("SetPosition") + "(" + num(100) + ", " + num(60) + ");");
-  L.push("anim-&gt;" + fn("SetSize") + "(" + num(160) + ", " + num(90) + ");");
-  L.push("");
-  L.push(cm("/* 2. 逐帧挂位图源（每帧一张图，内存占用 = 帧数 × 像素量） */"));
-  L.push("for (int i = " + num(0) + "; i &lt; FRAME_NUM; i++) {");
-  L.push("    anim-&gt;" + fn("AddImage") + "(frameImages[i]);");
-  L.push("}");
-  L.push("anim-&gt;" + fn("SetTimePerFrame") + "(" + num(33) + ");   " + cm("/* ≈30fps */"));
-  L.push("anim-&gt;" + fn("SetAnimatorLoop") + "(true);");
-  L.push("");
-  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(anim);");
-  L.push("anim-&gt;" + fn("Start") + "();");
-  L.push("");
-  L.push(cm("/* 局限：位图放大会失真（矢量无损缩放不存在）；"));
-  L.push("   路径 / 蒙版 / 表达式等 Lottie 特性全部丢失，只能整段换帧序列 */");
-  document.getElementById("ucode").innerHTML = L.join("\n");
 })();
 </script>
 

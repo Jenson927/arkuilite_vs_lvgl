@@ -430,55 +430,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js dropdown.alt：UIButton + UIList 手动拼装
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_dropdown，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：UIButton 负责展开，UIList 放根节点，选中后回填文字 */"));
-  L.push("");
-  L.push("static const char * OPTIONS[] = { \"北京\", \"上海\", \"广州\", \"深圳\", \"杭州\", \"成都\" };");
-  L.push("");
-  L.push(cm("/* 1. 触发按钮：显示当前选中项 */"));
-  L.push("UIButton * trigger = " + fn("new") + " UIButton();");
-  L.push("trigger-&gt;" + fn("SetPosition") + "(" + num(78) + ", " + num(98) + ");");
-  L.push("trigger-&gt;" + fn("SetWidth") + "(" + num(204) + ");");
-  L.push("trigger-&gt;" + fn("SetHeight") + "(" + num(44) + ");");
-  L.push("UILabel * triggerText = " + fn("new") + " UILabel();");
-  L.push("triggerText-&gt;" + fn("SetText") + "(\"北京\");");
-  L.push("trigger-&gt;" + fn("Add") + "(triggerText);");
-  L.push("");
-  L.push(cm("/* 2. 选项列表：Adapter 返回每行 UILabel，挂到根视图（初始隐藏） */"));
-  L.push("UIList * list = " + fn("new") + " UIList();");
-  L.push("list-&gt;" + fn("SetPosition") + "(" + num(78) + ", " + num(146) + ");");
-  L.push("list-&gt;" + fn("SetWidth") + "(" + num(204) + ");");
-  L.push("list-&gt;" + fn("SetHeight") + "(" + num(168) + ");");
-  L.push("list-&gt;" + fn("SetAdapter") + "(" + num("&optionsAdapter") + ");");
-  L.push("list-&gt;" + fn("SetVisible") + "(false);   " + cm("/* 点击 trigger 时 SetVisible(true) 展开 */"));
-  L.push("");
-  L.push(cm("/* 3. 选中回调：回填按钮文字并收起（全部自己维护） */"));
-  L.push("trigger-&gt;" + fn("SetOnClickListener") + "(" + num("&toggleListener") + ");");
-  L.push("list-&gt;" + fn("SetItemClickListener") + "(" + num("&selectListener") + ");");
-  L.push("");
-  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(trigger);");
-  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(list);");
-  L.push("");
-  L.push(cm("/* selectListener::OnClick 内："));
-  L.push("   triggerText-&gt;SetText(OPTIONS[index]);");
-  L.push("   list-&gt;SetVisible(false);   // 手动收起，无内置展开动画与键盘导航 */");
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>

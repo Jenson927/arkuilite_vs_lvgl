@@ -539,48 +539,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：ArkUI lite 替代思路静态示例代码（UIViewGroup 自绘标题栏窗口）
-   ===================================================================== */
-(function(){
-  "use strict";
-  var L = [];
-  L.push('<span class="cm">/* ArkUI lite 没有 lv_win：标题栏、窗口按钮、拖拽与层级都要自绘。</span>');
-  L.push('<span class="cm">   UIViewGroup 只能当容器；下面自拼一个"窗口"。 */</span>');
-  L.push('');
-  L.push('UIViewGroup * <span class="fn">CreateWindow</span>(UIViewGroup * root, int16_t w, int16_t h)');
-  L.push('{');
-  L.push('    UIViewGroup * win = new UIViewGroup();');
-  L.push('    win-&gt;<span class="fn">SetPosition</span>((SCREEN_W - w) / <span class="num">2</span>, (SCREEN_H - h) / <span class="num">2</span>, w, h);');
-  L.push('    win-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_COLOR, <span class="num">0xffffff</span>);');
-  L.push('');
-  L.push('    <span class="cm">// 标题栏：一条 UIView + 标题 UILabel</span>');
-  L.push('    UIView * titleBar = new UIView();');
-  L.push('    titleBar-&gt;<span class="fn">SetPosition</span>(<span class="num">0</span>, <span class="num">0</span>, w, <span class="num">34</span>);');
-  L.push('    titleBar-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_COLOR, <span class="num">0xf2f5f9</span>);');
-  L.push('    UILabel * title = new UILabel();');
-  L.push('    title-&gt;<span class="fn">SetText</span>(<span class="str">"系统设置"</span>);');
-  L.push('    title-&gt;<span class="fn">SetPosition</span>(<span class="num">13</span>, <span class="num">8</span>, w - <span class="num">100</span>, <span class="num">18</span>);');
-  L.push('    titleBar-&gt;<span class="fn">Add</span>(title);');
-  L.push('    win-&gt;<span class="fn">Add</span>(titleBar);');
-  L.push('');
-  L.push('    <span class="cm">// 窗口按钮：UILabelButton 手工摆放，点击回调自己实现关闭/最小化</span>');
-  L.push('    UILabelButton * btnClose = new UILabelButton();');
-  L.push('    btnClose-&gt;<span class="fn">SetPosition</span>(w - <span class="num">30</span>, <span class="num">7</span>, <span class="num">22</span>, <span class="num">20</span>);');
-  L.push('    btnClose-&gt;<span class="fn">SetText</span>(<span class="str">"×"</span>);');
-  L.push('    btnClose-&gt;<span class="fn">SetOnClickListener</span>(&amp;closeListener);');
-  L.push('    win-&gt;<span class="fn">Add</span>(btnClose);');
-  L.push('');
-  L.push('    <span class="cm">// 内容区 + 拖拽：无窗口层级概念，拖动需在 titleBar 的</span>');
-  L.push('    <span class="cm">// OnPressMove 里重算 SetPosition，且要自己管理遮罩/置顶</span>');
-  L.push('    root-&gt;<span class="fn">Add</span>(win);');
-  L.push('    return win;');
-  L.push('}');
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>

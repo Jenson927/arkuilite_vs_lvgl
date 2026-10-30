@@ -87,26 +87,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UIImageView 支持多种缩放模式，并自带模糊 / 边缘平滑；但没有旋转、缩放变换与九宫格拉伸。</p>
+      <p class="stage-tip">支持 6 种 resizeMode（默认 NONE）与模糊 / 边缘平滑；旋转缩放走 UIView::Rotate / Scale，九宫格拉伸没有；GIF 需开 ENABLE_GIF。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>缩放模式 resize_mode<span class="api">SetResizeMode(ImageResizeMode)：STRETCH 拉伸 / CONTAIN 完整显示 / COVER 裁剪填充</span></label>
-            <div class="seg" id="umode">
-              <button type="button" data-v="stretch" class="active">STRETCH</button>
-              <button type="button" data-v="contain">CONTAIN</button>
-              <button type="button" data-v="cover">COVER</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_image_view.cpp</code> / <code>ui_image_view.h</code> ——
-          <code>SetSrc</code> 资源路径或 ImageInfo、<code>SetResizeMode</code> 缩放模式、
-          <code>SetBlurLevel</code> 模糊、<code>SetEdgeSmoothRadius</code> 边缘平滑；
-          旋转 / 缩放变换与九宫格拉伸在 UI_Lite 中没有对应接口（见右上角红色标注）。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -574,52 +565,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIImageView 操作绑定 + 实时生成代码
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-
-  var u = { mode: "stretch" };
-  var MODE = { stretch: "IMAGE_RESIZE_STRETCH", contain: "IMAGE_RESIZE_CONTAIN", cover: "IMAGE_RESIZE_COVER" };
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_image_view.h） */</span>');
-    L.push('UIImageView * img = <span class="fn">new</span> UIImageView();');
-    L.push('img-&gt;<span class="fn">SetPosition</span>(<span class="num">90</span>, <span class="num">30</span>);');
-    L.push('img-&gt;<span class="fn">SetWidth</span>(<span class="num">180</span>);');
-    L.push('img-&gt;<span class="fn">SetHeight</span>(<span class="num">110</span>);');
-    L.push('img-&gt;<span class="fn">SetSrc</span>("images/landscape.png");');
-    L.push('img-&gt;<span class="fn">SetResizeMode</span>(' + MODE[u.mode] + ');');
-    L.push('img-&gt;<span class="fn">SetBlurLevel</span>(UIImageBlurLevel::BLUR_LEVEL0);');
-    L.push('<span class="cm">// 无旋转/缩放变换与九宫格接口，需自绘或裁图</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  function init(){
-    var api = (window.LV2 && window.LV2.api) || {};
-    if(api.setMode) api.setMode(u.mode);
-    $("umode").addEventListener("click", function(e){
-      var btn = e.target.closest ? e.target.closest("button") : null;
-      if(!btn || btn.parentNode !== this) return;
-      u.mode = btn.getAttribute("data-v");
-      var btns = this.getElementsByTagName("button");
-      for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
-      if(api.setMode) api.setMode(u.mode);
-      renderCode();
-    });
-    renderCode();
-  }
-
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
 })();
 </script>
 

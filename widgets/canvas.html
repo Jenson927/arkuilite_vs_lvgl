@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Canvas：lv_canvas vs UICanvas</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（280×180 像素缓冲自由绘制 + 第二图层混合叠加），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b>
-      源码 <code>ui_canvas.cpp</code> 有限图元行为渲染的 UICanvas。左右各自独立操作，页面最下方为差异对照。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>（280×180 像素缓冲自由绘制 + 第二图层混合叠加），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码 <code>ui_canvas.cpp</code> 图元（线 / 贝塞尔 / 矩形 / 圆 / 扇 / 弧 / 路径 / 描边文字）渲染的 <b>UICanvas</b>。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -29,7 +28,7 @@
         <div class="stage-canvas-box"><canvas id="view"></canvas></div>
         <div class="lv-gaps" id="lgaps"></div>
       </div>
-      <p class="stage-tip">在白色画布内按住拖动即可绘制；开启第二图层后预置图形画入独立缓冲并半透明叠加，混合模式可切换，贝塞尔曲线为实时叠加路径。</p>
+      <p class="stage-tip">在白色画布内按住拖动即可绘制；开启第二图层后预置图形画入独立缓冲并半透明叠加，混合模式可切换，贝塞尔曲线为实时叠加路径；右下角圆角矩形为 LVGL 独有的渐变填充（bg_grad），可切线性 / 径向。</p>
 
       <section class="panel">
         <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
@@ -54,6 +53,23 @@
           <div class="field wide">
             <label>图层叠加（ArkUI lite 无此能力）<span class="api">lv_canvas_init_layer / lv_canvas_finish_layer：独立绘制层合成到画布</span></label>
             <div class="check"><input type="checkbox" id="layer2"><span>启用第二图层（独立缓冲 · 半透明叠加 · 预置图形画入该层）</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>渐变填充（ArkUI lite 无此能力）<span class="api">bg_color + bg_grad_color + bg_grad_dir（LV_GRAD_DIR_VER / LV_GRAD_DIR_RADIAL）</span></label>
+            <div class="seg" id="grad">
+              <button type="button" data-v="none">关闭</button>
+              <button type="button" data-v="linear" class="active">线性</button>
+              <button type="button" data-v="radial">径向</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>渐变起始色<span class="api">lv_obj_set_style_bg_color()</span></label>
+            <input type="color" id="grad1" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>渐变终点色<span class="api">lv_obj_set_style_bg_grad_color()</span></label>
+            <input type="color" id="grad2" value="#9b6bff">
           </div>
 
           <div class="field">
@@ -92,34 +108,24 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UICanvas</code>
-        <span class="cmp-tag ui">有限图元 · 无图层</span>
+        <span class="cmp-tag ui">图元齐全 · 无图层/裁剪栈</span>
       </div>
 
       <div class="stage stage--ui">
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UICanvas 只能画直线、圆弧、矩形等有限图元；选择图元后右下方实时代码随之更新。</p>
+      <p class="stage-tip">UICanvas 图元齐全（线 / 贝塞尔 / 矩形 / 圆 / 扇 / 弧 / 图片 / 路径 / 描边文字）；没有图层、混合模式与裁剪栈，贝塞尔线宽上限 3。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>绘制图元 primitive<span class="api">SetDrawLinePath / SetArcParamInfo / SetDrawRect：仅这三类基础图元</span></label>
-            <div class="seg" id="udraw">
-              <button type="button" data-v="all" class="active">全部</button>
-              <button type="button" data-v="line">直线</button>
-              <button type="button" data-v="arc">圆弧</button>
-              <button type="button" data-v="rect">矩形</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>frameworks/components/ui_canvas.cpp</code> ——
-          <code>SetStartPosition</code> + <code>SetDrawLinePath</code> 画线段，
-          <code>SetArcParamInfo</code> 画圆弧，<code>SetDrawRect</code> 画矩形；
-          没有图层 / 混合模式 / 贝塞尔路径 / 自由绘制，复杂图形要在 <code>UIView::OnDraw</code> 里用底层绘制接口自绘。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -164,7 +170,10 @@
     width: 3,
     layer2: false,          /* 第二图层 */
     blend: "source-over",   /* source-over | multiply | screen */
-    bezier: true            /* 贝塞尔叠加路径 */
+    bezier: true,           /* 贝塞尔叠加路径 */
+    grad: "linear",         /* none | linear | radial（LVGL 独有：bg_grad） */
+    grad1: "#2b7de9",
+    grad2: "#9b6bff"
   };
 
   var canvas = document.getElementById("view");
@@ -270,6 +279,29 @@
     c.restore();
   }
 
+  /* LVGL 独有：bg_grad 渐变填充（ArkUI lite UICanvas 没有渐变 / 裁剪栈） */
+  var GRAD_RECT = { x: 198, y: 106, w: 66, h: 62, r: 10 };
+  function drawGradRect(c){
+    var g = GRAD_RECT, fill;
+    c.save();
+    c.translate(BX, BY);
+    if(state.grad === "radial"){
+      fill = c.createRadialGradient(g.x + g.w / 2, g.y + g.h / 2, 3,
+                                    g.x + g.w / 2, g.y + g.h / 2, Math.max(g.w, g.h) / 2);
+    }else{
+      fill = c.createLinearGradient(0, g.y, 0, g.y + g.h);
+    }
+    fill.addColorStop(0, state.grad1);
+    fill.addColorStop(1, state.grad2);
+    c.fillStyle = fill;
+    roundRectPath(c, g.x, g.y, g.w, g.h, g.r);
+    c.fill();
+    c.strokeStyle = "rgba(28,33,40,0.12)";
+    c.lineWidth = 1;
+    c.stroke();
+    c.restore();
+  }
+
   function drawScene(c){
     c.clearRect(0, 0, W, H);
 
@@ -299,6 +331,9 @@
     c.strokeRect(BX + 0.5, BY + 0.5, CW - 1, CH - 1);
 
     if(state.bezier) drawBezier(c);
+
+    /* LVGL 独有：渐变填充（画在最上层，避免贝塞尔控制手柄穿过） */
+    if(state.grad !== "none") drawGradRect(c);
 
     var info = "280×180 · LV_COLOR_FORMAT_ARGB8888";
     if(state.layer2) info += " · layer2:" + state.blend;
@@ -493,6 +528,20 @@
       L.push('<span class="cm">/* 在 layer2 上绘制图形（lv_draw_rect / lv_draw_line …），再合成 */</span>');
       L.push('<span class="fn">lv_canvas_finish_layer</span>(canvas, &amp;layer2);');
     }
+    if(state.grad !== "none"){
+      var g = GRAD_RECT;
+      L.push('');
+      L.push('<span class="cm">/* 渐变填充：LVGL 独有（ArkUI lite UICanvas 无渐变 / 裁剪栈）。lv_canvas 没有渐变图元，用 bg_grad 样式填充 */</span>');
+      L.push('lv_obj_t * grad = <span class="fn">lv_obj_create</span>(canvas);   <span class="cm">/* 作为画布子对象叠在像素缓冲之上 */</span>');
+      L.push('<span class="fn">lv_obj_remove_style_all</span>(grad);');
+      L.push('<span class="fn">lv_obj_set_pos</span>(grad, <span class="num">' + g.x + '</span>, <span class="num">' + g.y + '</span>);');
+      L.push('<span class="fn">lv_obj_set_size</span>(grad, <span class="num">' + g.w + '</span>, <span class="num">' + g.h + '</span>);');
+      L.push('<span class="fn">lv_obj_set_style_radius</span>(grad, <span class="num">' + g.r + '</span>, LV_PART_MAIN);');
+      L.push('<span class="fn">lv_obj_set_style_bg_opa</span>(grad, LV_OPA_COVER, LV_PART_MAIN);');
+      L.push('<span class="fn">lv_obj_set_style_bg_color</span>(grad, <span class="fn">lv_color_hex</span>(<span class="num">' + hexCode(state.grad1) + '</span>), LV_PART_MAIN);');
+      L.push('<span class="fn">lv_obj_set_style_bg_grad_color</span>(grad, <span class="fn">lv_color_hex</span>(<span class="num">' + hexCode(state.grad2) + '</span>), LV_PART_MAIN);');
+      L.push('<span class="fn">lv_obj_set_style_bg_grad_dir</span>(grad, <span class="num">' + (state.grad === "radial" ? "LV_GRAD_DIR_RADIAL" : "LV_GRAD_DIR_VER") + '</span>, LV_PART_MAIN);');
+    }
     document.getElementById("code").innerHTML = L.join("\n");
   }
 
@@ -518,6 +567,16 @@
 
   bindSeg("tool", function(v){ state.eraser = v === "eraser"; });
   bindSeg("blend", function(v){ state.blend = v; });
+  bindSeg("grad", function(v){ state.grad = v; });
+
+  document.getElementById("grad1").addEventListener("input", function(e){
+    state.grad1 = e.target.value;
+    renderCode();
+  });
+  document.getElementById("grad2").addEventListener("input", function(e){
+    state.grad2 = e.target.value;
+    renderCode();
+  });
 
   document.getElementById("color").addEventListener("input", function(e){
     state.color = e.target.value;
@@ -571,59 +630,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UICanvas 操作绑定 + 实时代码
-   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.canvas）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  var u = { which: "all" };
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return window.LV2 && window.LV2.api; }
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 frameworks/components/ui_canvas.cpp） */</span>');
-    L.push('UICanvas * canvas = <span class="fn">new</span> UICanvas();');
-    L.push('canvas-&gt;<span class="fn">SetPosition</span>(<span class="num">60</span>, <span class="num">40</span>, <span class="num">190</span>, <span class="num">120</span>);');
-    if(u.which === "all" || u.which === "line"){
-      L.push('<span class="cm">/* 直线 */</span>');
-      L.push('canvas-&gt;<span class="fn">SetStartPosition</span>({<span class="num">16</span>, <span class="num">92</span>});');
-      L.push('canvas-&gt;<span class="fn">SetDrawLinePath</span>({<span class="num">150</span>, <span class="num">26</span>});');
-    }
-    if(u.which === "all" || u.which === "arc"){
-      L.push('<span class="cm">/* 圆弧：圆心 / 半径 / 起始角 / 终止角 */</span>');
-      L.push('canvas-&gt;<span class="fn">SetArcParamInfo</span>({<span class="num">150</span>, <span class="num">84</span>}, <span class="num">20</span>, <span class="num">180</span>, <span class="num">288</span>);');
-    }
-    if(u.which === "all" || u.which === "rect"){
-      L.push('<span class="cm">/* 矩形 */</span>');
-      L.push('canvas-&gt;<span class="fn">SetDrawRect</span>(<span class="num">24</span>, <span class="num">20</span>, <span class="num">34</span>, <span class="num">24</span>);');
-    }
-    L.push('canvas-&gt;<span class="fn">Invalidate</span>();');
-    L.push('<span class="cm">/* 无图层 / 混合模式；无贝塞尔 / 自由绘制；无图像变换 */</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("udraw").addEventListener("click", function(e){
-    var btn = e.target.closest ? e.target.closest("button") : null;
-    if(!btn || btn.parentNode !== this) return;
-    u.which = btn.getAttribute("data-v");
-    var btns = this.getElementsByTagName("button");
-    for(var i = 0; i < btns.length; i++){
-      btns[i].className = btns[i] === btn ? "active" : "";
-    }
-    var a = api();
-    if(a && a.draw) a.draw(u.which);
-    renderCode();
-  });
-
-  renderCode();
 })();
 </script>
 

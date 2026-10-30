@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Switch：lv_switch vs UIToggleButton</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>，轨道与滑块分离设样式；右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
-      <code>ui_toggle_button.cpp</code>「两张整图切换」方式渲染的 UIToggleButton。左右各自独立操作，页面最下方为差异对照。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>，轨道与滑块分离设样式；右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码 <code>ui_toggle_button.cpp</code> 矢量自绘（32×23、圆角 11、滑块半径 9）渲染的 <b>UIToggleButton</b>。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -94,32 +93,24 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIToggleButton</code>
-        <span class="cmp-tag ui">两张整图切换 · 仅两态</span>
+        <span class="cmp-tag ui">矢量自绘 · 32×23 固定几何</span>
       </div>
 
       <div class="stage stage--ui">
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">点击画布上的开关切换；SetState(true/false) 两态整图切换，轨道色 / 滑块色无法分离设置。</p>
+      <p class="stage-tip">纯矢量自绘：32×23 圆角轨道（圆角 11）+ 白色圆滑块（半径 9）；选中色 #1f71ff，未选中白色 α97，切换动画 150ms。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>状态 state<span class="api">UIToggleButton::SetState(bool)：仅开 / 关两态，无按下 / 禁用叠加</span></label>
-            <div class="seg" id="umode">
-              <button type="button" data-v="off">关</button>
-              <button type="button" data-v="on" class="active">开</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_toggle_button.cpp</code> / <code>ui_abstract_button.cpp</code> ——
-          开 / 关为两张整图 <code>SetImages()</code> 切换，内置切换动画；
-          主题默认开态 <code>#007dff</code>、关态 <code>#cfd6df</code>、滑块白色（<code>style.cpp</code>）；
-          无轨道 / 滑块分离样式与自定义过渡曲线。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -519,46 +510,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIToggleButton 操作绑定 + 实时生成等价 C++ 代码
-   演示组件由 cmp2.js 自动挂进 #udemo（LV2.api.set）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return (window.LV2 && window.LV2.api) || {}; }
-
-  var u = { on: true };
-
-  function renderUCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_toggle_button.h） */</span>');
-    L.push('UIToggleButton * toggle = <span class="fn">new</span> UIToggleButton();');
-    L.push('toggle-&gt;<span class="fn">SetState</span>(' + (u.on ? "true" : "false") + ');');
-    L.push('<span class="cm">/* 开 / 关为两张整图，无法分离轨道与滑块样式 */</span>');
-    L.push('toggle-&gt;<span class="fn">SetImages</span>(&amp;imgOff, &amp;imgOn);');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("umode").addEventListener("click", function(e){
-    var btn = e.target.closest ? e.target.closest("button") : null;
-    if(!btn || btn.parentNode !== this) return;
-    u.on = btn.getAttribute("data-v") === "on";
-    var btns = this.getElementsByTagName("button");
-    for(var i = 0; i < btns.length; i++){
-      btns[i].className = btns[i] === btn ? "active" : "";
-    }
-    var a = api();
-    if(a.set) a.set(u.on);
-    renderUCode();
-  });
-
-  renderUCode();
 })();
 </script>
 

@@ -599,50 +599,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：ArkUI lite 替代组合静态示例代码（UISwipeView + UIToggleButton）
-   ===================================================================== */
-(function(){
-  "use strict";
-  var L = [];
-  L.push('<span class="cm">/* ArkUI lite 没有 lv_tabview：标签栏与内容联动必须自己写。</span>');
-  L.push('<span class="cm">   最接近的组合：UISwipeView（翻页容器）+ 一排 UIToggleButton（标签栏） */</span>');
-  L.push('');
-  L.push('<span class="cm">// 1. 标签栏：UIToggleButton 无互斥分组，需手动保证单选</span>');
-  L.push('static UIToggleButton * tabs[<span class="num">3</span>];');
-  L.push('static UISwipeView * swipe;');
-  L.push('');
-  L.push('void <span class="fn">CreateTabView</span>(UIViewGroup * root, int16_t w, int16_t h)');
-  L.push('{');
-  L.push('    const char * names[<span class="num">3</span>] = { "首页", "设置", "消息" };');
-  L.push('    for (int i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) {');
-  L.push('        tabs[i] = new UIToggleButton();');
-  L.push('        tabs[i]-&gt;<span class="fn">SetPosition</span>(w / <span class="num">3</span> * i, <span class="num">0</span>, w / <span class="num">3</span>, <span class="num">40</span>);');
-  L.push('        UILabel * label = new UILabel();   <span class="cm">// 按钮不画文字</span>');
-  L.push('        label-&gt;<span class="fn">SetText</span>(names[i]);');
-  L.push('        tabs[i]-&gt;<span class="fn">Add</span>(label);');
-  L.push('        tabs[i]-&gt;<span class="fn">SetState</span>(i == <span class="num">0</span>);');
-  L.push('        root-&gt;<span class="fn">Add</span>(tabs[i]);');
-  L.push('    }');
-  L.push('');
-  L.push('    <span class="cm">// 2. 内容区：UISwipeView 只能沿单轴整页滑动</span>');
-  L.push('    swipe = new UISwipeView();');
-  L.push('    swipe-&gt;<span class="fn">SetPosition</span>(<span class="num">0</span>, <span class="num">40</span>, w, h - <span class="num">40</span>);');
-  L.push('    swipe-&gt;<span class="fn">SetSwipeDirection</span>(DIR_LEFT_TO_RIGHT);');
-  L.push('    for (int i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) {');
-  L.push('        UIView * page = new UIView();  <span class="cm">/* 填充页面内容 */</span>');
-  L.push('        swipe-&gt;<span class="fn">Add</span>(page);');
-  L.push('    }');
-  L.push('    root-&gt;<span class="fn">Add</span>(swipe);');
-  L.push('');
-  L.push('    <span class="cm">// 3. 联动需自写：点击标签 → 手动滚动 swipe 到对应页；</span>');
-  L.push('    <span class="cm">//    滑动翻页 → 遍历 tabs[] 回填 SetState()，且无"标签栏滚动"</span>');
-  L.push('}');
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>

@@ -97,6 +97,39 @@
 <script>
 lvRenderGallery();
 
+/* 记住浏览位置：从组件页返回首页时恢复到离开时的滚动位置 */
+(function () {
+  var KEY = "lv-vs-ui:index-scroll";
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+  var saved = 0;
+  try { saved = Number(sessionStorage.getItem(KEY) || 0) || 0; } catch (e) { saved = 0; }
+
+  function restore() {
+    if (saved > 0) window.scrollTo(0, saved);
+  }
+  /* 画廊同步渲染，DOM 高度已确定；load 时再补一次，防止字体/图片撑高后位置偏掉 */
+  restore();
+  requestAnimationFrame(restore);
+  window.addEventListener("load", restore);
+
+  function save() {
+    try { sessionStorage.setItem(KEY, String(window.scrollY || window.pageYOffset || 0)); } catch (e) {}
+  }
+
+  var timer = 0;
+  window.addEventListener("scroll", function () {
+    if (timer) return;
+    timer = setTimeout(function () { timer = 0; save(); }, 120);
+  }, { passive: true });
+
+  /* 点卡片进子页前立刻记一次，避免节流未落盘 */
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest("a.lv-card-item") : null;
+    if (a) save();
+  }, true);
+})();
+
 (function () {
   var DATA = window.LV_COMPARE_DATA || {};
   var cards = document.querySelectorAll("#gallery .lv-card-item");

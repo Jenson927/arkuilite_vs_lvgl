@@ -577,40 +577,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：ArkUI lite 替代思路静态示例代码（UIButton 自绘软键盘）
-   ===================================================================== */
-(function(){
-  "use strict";
-  var L = [];
-  L.push('<span class="cm">/* ArkUI lite 没有 lv_keyboard：按键布局、长按连发、与输入框联动</span>');
-  L.push('<span class="cm">   都要自己用 UIButton 逐个实现。 */</span>');
-  L.push('');
-  L.push('static UIButton * keys[<span class="num">4</span>][<span class="num">10</span>];');
-  L.push('static UILabel  * editBox;   <span class="cm">// 联动目标：自绘输入框（UIEditText 亦可）</span>');
-  L.push('static char      text[<span class="num">64</span>] = {<span class="num">0</span>};');
-  L.push('');
-  L.push('<span class="cm">// 按键点击回调：手动维护字符映射与模式切换</span>');
-  L.push('bool <span class="fn">OnKeyPress</span>(UIView * view, const ClickEvent &amp; event)');
-  L.push('{');
-  L.push('    KeyParam * kp = reinterpret_cast&lt;KeyParam *&gt;(view-&gt;<span class="fn">GetViewId</span>());');
-  L.push('    if (kp-&gt;ch) {');
-  L.push('        size_t len = strlen(text);');
-  L.push('        if (len &lt; <span class="num">63</span>) { text[len] = kp-&gt;ch; text[len + <span class="num">1</span>] = <span class="num">0</span>; }');
-  L.push('    } else if (kp-&gt;isBackspace &amp;&amp; text[<span class="num">0</span>]) {');
-  L.push('        text[strlen(text) - <span class="num">1</span>] = <span class="num">0</span>;');
-  L.push('    }');
-  L.push('    editBox-&gt;<span class="fn">SetText</span>(text);   <span class="cm">// 联动要自己写</span>');
-  L.push('    return true;');
-  L.push('}');
-  L.push('');
-  L.push('<span class="cm">// 布局切换：4 套映射表各建一组按钮，切换时 Remove 重建；</span>');
-  L.push('<span class="cm">// 长按连发要用 Animator 或定时器模拟，UI_Lite 无按键重复事件。</span>');
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>

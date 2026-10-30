@@ -557,52 +557,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js menu.alt：UIButton + UIList + 自建弹层容器
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_menu，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：UIList 做侧栏，UIViewGroup 做内容区，子菜单层级与对齐翻转全部自实现 */"));
-  L.push("");
-  L.push(cm("/* 1. 侧栏：UIList + Adapter（首页 / 设置 / 关于） */"));
-  L.push("UIList * sidebar = " + fn("new") + " UIList();");
-  L.push("sidebar-&gt;" + fn("SetPosition") + "(" + num(0) + ", " + num(0) + ");");
-  L.push("sidebar-&gt;" + fn("SetSize") + "(" + num(110) + ", " + num(240) + ");");
-  L.push("sidebar-&gt;" + fn("SetAdapter") + "(" + num("&sidebarAdapter") + ");");
-  L.push("");
-  L.push(cm("/* 2. 内容区：每个页面一个 UIViewGroup，自己维护页面栈与回退 */"));
-  L.push("UIViewGroup * homePage = " + fn("new") + " UIViewGroup();");
-  L.push("UIViewGroup * settingsPage = " + fn("new") + " UIViewGroup();");
-  L.push("homePage-&gt;" + fn("SetPosition") + "(" + num(111) + ", " + num(0) + ");");
-  L.push("homePage-&gt;" + fn("SetSize") + "(" + num(249) + ", " + num(240) + ");");
-  L.push("");
-  L.push(cm("/* 3. 条目：UIButton 点击时切换页面（等价 lv_menu_set_load_page_event） */"));
-  L.push("UIButton * item = " + fn("new") + " UIButton();");
-  L.push("item-&gt;" + fn("SetOnClickListener") + "(" + num("&navListener") + ");");
-  L.push(cm("/* navListener::OnClick 内："));
-  L.push("   currentPage-&gt;SetVisible(false);");
-  L.push("   nextPage-&gt;SetVisible(true);");
-  L.push("   pageStack.Push(nextPage);   // 自己实现回退栈 */");
-  L.push("");
-  L.push(cm("/* 4. 子菜单浮层：自建弹层容器，按剩余空间手动计算向上/向下翻转 */"));
-  L.push("UIViewGroup * submenuPopup = " + fn("new") + " UIViewGroup();");
-  L.push("submenuPopup-&gt;" + fn("SetPosition") + "(popupX, " + fn("calcFlippedY") + "(anchorY, popupH));");
-  L.push("submenuPopup-&gt;" + fn("SetVisible") + "(true);");
-  L.push("");
-  L.push(cm("/* 注意：无键盘/编码器导航，无内置弹出层与页面管理，全部要自己写 */"));
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>

@@ -85,25 +85,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">点击画布上的勾选框可切换；只有 SELECTED / UNSELECTED 两态，没有半选，也没有禁用叠加。</p>
+      <p class="stage-tip">点击画布上的勾选框可切换；默认绘制内置矢量勾选框，只有 SELECTED / UNSELECTED 两态，无半选与禁用叠加。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>状态 state<span class="api">UICheckBox::SetState(bool)：仅 SELECTED / UNSELECTED，无半选与禁用叠加</span></label>
-            <div class="seg" id="umode">
-              <button type="button" data-v="off">未选中</button>
-              <button type="button" data-v="on" class="active">选中</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_check_box.cpp</code> / <code>ui_abstract_button.cpp</code> ——
-          两态 <code>SELECTED / UNSELECTED</code>，内置切换动画（DEFAULT_ANIMATION_TIME）；
-          选中色 <code>SetSelectedStateColor()</code>（主题默认 <code>#007dff</code>）；
-          文字需另挂 <code>UILabel</code>，无半选状态。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -507,49 +499,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UICheckBox 操作绑定 + 实时生成等价 C++ 代码
-   演示组件由 cmp2.js 自动挂进 #udemo（LV2.api.set）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return (window.LV2 && window.LV2.api) || {}; }
-
-  var u = { on: true };
-
-  function renderUCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_check_box.h） */</span>');
-    L.push('UICheckBox * checkBox = <span class="fn">new</span> UICheckBox();');
-    L.push('checkBox-&gt;<span class="fn">SetState</span>(' + (u.on ? "true" : "false") + ');  <span class="cm">// SELECTED / UNSELECTED</span>');
-    L.push('checkBox-&gt;<span class="fn">SetSelectedStateColor</span>(Color::<span class="fn">GetColorFromRGB</span>(0x00, 0x7d, 0xff).full);');
-    L.push('<span class="cm">/* 文字需另挂 UILabel：UICheckBox 本体无内置文字 */</span>');
-    L.push('UILabel * label = <span class="fn">new</span> UILabel();');
-    L.push('label-&gt;<span class="fn">SetText</span>("Check");');
-    L.push('checkBox-&gt;<span class="fn">Add</span>(label);');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("umode").addEventListener("click", function(e){
-    var btn = e.target.closest ? e.target.closest("button") : null;
-    if(!btn || btn.parentNode !== this) return;
-    u.on = btn.getAttribute("data-v") === "on";
-    var btns = this.getElementsByTagName("button");
-    for(var i = 0; i < btns.length; i++){
-      btns[i].className = btns[i] === btn ? "active" : "";
-    }
-    var a = api();
-    if(a.set) a.set(u.on);
-    renderUCode();
-  });
-
-  renderUCode();
 })();
 </script>
 

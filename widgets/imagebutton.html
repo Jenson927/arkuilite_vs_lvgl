@@ -13,7 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>ImageButton：lv_imagebutton vs UIButton + SetImageSrc</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>（四态图源：默认 / 按下 / 禁用 / 勾选 全部可配），右列为按
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（六态图源：默认 / 按下 / 勾选 / 勾选+按下 / 禁用 / 勾选+禁用 全部可配），右列为按
       <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码渲染的 UIButton + SetImageSrc（仅默认 / 按下两态图）。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
@@ -22,25 +22,27 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_imagebutton</code>
-        <span class="cmp-tag lv">四态图源 · 可勾选</span>
+        <span class="cmp-tag lv">六态图源 · 可勾选</span>
       </div>
 
       <div class="stage stage--lv">
         <div class="stage-canvas-box"><canvas id="view"></canvas></div>
         <div class="lv-gaps" id="lgaps"></div>
       </div>
-      <p class="stage-tip">按住画布按钮显示 pressed；松开后若可勾选则在 released / checked 间切换；禁用时完全不响应。</p>
+      <p class="stage-tip">六态图源：RELEASED / PRESSED / CHECKED_RELEASED / CHECKED_PRESSED / DISABLED / CHECKED_DISABLED，可用上方预览逐一看图；按住画布显示 pressed（勾选时显示 checked+pressed），松开后若可勾选则在 released / checked 间切换，禁用时完全不响应。</p>
 
       <section class="panel">
         <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
         <div class="grid">
           <div class="field wide">
-            <label>状态图源预览（外观预览）<span class="api">lv_imagebutton_set_src(btn, LV_IMAGEBUTTON_STATE_*, src)：每种状态一张图</span></label>
+            <label>六态图源预览（外观预览）<span class="api">lv_imagebutton_set_src(btn, LV_IMAGEBUTTON_STATE_*, src)：每种状态一张图</span></label>
             <div class="seg" id="preview">
               <button type="button" data-v="released" class="active">默认</button>
               <button type="button" data-v="pressed">按下</button>
-              <button type="button" data-v="disabled">禁用</button>
               <button type="button" data-v="checked">勾选</button>
+              <button type="button" data-v="checked_pressed">勾选+按下</button>
+              <button type="button" data-v="disabled">禁用</button>
+              <button type="button" data-v="checked_disabled">勾选+禁用</button>
             </div>
           </div>
 
@@ -90,25 +92,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">SetImageSrc 只能配默认图与按下图两张；按住右侧按钮可体验内置缩放动效。</p>
+      <p class="stage-tip">SetImageSrc 只能配默认图与按下图两张；图片按资源原尺寸绘制、不缩放也不居中（从内容区左上角开始），右列默认让图片尺寸等于按钮尺寸以贴近真实观感；改宽高会留白或裁切。按住可体验内置 0.8 缩放 + 白色蒙层。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>状态图源切换演示（默认图 / 按下图）<span class="api">SetImageSrc(默认图, 按下图)：仅两态；无禁用 / 勾选态图源</span></label>
-            <div class="seg" id="usrc">
-              <button type="button" data-v="released" class="active">默认图</button>
-              <button type="button" data-v="pressed">按下图</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>ui_button.cpp</code> ——
-          <code>SetImageSrc(const char* normal, const char* pressed)</code> 仅两张图；
-          按下时叠加内置缩放 0.8（150ms）与白色蒙层 25/255；
-          禁用态只改样式色值，不能换图源；选中 / 勾选态图源无对应接口（见右上角红色标注）。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -129,7 +123,7 @@
     </section>
   </div>
 
-  <footer>左列四态图源均为程序化绘制（实际工程替换为图片资源），PNG 导出离线可用。右列能力描述取自 foundation/arkui/ui_lite 源码。</footer>
+  <footer>左列六态图源均为程序化绘制（实际工程替换为图片资源），PNG 导出离线可用。右列能力描述取自 foundation/arkui/ui_lite 源码。</footer>
 </div>
 
 <script>
@@ -184,13 +178,15 @@
     c.closePath();
   }
 
-  /* ---------- 四态图源（程序化绘制） ---------- */
+  /* ---------- 六态图源（程序化绘制） ---------- */
   var sources = {};
   var LABEL = {
-    released: "released（默认图）",
-    pressed: "pressed（按下图）",
-    checked: "checked（勾选图）",
-    disabled: "disabled（禁用图）"
+    released: "RELEASED（默认图）",
+    pressed: "PRESSED（按下图）",
+    checked: "CHECKED_RELEASED（勾选图）",
+    checked_pressed: "CHECKED_PRESSED（勾选+按下）",
+    disabled: "DISABLED（禁用图）",
+    checked_disabled: "CHECKED_DISABLED（勾选+禁用）"
   };
 
   function buttonRadius(){ return Math.min(12, state.h / 3, state.w / 4); }
@@ -202,34 +198,51 @@
     var c = cv.getContext("2d");
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    var base = kind === "checked" ? state.checkedColor : state.color;
-    if(kind === "pressed") base = shade(base, -0.2);
-    if(kind === "disabled") base = "#b8bfc9";
-    var dy = kind === "pressed" ? 2 : 0;
+    var isChecked = kind.indexOf("checked") === 0;
+    var isPressed = kind.indexOf("pressed") >= 0;
+    var isDisabled = kind.indexOf("disabled") >= 0;
+    var base = isChecked ? state.checkedColor : state.color;
+    if(isPressed) base = shade(base, -0.24);
+    if(isDisabled) base = "#c3c9d2";
+    var dy = isPressed ? 2 : 0;
     var r = buttonRadius();
+    var s = Math.min(state.w, state.h) * 0.34;
+    var cx = state.w / 2;
+    var cy = state.h / 2 + dy;
 
     c.save();
-    c.globalAlpha = kind === "disabled" ? 0.45 : 1;
+    c.globalAlpha = isDisabled ? 0.55 : 1;
 
     var g = c.createLinearGradient(0, 0, 0, state.h);
     g.addColorStop(0, shade(base, 0.1));
-    g.addColorStop(1, shade(base, -0.09));
+    g.addColorStop(1, shade(base, -0.1));
     c.fillStyle = g;
     roundRectPath(c, 0, 0, state.w, state.h, r);
     c.fill();
 
-    c.strokeStyle = "rgba(0,0,0,0.12)";
+    /* 边框：禁用态改虚线，和可用态一眼分开 */
     c.lineWidth = 1;
+    if(isDisabled){
+      c.strokeStyle = "rgba(90,100,112,0.75)";
+      c.setLineDash([5, 3]);
+    }else{
+      c.strokeStyle = "rgba(0,0,0,0.12)";
+    }
     roundRectPath(c, 0.5, 0.5, state.w - 1, state.h - 1, Math.max(0, r - 0.5));
     c.stroke();
+    c.setLineDash([]);
 
-    var cx = state.w / 2;
-    var cy = state.h / 2 + dy;
-    var s = Math.min(state.w, state.h) * 0.34;
+    /* 按下态：内缩一圈暗边，表现“陷下去” */
+    if(isPressed){
+      c.strokeStyle = "rgba(0,0,0,0.18)";
+      c.lineWidth = 2;
+      roundRectPath(c, 2, 2, state.w - 4, state.h - 4, Math.max(0, r - 2));
+      c.stroke();
+    }
+
+    /* 图标：默认播放三角；勾选态换暂停双竖线 */
     c.fillStyle = "#ffffff";
-
-    if(kind === "checked"){
-      /* 暂停图标：两条竖线 */
+    if(isChecked){
       var bw = Math.max(4, s * 0.3);
       var gap = Math.max(4, s * 0.26);
       var bh = s;
@@ -238,7 +251,6 @@
       roundRectPath(c, cx + gap / 2, cy - bh / 2, bw, bh, bw / 2);
       c.fill();
     }else{
-      /* 播放三角 */
       c.beginPath();
       c.moveTo(cx - s * 0.42, cy - s * 0.58);
       c.lineTo(cx - s * 0.42, cy + s * 0.58);
@@ -246,6 +258,36 @@
       c.closePath();
       c.fill();
     }
+
+    /* 勾选徽标：右上角白色圆 + 对勾，勾选态再好认不过 */
+    if(isChecked){
+      var br = Math.max(7, Math.min(10, state.h * 0.15));
+      var bx = state.w - br - 7;
+      var by = br + 6 + dy;
+      c.fillStyle = "#ffffff";
+      c.beginPath(); c.arc(bx, by, br, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = isDisabled ? "#5a6470" : base;
+      c.lineWidth = 2;
+      c.lineCap = "round";
+      c.lineJoin = "round";
+      c.beginPath();
+      c.moveTo(bx - br * 0.42, by + br * 0.02);
+      c.lineTo(bx - br * 0.08, by + br * 0.34);
+      c.lineTo(bx + br * 0.46, by - br * 0.36);
+      c.stroke();
+    }
+
+    /* 禁用斜杠：图标上划一道，禁用态一眼可辨 */
+    if(isDisabled){
+      c.strokeStyle = "rgba(70,80,92,0.9)";
+      c.lineWidth = Math.max(2, s * 0.12);
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(cx - s * 0.62, cy + s * 0.62);
+      c.lineTo(cx + s * 0.62, cy - s * 0.62);
+      c.stroke();
+    }
+
     c.restore();
     return cv;
   }
@@ -254,7 +296,9 @@
     sources.released = makeSource("released");
     sources.pressed = makeSource("pressed");
     sources.checked = makeSource("checked");
+    sources.checked_pressed = makeSource("checked_pressed");
     sources.disabled = makeSource("disabled");
+    sources.checked_disabled = makeSource("checked_disabled");
   }
 
   buildSources();
@@ -264,8 +308,8 @@
   }
 
   function shownKind(){
-    if(state.disabled) return "disabled";
-    if(pressing) return state.checked ? "checked" : "pressed";
+    if(state.disabled) return state.checked ? "checked_disabled" : "disabled";
+    if(pressing) return state.checked ? "checked_pressed" : "pressed";
     return state.preview;
   }
 
@@ -286,15 +330,6 @@
     c.restore();
 
     c.drawImage(sources[kind], box.x, box.y, box.w, box.h);
-
-    if(pressing && state.checked && !state.disabled){
-      c.save();
-      roundRectPath(c, box.x, box.y, box.w, box.h, r);
-      c.clip();
-      c.fillStyle = "rgba(0,0,0,0.15)";
-      c.fillRect(box.x, box.y + 2, box.w, box.h);
-      c.restore();
-    }
 
     c.font = "12px " + FAMILY;
     c.textBaseline = "middle";
@@ -357,8 +392,7 @@
     var btn = e.target.closest ? e.target.closest("button") : null;
     if(!btn || btn.parentNode !== this) return;
     state.preview = btn.getAttribute("data-v");
-    if(state.preview === "checked") state.checked = true;
-    if(state.preview === "released") state.checked = false;
+    state.checked = state.preview.indexOf("checked") === 0;
     syncPreview();
     renderCode();
   });
@@ -390,7 +424,7 @@
     state.checkable = e.target.checked;
     if(!state.checkable){
       state.checked = false;
-      if(state.preview === "checked") state.preview = "released";
+      if(state.preview.indexOf("checked") === 0) state.preview = "released";
       syncPreview();
     }
     renderCode();
@@ -411,11 +445,13 @@
     L.push('<span class="fn">lv_obj_set_size</span>(btn, <span class="num">' + state.w + '</span>, <span class="num">' + state.h + '</span>);');
     L.push('<span class="fn">lv_obj_center</span>(btn);');
     L.push('');
-    L.push('<span class="cm">/* 四态图源：每种状态一张图（右列只能配两张） */</span>');
+    L.push('<span class="cm">/* 六态图源：每种状态各一张图（右列 SetImageSrc 只能配默认/按下两张） */</span>');
     L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_RELEASED, &src_released, NULL, NULL);');
     L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_PRESSED, &src_pressed, NULL, NULL);');
     L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_CHECKED_RELEASED, &src_checked, NULL, NULL);');
+    L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_CHECKED_PRESSED, &src_checked_pressed, NULL, NULL);');
     L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_DISABLED, &src_disabled, NULL, NULL);');
+    L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_CHECKED_DISABLED, &src_checked_disabled, NULL, NULL);');
     L.push('');
     if(state.checkable){
       L.push('<span class="fn">lv_obj_add_flag</span>(btn, LV_OBJ_FLAG_CHECKABLE);');
@@ -460,55 +496,6 @@
   renderCode();
   syncPreview();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIButton + SetImageSrc 操作绑定 + 实时生成代码
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function $(id){ return document.getElementById(id); }
-
-  var u = { src: "released" };   // 默认图 / 按下图
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_button.h） */</span>');
-    L.push('UIButton * btn = <span class="fn">new</span> UIButton();');
-    L.push('btn-&gt;<span class="fn">SetPosition</span>(<span class="num">114</span>, <span class="num">74</span>);');
-    L.push('btn-&gt;<span class="fn">SetWidth</span>(<span class="num">132</span>);');
-    L.push('btn-&gt;<span class="fn">SetHeight</span>(<span class="num">66</span>);');
-    L.push('<span class="cm">// 仅两张图源：默认图 + 按下图</span>');
-    L.push('btn-&gt;<span class="fn">SetImageSrc</span>("img_normal.png", "img_pressed.png");');
-    if(u.src === "pressed"){
-      L.push('btn-&gt;<span class="fn">SetStateForStyle</span>(UIButton::PRESSED);  <span class="cm">// 显示按下图</span>');
-    }else{
-      L.push('btn-&gt;<span class="fn">SetStateForStyle</span>(UIButton::RELEASED);  <span class="cm">// 显示默认图</span>');
-    }
-    L.push('<span class="cm">// 禁用态只改样式色值，不能换图源；无选中/勾选态图</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  function init(){
-    var api = (window.LV2 && window.LV2.api) || {};
-    if(api.set) api.set(u.src);
-    $("usrc").addEventListener("click", function(e){
-      var btn = e.target.closest ? e.target.closest("button") : null;
-      if(!btn || btn.parentNode !== this) return;
-      u.src = btn.getAttribute("data-v");
-      var btns = this.getElementsByTagName("button");
-      for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
-      if(api.set) api.set(u.src);
-      renderCode();
-    });
-    renderCode();
-  }
-
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
 })();
 </script>
 

@@ -96,21 +96,17 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UIQRCode 只接受内容字符串与前景 / 背景色；纠错级别、边距、Logo 叠加都没有接口。</p>
+      <p class="stage-tip">UIQRCode 模块数 21+4(v−1)，按整数倍放大后居中，没有静区；前景 / 背景色可配；纠错级别两边都无公开接口，Logo 只能靠叠放子对象近似。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>内容 text<span class="api">SetQrcodeInfo(QrcodeInfo)：val 为内容字符串，bg / qrColor 为双色</span></label>
-            <input type="text" id="utext" value="OpenHarmony" maxlength="40">
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          渲染依据：<code>frameworks/components/ui_qrcode.cpp</code> ——
-          <code>SetQrcodeInfo</code> 一次性传入内容与前景 / 背景色，<code>SetWidth</code> / <code>SetHeight</code> 配尺寸；
-          没有纠错级别、静区宽度与 Logo 叠加接口，多版本容量控制也不开放。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -472,45 +468,6 @@
   fitCanvas();
   renderCode();
   requestAnimationFrame(loop);
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite UIQRCode 操作绑定 + 实时代码
-   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.qrcode）
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  var u = { text: "OpenHarmony" };
-
-  function $(id){ return document.getElementById(id); }
-  function api(){ return window.LV2 && window.LV2.api; }
-
-  function renderCode(){
-    var L = [];
-    L.push('<span class="cm">/* 由页面参数实时生成（见 frameworks/components/ui_qrcode.cpp） */</span>');
-    L.push('UIQRCode * qr = <span class="fn">new</span> UIQRCode();');
-    L.push('QrcodeInfo info;');
-    L.push('info.val = <span class="num">"' + (u.text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + '"</span>;');
-    L.push('info.bg = <span class="num">0xffffff</span>;   <span class="cm">// 背景色</span>');
-    L.push('info.qrColor = <span class="num">0x000000</span>; <span class="cm">// 前景色</span>');
-    L.push('qr-&gt;<span class="fn">SetQrcodeInfo</span>(info);');
-    L.push('qr-&gt;<span class="fn">SetWidth</span>(<span class="num">126</span>);');
-    L.push('qr-&gt;<span class="fn">SetHeight</span>(<span class="num">126</span>);');
-    L.push('<span class="cm">/* 无纠错级别 / 静区宽度 / Logo 叠加接口 */</span>');
-    $("ucode").innerHTML = L.join("\n");
-  }
-
-  $("utext").addEventListener("input", function(e){
-    u.text = e.target.value;
-    var a = api();
-    if(a && a.setText) a.setText(u.text);
-    renderCode();
-  });
-
-  renderCode();
 })();
 </script>
 

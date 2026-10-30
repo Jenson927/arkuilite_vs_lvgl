@@ -565,51 +565,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：ArkUI lite 替代思路静态示例代码（UILabel 拼 7×6 月历网格）
-   ===================================================================== */
-(function(){
-  "use strict";
-  var L = [];
-  L.push('<span class="cm">/* ArkUI lite 没有 lv_calendar：UIPicker / UIDigitalClock 只能选值或显示时间，</span>');
-  L.push('<span class="cm">   月历网格要用 UILabel 阵列自己拼，日期选择与高亮全部手写。 */</span>');
-  L.push('');
-  L.push('static UILabel * cells[<span class="num">6</span>][<span class="num">7</span>];  <span class="cm">// 7 列 × 6 行日期格</span>');
-  L.push('static int16_t selDay = <span class="num">29</span>;');
-  L.push('');
-  L.push('UIViewGroup * <span class="fn">CreateCalendar</span>(UIViewGroup * root, int16_t x, int16_t y)');
-  L.push('{');
-  L.push('    UIViewGroup * cal = new UIViewGroup();');
-  L.push('    cal-&gt;<span class="fn">SetPosition</span>(x, y, <span class="num">288</span>, <span class="num">220</span>);');
-  L.push('');
-  L.push('    <span class="cm">// 1. 头部：UILabel 显示年月 + 两个 UILabelButton 做左右箭头</span>');
-  L.push('    UILabel * monthLabel = new UILabel();');
-  L.push('    monthLabel-&gt;<span class="fn">SetText</span>(<span class="str">"2026 年 10 月"</span>);');
-  L.push('    monthLabel-&gt;<span class="fn">SetPosition</span>(<span class="num">90</span>, <span class="num">8</span>, <span class="num">108</span>, <span class="num">20</span>);');
-  L.push('    cal-&gt;<span class="fn">Add</span>(monthLabel);');
-  L.push('    <span class="cm">// prevBtn / nextBtn 的点击回调里改月份文本并重排网格</span>');
-  L.push('');
-  L.push('    <span class="cm">// 2. 日期网格：手动计算每月天数与首日星期，逐格 SetText</span>');
-  L.push('    for (int r = <span class="num">0</span>; r &lt; <span class="num">6</span>; r++) {');
-  L.push('        for (int c = <span class="num">0</span>; c &lt; <span class="num">7</span>; c++) {');
-  L.push('            cells[r][c] = new UILabel();');
-  L.push('            cells[r][c]-&gt;<span class="fn">SetPosition</span>(c * <span class="num">41</span>, <span class="num">56</span> + r * <span class="num">28</span>, <span class="num">41</span>, <span class="num">28</span>);');
-  L.push('            cells[r][c]-&gt;<span class="fn">SetAlign</span>(TEXT_ALIGNMENT_CENTER);');
-  L.push('            cells[r][c]-&gt;<span class="fn">SetTouchable</span>(true);  <span class="cm">// 点击选中需自己判断日期</span>');
-  L.push('            cal-&gt;<span class="fn">Add</span>(cells[r][c]);');
-  L.push('        }');
-  L.push('    }');
-  L.push('');
-  L.push('    <span class="cm">// 3. 高亮日期 / 范围选择：改对应 cell 的 STYLE_BACKGROUND_COLOR，</span>');
-  L.push('    <span class="cm">//    选中态、"今天"描边都要自己维护状态数组后重绘样式</span>');
-  L.push('    root-&gt;<span class="fn">Add</span>(cal);');
-  L.push('    return cal;');
-  L.push('}');
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>

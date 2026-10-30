@@ -93,31 +93,24 @@
     <section class="cmp-col">
       <div class="cmp-colhead">
         <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIDialog</code>
-        <span class="cmp-tag ui">固定模板 · 无动画</span>
+        <span class="cmp-tag ui">白底直角 · 无遮罩变暗</span>
       </div>
 
       <div class="stage stage--ui">
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">UIDialog 是固定模板：标题 + 正文 + 最多两个按钮，内容区不可自定义，也没有打开/关闭动画。</p>
+      <p class="stage-tip">UIDialog 是固定模板：白底直角、无阴影、无遮罩变暗；标题 20px / 正文 16px，最多三个等宽按钮，内容区不可自定义。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
-        <div class="grid">
-          <div class="field wide">
-            <label>点击按钮（模拟触发）<span class="api">UIDialog::SetButton(DialogButtonType, text, listener)：按钮类型有限，回调里自行关闭</span></label>
-            <div class="seg" id="uclick">
-              <button type="button" data-v="cancel">取消</button>
-              <button type="button" data-v="ok" class="active">确定</button>
-            </div>
-          </div>
-        </div>
+        <div id="upanel"></div>
 
         <div class="src-note">
-          依据 <code>ui_dialog.h</code>：<code>SetTitle()</code> / <code>SetText()</code> /
-          <code>SetButton()</code> / <code>SetOnCancelListener()</code>；布局固定，
-          无法在标题与按钮之间插入输入框、图片等自定义控件，也不提供打开/关闭动画接口。
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code> 中的源码常量——
+          颜色、圆角、线宽、动画时长与贝塞尔控制点均按默认值绘制；
+          上方参数面板每一项都对应真实 C++ 接口，右列代码随参数实时生成。
         </div>
       </section>
     </section>
@@ -536,58 +529,6 @@
   });
 
   renderCode();
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：UIDialog 操作绑定 + 等价 C++ 代码生成
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  var clicked = "ok";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
-
-  function renderUCode(){
-    var L = [];
-    L.push(cm("/* 由右列参数实时生成（UIDialog 固定模板） */"));
-    L.push("UIDialog * dialog = " + fn("new") + " UIDialog();");
-    L.push("dialog-&gt;" + fn("SetTitle") + "(\"提示\");");
-    L.push("dialog-&gt;" + fn("SetText") + "(\"确定要删除选中的文件吗？\");");
-    L.push("dialog-&gt;" + fn("SetButton") + "(DIALOG_BUTTON_POSITIVE, \"确定\", " + num("&okListener") + ");");
-    L.push("dialog-&gt;" + fn("SetButton") + "(DIALOG_BUTTON_NEGATIVE, \"取消\", " + num("&cancelListener") + ");");
-    L.push("dialog-&gt;" + fn("SetOnCancelListener") + "(" + num("&onCancel") + ");");
-    L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(dialog);");
-    L.push("");
-    if(clicked === "ok"){
-      L.push(cm("/* 当前模拟触发：点击「确定」→ okListener 回调里调用 */"));
-      L.push("dialog-&gt;" + fn("Close") + "();");
-    }else{
-      L.push(cm("/* 当前模拟触发：点击「取消」→ onCancel / cancelListener 回调里调用 */"));
-      L.push("dialog-&gt;" + fn("Close") + "();");
-    }
-    L.push(cm("/* 注意：内容区不可自定义，无打开/关闭动画接口 */"));
-    document.getElementById("ucode").innerHTML = L.join("\n");
-  }
-
-  document.getElementById("uclick").addEventListener("click", function(e){
-    var btn = e.target.closest ? e.target.closest("button") : null;
-    if(!btn || btn.parentNode !== this) return;
-    clicked = btn.getAttribute("data-v");
-    var btns = this.getElementsByTagName("button");
-    for(var i = 0; i < btns.length; i++){
-      btns[i].className = btns[i] === btn ? "active" : "";
-    }
-    if(window.LV2 && LV2.api && LV2.api.click) LV2.api.click(clicked);
-    renderUCode();
-  });
-
-  renderUCode();
 })();
 </script>
 

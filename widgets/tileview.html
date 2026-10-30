@@ -13,8 +13,7 @@
   <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
     <h1>Tileview：lv_tileview vs 无对应组件</h1>
-    <p class="lead">左列为 <b>LVGL 复刻演示</b>：3×3 二维磁贴，双向拖动吸附，可一键切到任意行列方位并支持循环边界；
-      右列 ArkUI lite <b>没有对应的磁贴容器组件</b>，仅展示 LVGL 能力与替代思路（UISwipeView 只能单轴整页滑动）。</p>
+<p class="lead">左列为 <b>LVGL 复刻演示</b>：3×3 二维磁贴，双向拖动吸附，可一键切到任意行列方位并支持循环边界。<b>ArkUI lite 无对应组件</b>：UISwipeView 只有单轴分页。页面最下方为差异对照。</p>
   </header>
 
   <div class="cmp-grid">
@@ -97,7 +96,7 @@
         <div class="cmp-demo" id="udemo"></div>
         <div class="ui-gaps" id="ugaps"></div>
       </div>
-      <p class="stage-tip">最接近的替代：UISwipeView 只能沿单轴整页滑动，二维行列磁贴与斜向切换无法直接实现，需自己管理行列状态与动画。</p>
+      <p class="stage-tip">UISwipeView 只有单轴（水平或垂直）分页；二维磁贴（行列）与斜向切换没有对应实现。</p>
 
       <section class="panel">
         <h2>ArkUI lite 操作（独立）</h2>
@@ -116,7 +115,7 @@
       <pre class="code" id="code"></pre>
     </section>
     <section class="code-col">
-      <h2>ArkUI lite 替代组合示例（静态）</h2>
+      <h2>ArkUI lite 替代组合示例代码</h2>
       <pre class="code" id="ucode"></pre>
     </section>
   </div>
@@ -532,45 +531,6 @@
   restartAuto();
   renderCode();
   lastKey = activeTile(pos.x, pos.y).col + "," + activeTile(pos.x, pos.y).row + "|" + state.dir + "|" + state.loop;
-})();
-</script>
-
-<script>
-/* =====================================================================
-   右列：ArkUI lite 替代思路静态示例代码（UISwipeView 只能单轴，需自拼二维）
-   ===================================================================== */
-(function(){
-  "use strict";
-  var L = [];
-  L.push('<span class="cm">/* ArkUI lite 没有 lv_tileview：</span>');
-  L.push('<span class="cm">   UISwipeView 只能单轴整页滑动，二维磁贴需自己维护行列状态。 */</span>');
-  L.push('');
-  L.push('static UIViewGroup * tiles[<span class="num">3</span>][<span class="num">3</span>];  <span class="cm">// 磁贴容器</span>');
-  L.push('static int16_t curCol = <span class="num">1</span>, curRow = <span class="num">1</span>;');
-  L.push('');
-  L.push('<span class="cm">// 每个磁贴放一个 UISwipeView 承载横向切换，纵向切换自己处理：</span>');
-  L.push('void <span class="fn">CreateTileView</span>(UIViewGroup * root, int16_t w, int16_t h)');
-  L.push('{');
-  L.push('    for (int r = <span class="num">0</span>; r &lt; <span class="num">3</span>; r++) {');
-  L.push('        for (int c = <span class="num">0</span>; c &lt; <span class="num">3</span>; c++) {');
-  L.push('            tiles[r][c] = new UIViewGroup();');
-  L.push('            tiles[r][c]-&gt;<span class="fn">SetPosition</span>(<span class="num">0</span>, <span class="num">0</span>, w, h);');
-  L.push('            tiles[r][c]-&gt;<span class="fn">SetVisible</span>(r == curRow &amp;&amp; c == curCol);');
-  L.push('            root-&gt;<span class="fn">Add</span>(tiles[r][c]);');
-  L.push('        }');
-  L.push('    }');
-  L.push('}');
-  L.push('');
-  L.push('<span class="cm">// 手势结束后自行切换行列（没有吸附动画，要自己补位移动画）：</span>');
-  L.push('void <span class="fn">SwitchTile</span>(int16_t col, int16_t row)');
-  L.push('{');
-  L.push('    tiles[curRow][curCol]-&gt;<span class="fn">SetVisible</span>(false);');
-  L.push('    curCol = col;');
-  L.push('    curRow = row;');
-  L.push('    tiles[curRow][curCol]-&gt;<span class="fn">SetVisible</span>(true);');
-  L.push('    <span class="cm">// 循环边界、斜向切换、拖拽跟随均需在此手工实现</span>');
-  L.push('}');
-  document.getElementById("ucode").innerHTML = L.join("\n");
 })();
 </script>
 

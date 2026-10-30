@@ -460,50 +460,6 @@
 })();
 </script>
 
-<script>
-/* =====================================================================
-   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
-   依据 compare-data.js spinbox.alt：2×UIButton + UILabel，长按用 UIRepeatButton
-   ===================================================================== */
-(function(){
-  "use strict";
-
-  function fn(s){ return '<span class="fn">' + s + "</span>"; }
-  function num(v){ return '<span class="num">' + v + "</span>"; }
-  function cm(s){ return '<span class="cm">' + s + "</span>"; }
-
-  var L = [];
-  L.push(cm("/* ArkUI lite 无 lv_spinbox，以下为替代拼装骨架（静态示例） */"));
-  L.push(cm("/* 思路：两个 UIButton 负责增减，UILabel 显示数字，长按连发用 UIRepeatButton 近似 */"));
-  L.push("");
-  L.push(cm("/* 1. 数值显示：UILabel（格式化与循环逻辑全部自己写） */"));
-  L.push("UILabel * numText = " + fn("new") + " UILabel();");
-  L.push("numText-&gt;" + fn("SetText") + "(\"1234\");");
-  L.push("numText-&gt;" + fn("SetPosition") + "(" + num(124) + ", " + num(104) + ");");
-  L.push("numText-&gt;" + fn("Resize") + "(" + num(72) + ", " + num(32) + ");");
-  L.push("");
-  L.push(cm("/* 2. 减少按钮：UIRepeatButton 支持长按重复回调（近似 LVGL 长按连发） */"));
-  L.push("UIRepeatButton * btnMinus = " + fn("new") + " UIRepeatButton();");
-  L.push("btnMinus-&gt;" + fn("SetPosition") + "(" + num(24) + ", " + num(102) + ");");
-  L.push("btnMinus-&gt;" + fn("SetWidth") + "(" + num(44) + ");");
-  L.push("btnMinus-&gt;" + fn("SetHeight") + "(" + num(44) + ");");
-  L.push("btnMinus-&gt;" + fn("SetOnClickListener") + "(" + num("&decListener") + ");");
-  L.push("");
-  L.push(cm("/* 3. 增加按钮：同上 */"));
-  L.push("UIRepeatButton * btnPlus = " + fn("new") + " UIRepeatButton();");
-  L.push("btnPlus-&gt;" + fn("SetPosition") + "(" + num(252) + ", " + num(102) + ");");
-  L.push("btnPlus-&gt;" + fn("SetWidth") + "(" + num(44) + ");");
-  L.push("btnPlus-&gt;" + fn("SetHeight") + "(" + num(44) + ");");
-  L.push("btnPlus-&gt;" + fn("SetOnClickListener") + "(" + num("&incListener") + ");");
-  L.push("");
-  L.push(cm("/* decListener / incListener::OnClick 内："));
-  L.push("   value = clamp(value -/+ step, min, max);   // 范围与循环自己维护");
-  L.push("   numText-&gt;SetText(Format(value));            // 位数/小数/前缀格式化自己拼");
-  L.push("   无光标位概念，无法按位编辑。 */");
-  document.getElementById("ucode").innerHTML = L.join("\n");
-})();
-</script>
-
 <script>window.LV_PAGE_LVGAPS = [];</script>
 <script src="../assets/compare-data.js"></script>
 <script src="../assets/cmp2.js"></script>
