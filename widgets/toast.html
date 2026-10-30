@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toast：ArkUI standard vs ArkUI lite</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Crect x='8' y='13' width='16' height='7' rx='3.5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Toast：ArkUI standard vs ArkUI lite</h1>
+    <p class="lead">左列为 <b>OpenHarmony / HarmonyOS standard（ArkUI）</b> 的 Toast 真实行为：由 <code>ToastPattern</code> + <code>OverlayManager</code> 实现，应用侧调用 <code>promptAction.showToast({ message, duration, bottom, showMode })</code>，100 ms 淡入 + 15 vp 上移，到 duration 自动消失，并自动避让安全区与键盘。右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有 Toast 组件，也没有 overlay 顶层图层，<b>无此能力</b>。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：ArkUI standard ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>ArkUI standard</b><code>promptAction.showToast</code>
+        <span class="cmp-tag lv">ToastPattern + OverlayManager</span>
+      </div>
+
+      <div class="stage">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+      </div>
+      <p class="stage-tip">点「弹出 Toast」或直接点画布：黑底圆角条在窗口 overlay 上淡入并上移 15 vp，停留设定 duration 后反向淡出——100 ms 与 cubic-bezier(0.2, 0, 0.1, 1) 取自 <code>OverlayManager::OpenToastAnimation / PopToast</code>。</p>
+
+      <section class="panel">
+        <h2>ArkUI standard 操作（独立）· 参数对应 promptAction.showToast</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>提示文案 message<span class="api">showToast({ message })；单行显示，超出按主题规则省略</span></label>
+            <input type="text" id="text" value="已保存到本地" maxlength="20">
+          </div>
+
+          <div class="field wide">
+            <label>停留时长 duration<span class="api">showToast({ duration })；ToastDuration.SHORT = 1500、LONG = 10000，也可直接传毫秒</span></label>
+            <div class="seg" id="duration">
+              <button type="button" data-val="1500" class="active">1500 ms · SHORT</button>
+              <button type="button" data-val="3000">3000 ms</button>
+              <button type="button" data-val="10000">10000 ms · LONG</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>距底偏移 bottom<output id="o-bottom">32 vp</output><span class="api">showToast({ bottom })；支持 vp 与百分比，自动避让安全区 / 键盘</span></label>
+            <input type="range" id="bottom" min="8" max="96" step="4" value="32">
+          </div>
+          <div class="field">
+            <label>主题圆角 radius<output id="o-radius">24 vp</output><span class="api">toast_theme.h 默认 24 vp（主题配置，应用不直接传参）</span></label>
+            <input type="range" id="radius" min="0" max="24" step="2" value="24">
+          </div>
+
+          <div class="field wide">
+            <label>显示层级 showMode<span class="api">ToastShowMode：DEFAULT / TOP_MOST / SYSTEM_TOP_MOST</span></label>
+            <div class="seg" id="showmode">
+              <button type="button" data-val="DEFAULT" class="active">DEFAULT</button>
+              <button type="button" data-val="TOP_MOST">TOP_MOST</button>
+              <button type="button" data-val="SYSTEM_TOP_MOST">SYSTEM_TOP_MOST</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>自动循环演示<span class="api">业务侧反复调用 showToast（OverlayManager 同一时刻只保留一条）</span></label>
+            <div class="check"><input type="checkbox" id="auto" checked><span>每轮自动弹出一次（关闭后可手动触发）</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-pop">弹出 Toast</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有 Toast 组件，也没有 overlay 顶层图层、安全区与键盘避让：同样的效果只能在 <code>UIView::OnDraw()</code> 里自绘，计时、层级与动画都要自己实现。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">无此能力：没有 Toast 组件与 overlay 机制，无参数可调，也没有组件级代码可生成。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>ArkUI standard 调用代码（ArkTS）</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 对应代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240，模拟 standard Toast 的实际表现：动画时长 100 ms、位移 15 vp、曲线 cubic-bezier(0.2, 0, 0.1, 1)，主题圆角 24 vp / 最大宽 400 vp / 单行 / 屏高 65% 上限，均取自 ace_engine 的 OverlayManager 与 toast_theme。右列「无对应组件」卡片、右上角红标与差异表格由 cmp2.js 自动渲染。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：ArkUI standard Toast 行为复刻
+   —— ToastPattern + OverlayManager：100 ms 淡入 / 15 vp 上移 / duration 后淡出
+   —— 参数与 promptAction.showToast({ message, duration, bottom, showMode }) 一致
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+  var CARD = { x: 12, y: 8, w: 336, h: 224, r: 14 };
+  var IN_MS = 100, OUT_MS = 100, LIFT = 15;
+
+  var state = {
+    text: "已保存到本地",
+    duration: 1500,
+    bottom: 32,
+    radius: 24,
+    showMode: "DEFAULT",
+    auto: true
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var cur = null;           /* { t0, dur, label }：OverlayManager 同一时刻只保留一条 */
+  var lastPop = -Infinity;
+
+  /* ---------- cubic-bezier(0.2, 0, 0.1, 1)：与标准 Toast 动画曲线一致 ---------- */
+  function bezier(x1, y1, x2, y2){
+    function a1(a, b){ return 1 - 3 * b + 3 * a; }
+    function b1(a, b){ return 3 * b - 6 * a; }
+    function c1(a){ return 3 * a; }
+    function calc(t, a, b){ return ((a1(a, b) * t + b1(a, b)) * t + c1(a)) * t; }
+    return function(x){
+      if(x <= 0) return 0;
+      if(x >= 1) return 1;
+      var lo = 0, hi = 1, t = x;
+      for(var i = 0; i < 10; i++){
+        var v = calc(t, x1, x2) - x;
+        if(Math.abs(v) < 1e-4) break;
+        if(v > 0) hi = t; else lo = t;
+        t = (lo + hi) / 2;
+      }
+      return calc(t, y1, y2);
+    };
+  }
+  var easeToast = bezier(0.2, 0, 0.1, 1);
+
+  /* ---------- 弹出 / 回收 ---------- */
+  function pop(){
+    cur = { t0: performance.now(), dur: state.duration, label: state.text || " " };
+    lastPop = performance.now();
+    K.status("已弹出 · " + state.duration + " ms · showMode " + state.showMode, true);
+  }
+
+  function prune(now){
+    if(cur && now - cur.t0 > IN_MS + cur.dur + OUT_MS) cur = null;
+  }
+
+  /* ---------- 背景：模拟一个普通设置页 ---------- */
+  function drawMock(c){
+    K.text(c, "9:41", 30, 25, { size: 11, weight: 600, color: K.theme.textMuted });
+    K.icon(c, "wifi", W - 72, 20, 11, K.theme.textFaint);
+    K.icon(c, "battery", W - 54, 19, 12, K.theme.textFaint);
+    K.text(c, "overlay", W - 76, 25, { size: 9.5, mono: true, color: K.theme.textFaint, align: "right" });
+
+    K.text(c, "设置", 30, 50, { size: 16, weight: 700, color: K.theme.text });
+
+    var rows = [
+      { icon: "wifi", t: "无线网络", s: "已连接 HarmonyOS-5G" },
+      { icon: "bell", t: "通知", s: "允许通知" },
+      { icon: "user", t: "账户", s: "未登录" }
+    ];
+    for(var i = 0; i < rows.length; i++){
+      var y = 66 + i * 36;
+      K.box(c, 26, y, W - 52, 32, { bg: "#f6f8fb", radius: 10 });
+      K.icon(c, rows[i].icon, 36, y + 9, 13, K.theme.primary);
+      K.text(c, rows[i].t, 60, y + 11, { size: 12, weight: 600, color: K.theme.text });
+      K.text(c, rows[i].s, 60, y + 23, { size: 9.5, color: K.theme.textFaint });
+      K.text(c, "›", W - 40, y + 16, { size: 14, color: K.theme.textFaint, align: "center" });
+    }
+  }
+
+  function fitLabel(c, s){
+    var o = { size: 12.5 };
+    if(K.measure(c, s, o) <= 292) return s;
+    var t = s;
+    while(t.length > 1 && K.measure(c, t + "…", o) > 292) t = t.slice(0, -1);
+    return t + "…";
+  }
+
+  /* ---------- Toast：淡入 → 停留 → 淡出 ---------- */
+  function drawToast(c, now){
+    if(!cur) return;
+    var age = now - cur.t0;
+    var k;
+    if(age < IN_MS) k = easeToast(age / IN_MS);
+    else if(age > IN_MS + cur.dur) k = 1 - easeToast((age - IN_MS - cur.dur) / OUT_MS);
+    else k = 1;
+    k = Math.max(0, Math.min(1, k));
+
+    var label = fitLabel(c, cur.label);
+    var tw = K.measure(c, label, { size: 12.5 });
+    var bw = Math.max(88, tw + 32);
+    var bh = 38;
+    var bx = (W - bw) / 2;
+    var by = CARD.y + CARD.h - state.bottom - bh + (1 - k) * LIFT;
+
+    c.save();
+    c.globalAlpha = k;
+    K.box(c, bx, by, bw, bh, {
+      bg: "rgba(28,28,30,0.88)", radius: state.radius,
+      shadow: "rgba(0,0,0,0.28)", shadowBlur: 10, shadowY: 3
+    });
+    K.text(c, label, W / 2, by + bh / 2, { size: 12.5, color: "#ffffff", align: "center" });
+    c.restore();
+  }
+
+  function draw(now){
+    var c = view.ctx;
+    c.clearRect(0, 0, W, H);
+    K.box(c, CARD.x, CARD.y, CARD.w, CARD.h, {
+      bg: "#ffffff", radius: CARD.r, borderWidth: 1, border: "#e7eaee",
+      shadow: "rgba(28,33,40,0.07)", shadowBlur: 14, shadowY: 4
+    });
+    drawMock(c);
+    drawToast(c, now);
+  }
+
+  /* ---------- 主循环 ---------- */
+  K.run(function(now){
+    prune(now);
+    if(state.auto && !cur && now - lastPop > state.duration + IN_MS + OUT_MS + 800){
+      pop();
+    }
+    draw(now);
+  });
+
+  /* ---------- 代码 ---------- */
+  function renderCode(){
+    var L = [];
+    L.push(K.cm("/* OpenHarmony standard：ToastPattern + OverlayManager（ace_engine） */"));
+    L.push("import { promptAction } from '@kit.ArkUI';");
+    L.push("");
+    L.push("promptAction.showToast({");
+    L.push("  message: " + JSON.stringify(state.text || "") + ",");
+    L.push("  duration: " + state.duration + ",   // SHORT 1500 / LONG 10000");
+    L.push("  bottom: '" + state.bottom + "vp',   // 距屏底，自动避让安全区与键盘");
+    L.push("  showMode: promptAction.ToastShowMode." + state.showMode);
+    L.push("});");
+    L.push("");
+    L.push(K.cm("/* 主题（toast_theme.h）：圆角 " + state.radius + " vp、最大宽 400 vp、单行、高度上限为屏高 65% */"));
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件 ---------- */
+  var textEl = document.getElementById("text");
+  textEl.addEventListener("input", function(){
+    state.text = textEl.value.slice(0, 20);
+    renderCode();
+  });
+
+  K.bindSeg("duration", function(v){
+    state.duration = Number(v);
+    lastPop = -Infinity;
+    renderCode();
+  });
+  K.bindSeg("showmode", function(v){
+    state.showMode = v;
+    renderCode();
+  });
+  K.bindRange("bottom", function(v){ return v + " vp"; }, function(v){ state.bottom = v; renderCode(); });
+  K.bindRange("radius", function(v){ return v + " vp"; }, function(v){ state.radius = v; renderCode(); });
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    lastPop = -Infinity;
+  });
+
+  document.getElementById("btn-pop").addEventListener("click", pop);
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "toast.png");
+  });
+  view.canvas.style.cursor = "pointer";
+  view.canvas.addEventListener("pointerdown", pop);
+
+  renderCode();
+})();
+</script>
+
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

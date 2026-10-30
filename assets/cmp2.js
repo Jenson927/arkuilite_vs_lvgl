@@ -111,7 +111,7 @@
     var box = el("div", "cmp-none");
     box.appendChild(el("div", "cmp-none-x", "✗"));
     box.appendChild(el("div", "cmp-none-t", "ArkUI lite 无此能力"));
-    box.appendChild(el("div", "cmp-none-s", "没有与 LVGL 对应的组件，右侧无法演示"));
+    box.appendChild(el("div", "cmp-none-s", "没有与 " + (d.leftLabel || "LVGL") + " 对应的组件，右侧无法演示"));
     if(d.alt) box.appendChild(el("div", "cmp-none-alt", "<b>最接近的实现：</b>" + d.alt));
     return box;
   }
@@ -2081,9 +2081,11 @@
     if(!D || !host) return;
 
     var uiName = D.level === "none" ? "无对应组件" : D.ui;
+    /* 左列对比对象默认 LVGL；个别页面（如 toast）左列可能是标准 ArkUI */
+    var leftName = D.leftLabel || "LVGL";
     host.appendChild(el("h2", null, "差异对照：" + (D.lv || key) + " / " + uiName));
     host.appendChild(el("div", "cmp-diff-sub",
-      "判定说明：<b>✓ 双方具备</b>（能力可对齐）&nbsp;·&nbsp; <b>△ 部分对齐</b>（右侧能做但有限制）&nbsp;·&nbsp; <b>✗ 仅 LVGL 具备</b>（ArkUI lite 无此能力）"));
+      "判定说明：<b>✓ 双方具备</b>（能力可对齐）&nbsp;·&nbsp; <b>△ 部分对齐</b>（右侧能做但有限制）&nbsp;·&nbsp; <b>✗ 仅 " + leftName + " 具备</b>（ArkUI lite 无此能力）"));
 
     var nOk = 0, nPart = 0, nNone = 0;
     (D.diffs || []).forEach(function(r){
@@ -2094,13 +2096,13 @@
     var chips = el("div", "cmp-chips");
     chips.appendChild(el("span", "cmp-chip ok", "✓ 双方具备 " + nOk + " 项"));
     chips.appendChild(el("span", "cmp-chip part", "△ 部分对齐 " + nPart + " 项"));
-    chips.appendChild(el("span", "cmp-chip none", "✗ 仅 LVGL 具备 " + nNone + " 项"));
+    chips.appendChild(el("span", "cmp-chip none", "✗ 仅 " + leftName + " 具备 " + nNone + " 项"));
     host.appendChild(chips);
 
     var tWrap = el("div", "tbl-wrap");
     var table = el("table", "cmp-table");
     table.innerHTML =
-      "<thead><tr><th>能力</th><th>LVGL " + (D.lv || key) + "</th><th>ArkUI lite " +
+      "<thead><tr><th>能力</th><th>" + leftName + " " + (D.lv || key) + "</th><th>ArkUI lite " +
       uiName + "</th><th>判定</th></tr></thead><tbody></tbody>";
     var tbody = table.querySelector("tbody");
     (D.diffs || []).forEach(function(r){

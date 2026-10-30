@@ -597,5 +597,27 @@ window.LV_COMPARE_DATA = {
       ["格式", "Lottie JSON 矢量", "无（UIImageAnimator 仅位图帧）", "none"],
       ["缩放", "矢量无损", "位图放大会失真", "none"]
     ]
+  },
+
+  toast: {
+    leftLabel: "ArkUI standard",
+    lv: "promptAction.showToast", ui: "无", level: "none", demo: "none",
+    alt: "ArkUI lite 没有 Toast 组件，也没有 overlay 顶层图层、安全区与键盘避让；同样效果只能在 UIView::OnDraw() 里自绘，计时、层级与动画都得自己实现。",
+    gaps: ["Toast 组件与自动消失", "底部安全区定位", "淡入淡出 + 位移动画", "顶层 overlay 图层"],
+    diffs: [
+      ["Toast 组件", "ToastPattern + OverlayManager，duration 到点自动关闭", "无对应组件", "none"],
+      ["文案与时长", "message + duration（SHORT 1500 / LONG 10000 ms，也可传具体毫秒）", "无", "none"],
+      ["位置", "bottom 支持 vp / 百分比，自动避让安全区与键盘", "无（无安全区 / 键盘避让）", "none"],
+      ["动画", "100 ms 透明度 0↔1 + 15 vp 垂直位移，cubic-bezier(0.2, 0, 0.1, 1)", "无", "none"],
+      ["层级", "挂在窗口 overlay；showMode 支持 DEFAULT / TOP_MOST / SYSTEM_TOP_MOST", "无 overlay 机制", "none"],
+      ["主题样式", "圆角 24 vp、最大宽 400 vp、单行、高度上限为屏高 65%", "无", "none"],
+      ["无障碍", "PAGE_OPEN / PAGE_CLOSE 事件自动上报，读屏可播报", "无读屏播报", "none"]
+    ],
+    points: [
+      "<b>标准实现：</b>ace_engine 的 OverlayManager::OpenToastAnimation / PopToast 以 100 ms 时长、cubic-bezier(0.2, 0, 0.1, 1) 曲线做透明度 0↔1 与 15 vp 垂直位移，ToastPattern 负责按 bottom / 安全区 / 键盘位置重算偏移。",
+      "<b>标准参数：</b>应用侧只需 promptAction.showToast({ message, duration, bottom, showMode })；duration 默认 -1 由系统取默认值，bottom 支持 vp 与百分比，showMode 决定挂在默认 overlay 还是系统级顶层窗口。",
+      "<b>标准样式：</b>主题默认圆角 24 vp、最大宽度 400 vp、单行文本，高度超过屏高 65% 时截断。",
+      "<b>lite 现状：</b>既没有 Toast 组件，也没有 overlay 层、安全区 / 键盘避让与无障碍播报；同样效果只能自绘 UIView，并自己实现计时销毁与顶层管理。"
+    ]
   }
 };
