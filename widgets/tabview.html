@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabview：lv_tabview vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='6' width='24' height='20' rx='4' fill='%23ffffff' stroke='%232b7de9' stroke-width='2'/%3E%3Crect x='4' y='6' width='10' height='6' rx='3' fill='%232b7de9'/%3E%3Crect x='6' y='16' width='20' height='2.4' rx='1.2' fill='%23d6d9df'/%3E%3Crect x='6' y='20.5' width='13' height='2.4' rx='1.2' fill='%23d6d9df'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Tabview：lv_tabview vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>：标签栏四边停靠、可滚动、切换动画齐备；
+      右列 ArkUI lite <b>没有对应的标签容器组件</b>，仅展示 LVGL 能力与替代思路（UISwipeView + UIToggleButton 自拼）。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_tabview</code>
+        <span class="cmp-tag lv">标签栏四边停靠 · 可滚动</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击标签栏切换页面；标签多于一行时标签栏自动滚动并把活动标签带到可视区。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>标签栏位置 tab_bar_position<span class="api">lv_tabview_set_tab_bar_position(tv, LV_DIR_TOP / BOTTOM / LEFT / RIGHT)</span></label>
+            <div class="seg" id="pos">
+              <button type="button" data-v="top" class="active">上</button>
+              <button type="button" data-v="bottom">下</button>
+              <button type="button" data-v="left">左</button>
+              <button type="button" data-v="right">右</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>标签样式 tab style<span class="api">lv_obj_set_style_border_side / bg_color(bar, …, LV_PART_ITEMS | LV_STATE_CHECKED)</span></label>
+            <div class="seg" id="tstyle">
+              <button type="button" data-v="underline" class="active">下划线指示</button>
+              <button type="button" data-v="capsule">胶囊背景</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>标签栏尺寸 tab_bar_size<output id="o-size">40 px</output><span class="api">lv_tabview_set_tab_bar_size(tv, size)</span></label>
+            <input type="range" id="size" min="24" max="80" step="2" value="40">
+          </div>
+          <div class="field">
+            <label>标签数量 tab count<output id="o-count">5</output><span class="api">lv_tabview_add_tab(tv, name) × N</span></label>
+            <input type="range" id="count" min="2" max="6" step="1" value="5">
+          </div>
+
+          <div class="field">
+            <label>活动标签 active<output id="o-active">0</output><span class="api">lv_tabview_set_active(tv, idx, anim)</span></label>
+            <input type="range" id="active" min="0" max="5" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>动画时长 anim_duration<output id="o-dur">320 ms</output><span class="api">lv_obj_set_style_anim_duration(tv, dur, 0)</span></label>
+            <input type="range" id="dur" min="0" max="600" step="20" value="320">
+          </div>
+
+          <div class="field">
+            <label>标签栏滚动 scroll<span class="api">lv_obj_add_flag(bar, LV_OBJ_FLAG_SCROLLABLE)：标签过多时横向滚动</span></label>
+            <div class="check"><input type="checkbox" id="barscroll" checked><span>允许滚动到活动标签</span></div>
+          </div>
+          <div class="field">
+            <label>切换动画 anim<span class="api">lv_tabview_set_active(tv, idx, LV_ANIM_ON / LV_ANIM_OFF)</span></label>
+            <div class="check"><input type="checkbox" id="animon" checked><span>内容横向滑动过渡</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>自动演示<span class="api">约 1.3 s 轮换所有标签页（导出动图用）</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>依次切换所有标签页</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一轮全标签）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一轮全标签）</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">最接近的替代：UISwipeView 承担内容翻页 + 一排 UIToggleButton 充当标签栏，二者的联动（点标签换页、滑页高亮标签）必须自己写。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例（静态）</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列替代思路依据 foundation/arkui/ui_lite 的 UISwipeView / UIToggleButton 源码。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_tabview 复刻（迁移自旧版单页，补充标签栏滚动 / 标签样式）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+
+  var TABS = ["首页", "设置", "消息", "相册", "更多", "关于"];
+  var TAB_ICONS = ["home", "gear", "bell", "folder", "play", "file"];
+  var ACCENTS = ["#2b7de9", "#1f9d66", "#e6a23c", "#8e63d6", "#e04b4b", "#00a6a6"];
+  var DIR_CONST = { top: "LV_DIR_TOP", bottom: "LV_DIR_BOTTOM", left: "LV_DIR_LEFT", right: "LV_DIR_RIGHT" };
+
+  var state = {
+    pos: "top",
+    style: "underline",   // underline | capsule
+    size: 40,
+    count: 5,
+    active: 0,
+    dur: 320,
+    barScroll: true,
+    animOn: true,
+    auto: false
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var canvas = view.canvas;
+
+  var t0 = performance.now();
+  var autoStart = 0;
+  var anim = { from: 0, to: 0, start: 0 };
+  var tabRects = [];
+  var barOff = 0;                 // 标签栏当前滚动偏移（带动画）
+  var HOLD = 1300;
+  var FIXED_CELL = 64;            // 开启滚动后每个标签的固定宽度/高度
+
+  function autoState(t){
+    var period = HOLD + effDur();
+    var seg = Math.floor(t / period);
+    var local = t - seg * period;
+    var from = seg % state.count;
+    var to = (seg + 1) % state.count;
+    var p = effDur() > 0 ? K.clamp((local - HOLD) / effDur(), 0, 1) : 1;
+    return { from: from, to: to, p: p };
+  }
+
+  function effDur(){ return state.animOn ? state.dur : 0; }
+
+  function layout(){
+    var cx = 8, cy = 8, cw = 304, ch = 224;
+    var size = state.size;
+    var horizontal = (state.pos === "top" || state.pos === "bottom");
+    var barX, barY, barW, barH, contentX, contentY, contentW, contentH;
+    if(state.pos === "top"){
+      barX = cx; barY = cy; barW = cw; barH = size;
+      contentX = cx; contentY = cy + size; contentW = cw; contentH = ch - size;
+    }else if(state.pos === "bottom"){
+      barX = cx; barY = cy + ch - size; barW = cw; barH = size;
+      contentX = cx; contentY = cy; contentW = cw; contentH = ch - size;
+    }else if(state.pos === "left"){
+      barX = cx; barY = cy; barW = size; barH = ch;
+      contentX = cx + size; contentY = cy; contentW = cw - size; contentH = ch;
+    }else{
+      barX = cx + cw - size; barY = cy; barW = size; barH = ch;
+      contentX = cx; contentY = cy; contentW = cw - size; contentH = ch;
+    }
+    return {
+      cx: cx, cy: cy, cw: cw, ch: ch,
+      barX: barX, barY: barY, barW: barW, barH: barH,
+      contentX: contentX, contentY: contentY, contentW: contentW, contentH: contentH,
+      horizontal: horizontal
+    };
+  }
+
+  /* 标签单元格尺寸：开滚动则固定宽度（可能超出可视区），否则均分 */
+  function cellLen(L){
+    if(L.horizontal) return state.barScroll ? FIXED_CELL : L.barW / state.count;
+    return state.barScroll ? FIXED_CELL : L.barH / state.count;
+  }
+
+  function scrollTotal(L){ return cellLen(L) * state.count; }
+  function scrollMax(L){
+    var total = scrollTotal(L);
+    var vis = L.horizontal ? L.barW : L.barH;
+    return state.barScroll ? Math.max(0, total - vis) : 0;
+  }
+
+  /* 目标滚动偏移：把活动标签带到可视区中部 */
+  function scrollTarget(L){
+    if(!state.barScroll) return 0;
+    var cell = cellLen(L);
+    var vis = L.horizontal ? L.barW : L.barH;
+    var off = state.active * cell + cell / 2 - vis / 2;
+    return K.clamp(off, 0, scrollMax(L));
+  }
+
+  /* ---------- 页面内容 ---------- */
+  function drawPage(c, idx, x, y, w, h){
+    var ac = ACCENTS[idx % ACCENTS.length];
+    c.save();
+    c.beginPath(); c.rect(x, y, w, h); c.clip();
+    c.fillStyle = "#ffffff";
+    c.fillRect(x, y, w, h);
+
+    K.text(c, TABS[idx] + "页面", x + 18, y + 20, { size: 14, weight: 600, color: K.theme.text });
+
+    var cardX = x + 14, cardY = y + 38;
+    var cardW = w - 28, cardH = Math.max(40, h - 48);
+    K.box(c, cardX, cardY, cardW, cardH, { bg: "#f7f9fc", radius: 10, borderWidth: 1, border: "#e8ecf2" });
+
+    var ccx = cardX + cardW / 2;
+    var icy = cardY + Math.min(36, cardH * 0.36);
+    c.beginPath();
+    c.arc(ccx, icy, 18, 0, Math.PI * 2);
+    c.fillStyle = K.alpha(ac, 0.13);
+    c.fill();
+    K.icon(c, TAB_ICONS[idx % TAB_ICONS.length], ccx - 9, icy - 9, 18, ac);
+
+    if(cardH > 58) K.text(c, TABS[idx], ccx, icy + 31, { size: 14.5, weight: 600, color: K.theme.text, align: "center" });
+    if(cardH > 82) K.text(c, "第 " + (idx + 1) + " / " + state.count + " 个标签页", ccx, icy + 49, { size: 11, color: K.theme.textMuted, align: "center" });
+    c.restore();
+  }
+
+  /* ---------- 标签栏 ---------- */
+  function drawBar(c, L, active){
+    tabRects = [];
+    c.save();
+    c.beginPath(); c.rect(L.barX, L.barY, L.barW, L.barH); c.clip();
+    c.fillStyle = "#f5f7fa";
+    c.fillRect(L.barX, L.barY, L.barW, L.barH);
+
+    var cell = cellLen(L);
+    var maxOff = scrollMax(L);
+    barOff = K.clamp(barOff, 0, maxOff);
+
+    var i, isActive, tx, ty, tw, th;
+    for(i = 0; i < state.count; i++){
+      isActive = (i === active);
+      if(L.horizontal){
+        tx = L.barX + i * cell - barOff;
+        ty = L.barY; tw = cell; th = L.barH;
+      }else{
+        tx = L.barX;
+        ty = L.barY + i * cell - barOff; tw = L.barW; th = cell;
+      }
+      if(L.horizontal ? (tx + tw < L.barX || tx > L.barX + L.barW)
+                      : (ty + th < L.barY || ty > L.barY + L.barH)){
+        tabRects.push({ idx: i, x: tx, y: ty, w: tw, h: th });
+        continue;
+      }
+
+      var fs, tcol, tweight;
+      if(state.style === "capsule"){
+        /* 胶囊：活动标签圆角背景 + 白字 */
+        var inset = 3;
+        if(isActive){
+          K.box(c, tx + inset, ty + inset, tw - inset * 2, th - inset * 2, {
+            bg: K.theme.primary, radius: Math.min(14, (th - inset * 2) / 2)
+          });
+        }
+        fs = K.clamp((L.horizontal ? th : tw) * 0.30, 9, 13);
+        tcol = isActive ? "#ffffff" : K.theme.textMuted;
+        tweight = isActive ? 600 : 400;
+        K.text(c, TABS[i], tx + tw / 2, ty + th / 2 + 0.5, { size: fs, weight: tweight, color: tcol, align: "center" });
+      }else{
+        /* 下划线：活动标签白底 + 3px 指示条 */
+        if(isActive){
+          c.fillStyle = "#ffffff";
+          c.fillRect(tx, ty, tw, th);
+          c.fillStyle = K.theme.primary;
+          if(L.horizontal){
+            if(state.pos === "top") c.fillRect(tx + 4, ty + th - 3, tw - 8, 3);
+            else c.fillRect(tx + 4, ty, tw - 8, 3);
+          }else{
+            if(state.pos === "left") c.fillRect(tx + tw - 3, ty + 4, 3, th - 8);
+            else c.fillRect(tx, ty + 4, 3, th - 8);
+          }
+        }
+        fs = K.clamp((L.horizontal ? th : tw) * (L.horizontal ? 0.32 : 0.26), 9, 14);
+        tcol = isActive ? K.theme.primary : K.theme.textMuted;
+        tweight = isActive ? 600 : 400;
+        K.text(c, TABS[i], tx + tw / 2, ty + th / 2 + 0.5, { size: fs, weight: tweight, color: tcol, align: "center" });
+      }
+      tabRects.push({ idx: i, x: tx, y: ty, w: tw, h: th });
+    }
+
+    /* 滚动条指示（仅当可滚动时） */
+    if(maxOff > 0){
+      var vis = L.horizontal ? L.barW : L.barH;
+      var total = scrollTotal(L);
+      var trackLen = vis - 12;
+      var thumbLen = Math.max(14, trackLen * vis / total);
+      var thumbPos = 6 + (trackLen - thumbLen) * (barOff / maxOff);
+      c.fillStyle = "rgba(43,125,233,0.35)";
+      if(L.horizontal){
+        var sy = state.pos === "top" ? L.barY + L.barH - 3 : L.barY + 1;
+        K.box(c, L.barX + 6, sy, trackLen, 2, { bg: "rgba(120,132,148,0.18)", radius: 1 });
+        K.box(c, L.barX + thumbPos, sy, thumbLen, 2, { bg: "rgba(43,125,233,0.55)", radius: 1 });
+      }else{
+        var sx = state.pos === "left" ? L.barX + L.barW - 3 : L.barX + 1;
+        K.box(c, sx, L.barY + 6, 2, trackLen, { bg: "rgba(120,132,148,0.18)", radius: 1 });
+        K.box(c, sx, L.barY + thumbPos, 2, thumbLen, { bg: "rgba(43,125,233,0.55)", radius: 1 });
+      }
+    }
+    c.restore();
+  }
+
+  /* ---------- 场景 ---------- */
+  function drawScene(c, t, forceAuto){
+    var autoOn = forceAuto || state.auto;
+    var from = anim.from, to = anim.to, p = 1;
+    if(autoOn){
+      var a = autoState(t);
+      from = a.from; to = a.to; p = a.p;
+    }else{
+      p = effDur() > 0 ? K.clamp((performance.now() - anim.start) / effDur(), 0, 1) : 1;
+    }
+
+    var e = K.ease(p);
+    var active = (p <= 0) ? from : to;
+    var L = layout();
+
+    /* 标签栏滚动偏移平滑逼近目标 */
+    var target = scrollTarget(L);
+    barOff += (target - barOff) * 0.22;
+    if(Math.abs(target - barOff) < 0.4) barOff = target;
+
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+
+    K.box(c, L.cx, L.cy, L.cw, L.ch, {
+      bg: "#ffffff", radius: 14,
+      shadow: K.alpha("#1c2128", 0.09), shadowBlur: 16, shadowY: 4
+    });
+
+    c.save();
+    K.roundRectPath(c, L.cx, L.cy, L.cw, L.ch, 14);
+    c.clip();
+
+    c.save();
+    c.beginPath();
+    c.rect(L.contentX, L.contentY, L.contentW, L.contentH);
+    c.clip();
+    if(L.horizontal){
+      drawPage(c, from, L.contentX - e * L.contentW, L.contentY, L.contentW, L.contentH);
+      drawPage(c, to, L.contentX + (1 - e) * L.contentW, L.contentY, L.contentW, L.contentH);
+    }else{
+      drawPage(c, from, L.contentX, L.contentY - e * L.contentH, L.contentW, L.contentH);
+      drawPage(c, to, L.contentX, L.contentY + (1 - e) * L.contentH, L.contentW, L.contentH);
+    }
+    c.restore();
+
+    drawBar(c, L, active);
+
+    c.fillStyle = "#e6e9ee";
+    if(state.pos === "top") c.fillRect(L.cx, L.contentY - 1, L.cw, 1);
+    else if(state.pos === "bottom") c.fillRect(L.cx, L.barY, L.cw, 1);
+    else if(state.pos === "left") c.fillRect(L.contentX - 1, L.cy, 1, L.ch);
+    else c.fillRect(L.barX, L.cy, 1, L.ch);
+
+    c.restore();
+
+    K.box(c, L.cx, L.cy, L.cw, L.ch, { radius: 14, borderWidth: 1, border: K.theme.border });
+  }
+
+  K.run(function(now){
+    var t = state.auto ? now - autoStart : now - t0;
+    drawScene(view.ctx, t, false);
+    if(state.auto){
+      var a = autoState(t);
+      var act = (a.p <= 0) ? a.from : a.to;
+      if(state.active !== act){
+        state.active = act;
+        syncActiveUI();
+        renderCode();
+      }
+    }
+  });
+
+  /* ---------- 交互 ---------- */
+  function posOf(e){
+    var r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function stopAuto(){
+    if(state.auto){ state.auto = false; document.getElementById("auto").checked = false; }
+  }
+  canvas.addEventListener("pointerdown", function(e){
+    var p = posOf(e);
+    for(var i = 0; i < tabRects.length; i++){
+      var t = tabRects[i];
+      if(p.x >= t.x && p.x <= t.x + t.w && p.y >= t.y && p.y <= t.y + t.h){
+        stopAuto();
+        if(i !== state.active){
+          anim.from = state.active;
+          anim.to = t.idx;
+          anim.start = performance.now();
+          state.active = t.idx;
+          syncActiveUI();
+          renderCode();
+        }
+        return;
+      }
+    }
+  });
+
+  /* ---------- 参数 ---------- */
+  function syncActiveUI(){
+    var el = document.getElementById("active");
+    el.max = state.count - 1;
+    if(state.active > state.count - 1) state.active = state.count - 1;
+    el.value = state.active;
+    document.getElementById("o-active").textContent = state.active;
+    document.getElementById("o-count").textContent = state.count;
+    document.getElementById("count").value = state.count;
+  }
+
+  function setSeg(id, value){
+    var btns = document.getElementById(id).getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i].getAttribute("data-v") === value ? "active" : "";
+    }
+  }
+
+  document.getElementById("pos").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.pos = btn.getAttribute("data-v");
+    setSeg("pos", state.pos);
+    renderCode();
+  });
+  document.getElementById("tstyle").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.style = btn.getAttribute("data-v");
+    setSeg("tstyle", state.style);
+    renderCode();
+  });
+
+  K.bindRange("size", function(v){ return v + " px"; }, function(v){ state.size = v; renderCode(); });
+  K.bindRange("count", null, function(v){
+    state.count = v;
+    syncActiveUI();
+    anim.from = state.active; anim.to = state.active; anim.start = 0;
+    renderCode();
+  });
+  K.bindRange("active", null, function(v){
+    state.active = v;
+    anim.from = v; anim.to = v; anim.start = 0;
+    renderCode();
+  });
+  K.bindRange("dur", function(v){ return v + " ms"; }, function(v){ state.dur = v; renderCode(); });
+
+  document.getElementById("barscroll").addEventListener("change", function(e){
+    state.barScroll = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("animon").addEventListener("change", function(e){
+    state.animOn = e.target.checked;
+    anim.from = state.active; anim.to = state.active; anim.start = 0;
+    renderCode();
+  });
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    autoStart = performance.now();
+    if(on){
+      state.active = 0;
+      anim.from = 0; anim.to = 0; anim.start = 0;
+      syncActiveUI();
+      renderCode();
+    }else{
+      anim.from = state.active; anim.to = state.active; anim.start = 0;
+    }
+  });
+
+  /* ---------- C 代码 ---------- */
+  function renderCode(){
+    var L = [];
+    var hex = function(c){ return "0x" + c.replace("#", ""); };
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * tv = " + K.fn("lv_tabview_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(tv, " + K.num(304) + ", " + K.num(224) + ");");
+    L.push(K.fn("lv_obj_center") + "(tv);");
+    L.push("");
+    for(var i = 0; i < state.count; i++){
+      L.push("lv_obj_t * tab_" + i + " = " + K.fn("lv_tabview_add_tab") + "(tv, " + JSON.stringify(TABS[i]) + ");");
+    }
+    L.push("lv_obj_t * content = " + K.fn("lv_tabview_get_content") + "(tv);" + K.cm("  /* 标签页内容容器 */"));
+    L.push("lv_obj_t * bar = " + K.fn("lv_tabview_get_tab_bar") + "(tv);" + K.cm("  /* 标签栏（lv_buttonmatrix） */"));
+    L.push("");
+    L.push(K.fn("lv_tabview_set_tab_bar_position") + "(tv, " + K.num(DIR_CONST[state.pos]) + ");");
+    L.push(K.fn("lv_tabview_set_tab_bar_size") + "(tv, " + K.num(state.size) + ");");
+    L.push("");
+    if(state.style === "capsule"){
+      L.push(K.cm("/* 胶囊样式：活动标签圆角背景 */"));
+      L.push(K.fn("lv_obj_set_style_bg_color") + "(bar, " + K.fn("lv_color_hex") + "(" + K.num(hex(K.theme.primary)) +
+        "), LV_PART_ITEMS | LV_STATE_CHECKED);");
+      L.push(K.fn("lv_obj_set_style_radius") + "(bar, " + K.num(14) + ", LV_PART_ITEMS | LV_STATE_CHECKED);");
+      L.push(K.fn("lv_obj_set_style_bg_opa") + "(bar, LV_OPA_COVER, LV_PART_ITEMS | LV_STATE_CHECKED);");
+    }else{
+      L.push(K.cm("/* 下划线样式：活动标签底部指示条 */"));
+      L.push(K.fn("lv_obj_set_style_border_color") + "(bar, " + K.fn("lv_color_hex") + "(" + K.num(hex(K.theme.primary)) +
+        "), LV_PART_ITEMS | LV_STATE_CHECKED);");
+      L.push(K.fn("lv_obj_set_style_border_width") + "(bar, " + K.num(3) + ", LV_PART_ITEMS | LV_STATE_CHECKED);");
+      L.push(K.fn("lv_obj_set_style_border_side") + "(bar, LV_BORDER_SIDE_BOTTOM, LV_PART_ITEMS | LV_STATE_CHECKED);");
+    }
+    L.push("");
+    if(state.barScroll){
+      L.push(K.fn("lv_obj_add_flag") + "(bar, LV_OBJ_FLAG_SCROLLABLE);" + K.cm("  /* 标签过多时滚动 */"));
+      L.push(K.fn("lv_obj_set_scroll_snap_x") + "(bar, LV_SCROLL_SNAP_CENTER);");
+    }else{
+      L.push(K.fn("lv_obj_remove_flag") + "(bar, LV_OBJ_FLAG_SCROLLABLE);" + K.cm("  /* 均分宽度不滚动 */"));
+    }
+    L.push("");
+    L.push(K.fn("lv_tabview_set_active") + "(tv, " + K.num(state.active) + ", " +
+      K.num(state.animOn ? "LV_ANIM_ON" : "LV_ANIM_OFF") + ");");
+    L.push(K.fn("lv_obj_set_style_anim_duration") + "(tv, " + K.num(state.dur) + ", " + K.num(0) + ");");
+    K.code(L);
+  }
+
+  /* ---------- 导出 ---------- */
+  function FULL_CYCLE(){ return state.count * (HOLD + effDur()); }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(canvas, "tabview.png");
+  });
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "tabview.gif", w: W, h: H, fps: 14, duration: FULL_CYCLE(),
+      frame: function(c, t){ drawScene(c, t, true); },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: canvas, name: "tabview.webm", duration: FULL_CYCLE(),
+      before: function(){
+        var old = state.auto;
+        state.auto = true;
+        autoStart = performance.now();
+        document.getElementById("auto").checked = true;
+        state.active = 0;
+        syncActiveUI();
+        return old;
+      },
+      after: function(old){
+        state.auto = old;
+        document.getElementById("auto").checked = old;
+      },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  syncActiveUI();
+  renderCode();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite 替代组合静态示例代码（UISwipeView + UIToggleButton）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var L = [];
+  L.push('<span class="cm">/* ArkUI lite 没有 lv_tabview：标签栏与内容联动必须自己写。</span>');
+  L.push('<span class="cm">   最接近的组合：UISwipeView（翻页容器）+ 一排 UIToggleButton（标签栏） */</span>');
+  L.push('');
+  L.push('<span class="cm">// 1. 标签栏：UIToggleButton 无互斥分组，需手动保证单选</span>');
+  L.push('static UIToggleButton * tabs[<span class="num">3</span>];');
+  L.push('static UISwipeView * swipe;');
+  L.push('');
+  L.push('void <span class="fn">CreateTabView</span>(UIViewGroup * root, int16_t w, int16_t h)');
+  L.push('{');
+  L.push('    const char * names[<span class="num">3</span>] = { "首页", "设置", "消息" };');
+  L.push('    for (int i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) {');
+  L.push('        tabs[i] = new UIToggleButton();');
+  L.push('        tabs[i]-&gt;<span class="fn">SetPosition</span>(w / <span class="num">3</span> * i, <span class="num">0</span>, w / <span class="num">3</span>, <span class="num">40</span>);');
+  L.push('        UILabel * label = new UILabel();   <span class="cm">// 按钮不画文字</span>');
+  L.push('        label-&gt;<span class="fn">SetText</span>(names[i]);');
+  L.push('        tabs[i]-&gt;<span class="fn">Add</span>(label);');
+  L.push('        tabs[i]-&gt;<span class="fn">SetState</span>(i == <span class="num">0</span>);');
+  L.push('        root-&gt;<span class="fn">Add</span>(tabs[i]);');
+  L.push('    }');
+  L.push('');
+  L.push('    <span class="cm">// 2. 内容区：UISwipeView 只能沿单轴整页滑动</span>');
+  L.push('    swipe = new UISwipeView();');
+  L.push('    swipe-&gt;<span class="fn">SetPosition</span>(<span class="num">0</span>, <span class="num">40</span>, w, h - <span class="num">40</span>);');
+  L.push('    swipe-&gt;<span class="fn">SetSwipeDirection</span>(DIR_LEFT_TO_RIGHT);');
+  L.push('    for (int i = <span class="num">0</span>; i &lt; <span class="num">3</span>; i++) {');
+  L.push('        UIView * page = new UIView();  <span class="cm">/* 填充页面内容 */</span>');
+  L.push('        swipe-&gt;<span class="fn">Add</span>(page);');
+  L.push('    }');
+  L.push('    root-&gt;<span class="fn">Add</span>(swipe);');
+  L.push('');
+  L.push('    <span class="cm">// 3. 联动需自写：点击标签 → 手动滚动 swipe 到对应页；</span>');
+  L.push('    <span class="cm">//    滑动翻页 → 遍历 tabs[] 回填 SetState()，且无"标签栏滚动"</span>');
+  L.push('}');
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

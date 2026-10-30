@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Span：lv_span vs UILabel + SpannableString</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='5' fill='%232b7de9'/%3E%3Cpath d='M9 11h14M9 16h9M9 21h12' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Span：lv_span vs UILabel + SpannableString</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（多段样式混排，新增行内图片与逐字旋转变换），右列为按
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> SpannableString 能力渲染的富文本。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_span</code>
+        <span class="cmp-tag lv">行内图片 · 逐字变换</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">开启“行内图片”后文字中间嵌入小图标，开启“逐字旋转”后波浪文字逐字绕自身旋转——这两项 SpannableString 都做不到。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>溢出策略<span class="api">lv_spangroup_set_overflow(LV_SPAN_OVERFLOW_CLIP / ELLIPSIS)</span></label>
+            <div class="seg" id="overflow">
+              <button type="button" data-val="clip" class="active">CLIP</button>
+              <button type="button" data-val="dots">DOTS</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>最大行数 max_lines<output id="o-lines">3</output><span class="api">lv_spangroup_set_max_lines</span></label>
+            <input type="range" id="lines" min="1" max="4" step="1" value="3">
+          </div>
+          <div class="field">
+            <label>对齐方式<span class="api">lv_spangroup_set_align</span></label>
+            <div class="seg" id="align">
+              <button type="button" data-val="left" class="active">左</button>
+              <button type="button" data-val="center">中</button>
+              <button type="button" data-val="right">右</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>首行缩进 indent<output id="o-indent">0 px</output><span class="api">lv_spangroup_set_indent</span></label>
+            <input type="range" id="indent" min="0" max="60" step="2" value="0">
+          </div>
+          <div class="field">
+            <label>大字号尺寸<output id="o-big">26 px</output><span class="api">lv_style_set_text_font（对应字号）</span></label>
+            <input type="range" id="big" min="16" max="32" step="2" value="26">
+          </div>
+
+          <div class="field">
+            <label>强调色（彩色加粗）<span class="api">lv_style_set_text_color</span></label>
+            <input type="color" id="color1" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>大字号颜色<output id="o-color2">#e6a23c</output><span class="api">lv_style_set_text_color</span></label>
+            <input type="color" id="color2" value="#e6a23c">
+          </div>
+
+          <div class="field">
+            <label>行内图片（文字中插图）<span class="api">lv_span + lv_image 混排（SpannableString 无行内图片）</span></label>
+            <div class="check"><input type="checkbox" id="inlineimg" checked><span>在文字间嵌入小图标</span></div>
+          </div>
+          <div class="field">
+            <label>逐字旋转<output id="o-rot">18 °</output><span class="api">lv_obj_set_style_transform_rotation 逐 span（SpannableString 无逐字变换）</span></label>
+            <input type="range" id="rot" min="0" max="30" step="1" value="18">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UILabel + SpannableString</code>
+        <span class="cmp-tag ui">颜色/字号/背景 Span</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UILabel 用 SpannableString 实现颜色 / 字号 / 背景 Span；行内图片与逐字变换无法表达。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>样式模式（模拟 Span 组合）<span class="api">UILabel::SetText(SpannableString*)：SpannableString::SetForegroundColorSpan / SetBackgroundColorSpan / SetAbsoluteSizeSpan</span></label>
+            <div class="seg" id="ustyle">
+              <button type="button" data-v="normal" class="active">普通</button>
+              <button type="button" data-v="accent">强调</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          依据 <code>spannable_string.h</code>：支持
+          <code>SetForegroundColorSpan()</code> / <code>SetAbsoluteSizeSpan()</code> /
+          <code>SetBackgroundColorSpan()</code> 等 Span；没有行内图片对象，也没有逐字旋转/位移接口。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240，文本容器 300×140。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_span 复刻（迁移自旧页，新增行内图片 + 逐字旋转）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+  var BOX = { x: 30, y: 44, w: 300, h: 140, pad: 12 };
+  var IMG_W = 16, IMG_H = 14;
+
+  var state = {
+    overflow: "clip",
+    maxLines: 3,
+    align: "left",
+    indent: 0,
+    color1: "#2b7de9",
+    color2: "#e6a23c",
+    big: 26,
+    inlineImg: true,
+    rot: 18
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var t0 = performance.now();
+
+  /* ---------- 文本片段 ---------- */
+  function buildSpans(){
+    var spans = [
+      { text: "LVGL ", size: 14 },
+      { text: "富文本 Span", size: 14, weight: 600, color: state.color1 },
+      { text: " 支持多段样式混排：", size: 14 },
+      { text: "大字号", size: state.big, weight: 600, color: state.color2 },
+      { text: "、", size: 14 },
+      { text: "下划线", size: 14, underline: true },
+      { text: " 与 ", size: 14 },
+      { text: "删除线", size: 14, strike: true }
+    ];
+    if(state.inlineImg){
+      spans.push({ text: "，文字中还能嵌入 ", size: 14 });
+      spans.push({ img: "check", w: IMG_W, h: IMG_H });
+      spans.push({ img: "wifi", w: IMG_W, h: IMG_H });
+      spans.push({ text: " 小图标。", size: 14 });
+    }else{
+      spans.push({ text: "。", size: 14 });
+    }
+    spans.push({ text: "波浪行", size: 14, wave: true, weight: 600, color: state.color1 });
+    spans.push({ text: " 演示逐字旋转。这是一个用于演示 overflow 与 max_lines 的较长段落，文字会按容器宽度自动换行。", size: 14 });
+    spans.push({ text: "继续补充一些文字，确保内容高度超过容器的可视区域，从而可以直观看到裁剪与省略号两种策略的差异。", size: 14 });
+    return spans;
+  }
+
+  function charStyle(tok){
+    return {
+      size: tok.size || 14,
+      weight: tok.weight || 400,
+      color: tok.color || "#1c2128",
+      mono: !!tok.mono,
+      underline: !!tok.underline,
+      strike: !!tok.strike,
+      wave: !!tok.wave
+    };
+  }
+
+  function spanW(c, tok){
+    if(tok.img) return tok.w + 4;
+    return K.measure(c, tok.text, { size: tok.size, weight: tok.weight || 400, mono: tok.mono });
+  }
+
+  /* ---------- 排版 ---------- */
+  function layout(c, maxW, indent, limit){
+    var spans = buildSpans();
+    var lines = [];
+    var cur = { items: [], w: 0, maxSize: 14 };
+
+    function flush(){
+      lines.push(cur);
+      cur = { items: [], w: 0, maxSize: 14 };
+    }
+
+    for(var s = 0; s < spans.length; s++){
+      var tok = spans[s];
+      if(tok.img){
+        var w = tok.w + 4;
+        var avail0 = maxW - (lines.length === 0 ? indent : 0);
+        if(cur.items.length && cur.w + w > avail0) flush();
+        cur.items.push({ img: tok.img, w: w, h: tok.h });
+        cur.w += w;
+        if(tok.h > cur.maxSize) cur.maxSize = Math.max(cur.maxSize, tok.h);
+        continue;
+      }
+      var st = charStyle(tok);
+      var text = tok.text;
+      for(var i = 0; i < text.length; i++){
+        var ch = text[i];
+        if(ch === "\n"){ flush(); continue; }
+        var cw = K.measure(c, ch, { size: st.size, weight: st.weight, mono: st.mono });
+        var avail = maxW - (lines.length === 0 && cur.items.length === 0 ? indent : 0);
+        if(cur.items.length && cur.w + cw > avail) flush();
+        cur.items.push({ ch: ch, st: st, w: cw });
+        cur.w += cw;
+        if(st.size > cur.maxSize) cur.maxSize = st.size;
+      }
+    }
+    if(cur.items.length || lines.length === 0) flush();
+
+    var truncated = false;
+    if(limit > 0 && lines.length > limit){
+      lines = lines.slice(0, limit);
+      truncated = true;
+    }
+    return { lines: lines, truncated: truncated };
+  }
+
+  function addEllipsis(c, lines, maxW){
+    var last = lines[lines.length - 1];
+    if(!last || !last.items.length) return;
+    var lastItem = last.items[last.items.length - 1];
+    var size = lastItem.ch ? lastItem.st.size : 14;
+    var ew = K.measure(c, "…", { size: size });
+    while(last.items.length > 1 && last.w + ew > maxW){
+      last.w -= last.items.pop().w;
+    }
+    last.items.push({ ch: "…", st: { size: size, weight: 400, color: "#1c2128" }, w: ew });
+    last.w += ew;
+  }
+
+  function lineHeight(line){ return Math.max(20, line.maxSize * 1.5); }
+
+  function drawInlineImg(c, name, x, yTop, h, color){
+    K.icon(c, name, x, yTop, h, color || K.theme.primary);
+  }
+
+  function drawLine(c, line, x0, iw, y, isFirst, indent, align, tMs){
+    var avail = iw - (isFirst ? indent : 0);
+    var offset = 0;
+    if(align === "center") offset = Math.max(0, (avail - line.w) / 2);
+    else if(align === "right") offset = Math.max(0, avail - line.w);
+    var x = x0 + (isFirst ? indent : 0) + offset;
+    var baseline = y + line.maxSize * 1.02 + 2;
+    var k = 0;
+
+    for(var i = 0; i < line.items.length; i++){
+      var it = line.items[i];
+      if(it.img){
+        drawInlineImg(c, it.img, x + 2, y + Math.max(2, line.maxSize - it.h), it.h, K.theme.primary);
+        x += it.w;
+        continue;
+      }
+      var ch = it.ch, st = it.st;
+      var rot = 0, dy = 0;
+      if(st.wave && state.rot > 0){
+        var ph = tMs / 320 + k * 0.7;
+        rot = Math.sin(ph) * state.rot;
+        dy = Math.sin(ph) * 1.5;
+      }
+      if(rot !== 0){
+        c.save();
+        c.translate(x + it.w / 2, baseline + dy);
+        c.rotate(rot * Math.PI / 180);
+        K.text(c, ch, 0, 0, {
+          size: st.size, weight: st.weight, color: st.color, mono: st.mono,
+          align: "center", baseline: "alphabetic"
+        });
+        c.restore();
+      }else{
+        K.text(c, ch, x, baseline + dy, {
+          size: st.size, weight: st.weight, color: st.color, mono: st.mono,
+          baseline: "alphabetic"
+        });
+      }
+      if(st.underline){
+        c.beginPath();
+        c.moveTo(x, baseline + 2.5);
+        c.lineTo(x + it.w, baseline + 2.5);
+        c.strokeStyle = st.color; c.lineWidth = 1; c.stroke();
+      }
+      if(st.strike){
+        c.beginPath();
+        c.moveTo(x, baseline - st.size * 0.3);
+        c.lineTo(x + it.w, baseline - st.size * 0.3);
+        c.strokeStyle = st.color; c.lineWidth = 1; c.stroke();
+      }
+      x += it.w;
+      k++;
+    }
+  }
+
+  /* ---------- 绘制 ---------- */
+  function drawScene(c, tMs){
+    c.clearRect(0, 0, W, H);
+    K.box(c, 12, 8, W - 24, H - 16, {
+      bg: "#ffffff", radius: 14, borderWidth: 1, border: "#e7eaee",
+      shadow: "rgba(28,33,40,0.07)", shadowBlur: 14, shadowY: 4
+    });
+
+    K.text(c, "lv_spangroup  300 × 140", 24, 30, { size: 12, weight: 600, color: K.theme.text });
+    var modeTxt = state.overflow === "clip" ? "CLIP" : "DOTS";
+    K.text(c, modeTxt, W - 24, 30, { size: 10.5, mono: true, color: K.theme.textFaint, align: "right" });
+
+    K.box(c, BOX.x, BOX.y, BOX.w, BOX.h, {
+      bg: "#ffffff", radius: 10, borderWidth: 1, border: "#d6d9df"
+    });
+
+    var ix = BOX.x + BOX.pad, iy = BOX.y + BOX.pad;
+    var iw = BOX.w - BOX.pad * 2, ih = BOX.h - BOX.pad * 2;
+
+    var res = layout(c, iw, state.indent, state.maxLines);
+    var lines = res.lines;
+    if(state.overflow === "dots" && res.truncated){
+      addEllipsis(c, lines, iw);
+    }
+
+    c.save();
+    K.roundRectPath(c, ix, iy, iw, ih, 4);
+    c.clip();
+    var y = iy;
+    for(var j = 0; j < lines.length; j++){
+      var lh = lineHeight(lines[j]);
+      drawLine(c, lines[j], ix, iw, y, j === 0, state.indent, state.align, tMs);
+      y += lh;
+    }
+    c.restore();
+
+    var info = modeTxt + " · max_lines " + state.maxLines +
+      (state.inlineImg ? " · 行内图片 ✓" : "") +
+      (state.rot > 0 ? " · 逐字旋转 " + state.rot + "°" : "");
+    K.text(c, info, W / 2, 206, { size: 11, color: K.theme.textMuted, align: "center" });
+    K.text(c, "多 span 混排 · 自动换行 · 首行缩进 " + state.indent + " px", W / 2, 222, {
+      size: 10.5, color: K.theme.textFaint, align: "center"
+    });
+  }
+
+  K.run(function(now){
+    drawScene(view.ctx, now - t0);
+  });
+
+  /* ---------- C 代码 ---------- */
+  function hexCode(c){ return "0x" + c.replace("#", ""); }
+
+  function renderCode(){
+    var align = state.align === "left" ? "LV_TEXT_ALIGN_LEFT" :
+      (state.align === "center" ? "LV_TEXT_ALIGN_CENTER" : "LV_TEXT_ALIGN_RIGHT");
+    var overflow = state.overflow === "dots" ? "LV_SPAN_OVERFLOW_ELLIPSIS" : "LV_SPAN_OVERFLOW_CLIP";
+    var L = [];
+
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * spangroup = " + K.fn("lv_spangroup_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(spangroup, " + K.num(BOX.w) + ", " + K.num(BOX.h) + ");");
+    L.push(K.fn("lv_obj_set_style_pad_all") + "(spangroup, " + K.num(BOX.pad) + ", 0);");
+    L.push("");
+    L.push("static lv_style_t st_bold, st_big, st_underline, st_strike;");
+    L.push(K.fn("lv_style_init") + "(&st_bold);");
+    L.push(K.fn("lv_style_set_text_color") + "(&st_bold, " + K.fn("lv_color_hex") + "(" + K.num(hexCode(state.color1)) + "));");
+    L.push(K.fn("lv_style_init") + "(&st_big);");
+    L.push(K.fn("lv_style_set_text_color") + "(&st_big, " + K.fn("lv_color_hex") + "(" + K.num(hexCode(state.color2)) + "));");
+    L.push(K.fn("lv_style_set_text_font") + "(&st_big, &lv_font_montserrat_" + state.big + ");" + K.cm("  /* 中文换同字号字库 */"));
+    L.push(K.fn("lv_style_init") + "(&st_underline);");
+    L.push(K.fn("lv_style_set_text_decor") + "(&st_underline, " + K.num("LV_TEXT_DECOR_UNDERLINE") + ");");
+    L.push(K.fn("lv_style_init") + "(&st_strike);");
+    L.push(K.fn("lv_style_set_text_decor") + "(&st_strike, " + K.num("LV_TEXT_DECOR_STRIKETHROUGH") + ");");
+    L.push("");
+
+    var sn = 0;
+    function addSpan(text, styleVar, extra){
+      sn++;
+      var v = "s" + sn;
+      L.push("lv_span_t * " + v + " = " + K.fn("lv_spangroup_add_span") + "(spangroup);");
+      L.push(K.fn("lv_spangroup_set_span_text") + "(spangroup, " + v + ", " + JSON.stringify(text) + ");");
+      if(styleVar) L.push(K.fn("lv_spangroup_set_span_style") + "(spangroup, " + v + ", &" + styleVar + ");");
+      if(extra) L.push(extra.replace(/@V@/g, v));
+    }
+
+    addSpan("LVGL ", null);
+    addSpan("富文本 Span", "st_bold");
+    addSpan(" 支持多段样式混排：", null);
+    addSpan("大字号", "st_big");
+    addSpan("、", null);
+    addSpan("下划线", "st_underline");
+    addSpan(" 与 ", null);
+    addSpan("删除线", "st_strike");
+
+    if(state.inlineImg){
+      L.push("");
+      L.push(K.cm("/* 行内图片：LVGL 把 lv_image 混入文本流（SpannableString 做不到） */"));
+      L.push("lv_obj_t * inline_img = " + K.fn("lv_image_create") + "(spangroup);");
+      L.push(K.fn("lv_image_set_src") + "(inline_img, LV_SYMBOL_OK);");
+      L.push(K.fn("lv_obj_set_style_image_recolor") + "(inline_img, " + K.fn("lv_color_hex") + "(" + K.num(hexCode(state.color1)) + "), 0);");
+    }
+    addSpan("，行内图片与逐字旋转见画布。", null);
+
+    if(state.rot > 0){
+      L.push("");
+      L.push(K.cm("/* 逐字旋转：每个字一个 lv_label，各自设置 transform_rotation */"));
+      L.push("static const char * wave_chars[] = { \"波\", \"浪\", \"行\" };");
+      L.push("for (uint8_t i = 0; i < " + K.num(3) + "; i++) {");
+      L.push("    lv_obj_t * ch = " + K.fn("lv_label_create") + "(spangroup);");
+      L.push("    " + K.fn("lv_label_set_text") + "(ch, wave_chars[i]);");
+      L.push("    " + K.fn("lv_obj_set_style_text_color") + "(ch, " + K.fn("lv_color_hex") + "(" + K.num(hexCode(state.color1)) + "), 0);");
+      L.push("    " + K.fn("lv_obj_set_style_transform_rotation") + "(ch, (int32_t)(sin(t) * " + K.num(state.rot * 10) + "), 0);" + K.cm(" /* 0.1° 单位，定时器逐帧更新 */"));
+      L.push("}");
+    }else{
+      addSpan("波浪行", "st_bold");
+    }
+
+    L.push("");
+    L.push(K.fn("lv_spangroup_set_overflow") + "(spangroup, " + K.num(overflow) + ");");
+    L.push(K.fn("lv_spangroup_set_max_lines") + "(spangroup, " + K.num(state.maxLines) + ");");
+    L.push(K.fn("lv_spangroup_set_align") + "(spangroup, " + K.num(align) + ");");
+    L.push(K.fn("lv_spangroup_set_indent") + "(spangroup, " + K.num(state.indent) + ");");
+    L.push(K.fn("lv_spangroup_set_mode") + "(spangroup, " + K.num("LV_SPAN_MODE_BREAK") + ");");
+    L.push(K.fn("lv_obj_center") + "(spangroup);");
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件 ---------- */
+  K.bindSeg("overflow", function(v){ state.overflow = v; renderCode(); });
+  K.bindRange("lines", function(v){ return v; }, function(v){ state.maxLines = v; renderCode(); });
+  K.bindSeg("align", function(v){ state.align = v; renderCode(); });
+  K.bindRange("indent", function(v){ return v + " px"; }, function(v){ state.indent = v; renderCode(); });
+  document.getElementById("color1").addEventListener("input", function(e){
+    state.color1 = e.target.value;
+    renderCode();
+  });
+  document.getElementById("color2").addEventListener("input", function(e){
+    state.color2 = e.target.value;
+    document.getElementById("o-color2").textContent = e.target.value;
+    renderCode();
+  });
+  K.bindRange("big", function(v){ return v + " px"; }, function(v){ state.big = v; renderCode(); });
+  K.bindCheck("inlineimg", function(on){ state.inlineImg = on; renderCode(); });
+  K.bindRange("rot", function(v){ return v + " °"; }, function(v){ state.rot = v; renderCode(); });
+
+  /* ---------- 导出 ---------- */
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "span.png");
+  });
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "span.gif", w: W, h: H, fps: 20, duration: state.rot > 0 ? 2000 : 1200,
+      frame: function(c, t){ drawScene(c, t); },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: view.canvas, name: "span.webm", duration: 2500,
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：UILabel + SpannableString 操作绑定 + 等价 C++ 代码生成
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var mode = "normal";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  function renderUCode(){
+    var accent = mode === "accent";
+    var fg = accent ? "0x00, 0x7d, 0xff" : "0x1c, 0x21, 0x28";
+    var bg = accent ? "0xff, 0xd3, 0x4d" : "0xff, 0xe0, 0x8a";
+    var size = accent ? 20 : 16;
+    var L = [];
+    L.push(cm("/* 由右列参数实时生成（模式：" + (accent ? "强调" : "普通") + "） */"));
+    L.push("SpannableString * rich = " + fn("new") + " SpannableString();");
+    L.push("rich-&gt;" + fn("Append") + "(\"Rich \");");
+    L.push("rich-&gt;" + fn("SetForegroundColorSpan") + "(Color{" + fg + "}, " + num(0) + ", " + num(4) + ");");
+    L.push("rich-&gt;" + fn("Append") + "(\"Span \");");
+    L.push("rich-&gt;" + fn("SetBackgroundColorSpan") + "(Color{" + bg + "}, " + num(5) + ", " + num(9) + ");");
+    L.push("rich-&gt;" + fn("SetAbsoluteSizeSpan") + "(" + num(size) + ", " + num(0) + ", " + num(4) + ");");
+    L.push("rich-&gt;" + fn("Append") + "(\" text\");");
+    L.push("");
+    L.push("UILabel * label = " + fn("new") + " UILabel();");
+    L.push("label-&gt;" + fn("SetText") + "(rich);");
+    L.push(cm("/* 无行内图片对象、无逐字旋转/位移接口（lv_span 可做到） */"));
+    document.getElementById("ucode").innerHTML = L.join("\n");
+  }
+
+  document.getElementById("ustyle").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    mode = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    if(window.LV2 && LV2.api && LV2.api.setStyle) LV2.api.setStyle(mode);
+    renderUCode();
+  });
+
+  renderUCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

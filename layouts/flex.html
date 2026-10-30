@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LVGL Flex 布局复刻与导出</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='5' fill='%23fbfcfe' stroke='%239aa4b2'/%3E%3Crect x='8' y='9' width='7' height='6' rx='2' fill='%232b7de9'/%3E%3Crect x='18' y='9' width='7' height='6' rx='2' fill='%231f9d66'/%3E%3Crect x='8' y='18' width='7' height='6' rx='2' fill='%23e6a23c'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../index.html">← 返回画廊</a>
+    <h1>LVGL Flex 弹性布局复刻</h1>
+    <p>6 个彩色子卡片在容器内实时重排，参数对齐 <code>lv_obj_set_flex_flow()</code> / <code>lv_obj_set_flex_align()</code>。点击卡片选中后可用滑杆调整该子项的 <code>flex_grow</code>。</p>
+  </header>
+
+  <div class="stage">
+    <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+  </div>
+
+  <section class="panel">
+    <h2>参数（对应 LVGL 接口）</h2>
+    <div class="grid">
+      <div class="field wide">
+        <label>流向 flex_flow</label>
+        <div class="seg" id="flow">
+          <button type="button" data-val="row" class="active">ROW</button>
+          <button type="button" data-val="col">COLUMN</button>
+          <button type="button" data-val="row-wrap">ROW_WRAP</button>
+          <button type="button" data-val="col-wrap">COLUMN_WRAP</button>
+        </div>
+      </div>
+      <div class="field wide">
+        <label>主轴对齐 main_place</label>
+        <div class="seg" id="main">
+          <button type="button" data-val="start" class="active">起</button>
+          <button type="button" data-val="center">中</button>
+          <button type="button" data-val="end">末</button>
+          <button type="button" data-val="between">两端</button>
+          <button type="button" data-val="around">环绕</button>
+          <button type="button" data-val="evenly">等距</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>交叉轴对齐 cross_place</label>
+        <div class="seg" id="cross">
+          <button type="button" data-val="start">起</button>
+          <button type="button" data-val="center" class="active">中</button>
+          <button type="button" data-val="end">末</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>行轨道对齐 track_place</label>
+        <div class="seg" id="track">
+          <button type="button" data-val="start" class="active">起</button>
+          <button type="button" data-val="center">中</button>
+          <button type="button" data-val="end">末</button>
+          <button type="button" data-val="between">两端</button>
+          <button type="button" data-val="evenly">等距</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>行间距 pad_row <output id="o-rowGap">8 px</output></label>
+        <input type="range" id="rowGap" min="0" max="20" step="1" value="8">
+      </div>
+      <div class="field">
+        <label>列间距 pad_column <output id="o-colGap">8 px</output></label>
+        <input type="range" id="colGap" min="0" max="20" step="1" value="8">
+      </div>
+      <div class="field">
+        <label>子项数量（增删子项）</label>
+        <div class="seg" id="count">
+          <button type="button" data-val="4">4</button>
+          <button type="button" data-val="5">5</button>
+          <button type="button" data-val="6" class="active">6</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>选中子项 <output id="o-sel">1</output></label>
+        <div class="check"><span style="font-size:12px" id="sel-info">点击画布卡片选择</span></div>
+      </div>
+      <div class="field wide">
+        <label>选中子项 flex_grow <output id="o-grow">0</output></label>
+        <input type="range" id="grow" min="0" max="3" step="1" value="0">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <pre class="code" id="code"></pre>
+
+  <footer>画布尺寸 320×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。本页布局变化带 200ms 缓动，仅导出 PNG。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+(function () {
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+  var CONT = { x: 10, y: 30, w: 300, h: 198 };
+  var COLORS = ["#2b7de9", "#1f9d66", "#e6a23c", "#e04b4b", "#7b61ff", "#00a6a6"];
+  var BASE_MAIN_ROW = [32, 38, 28, 34, 42, 32];
+  var BASE_CROSS_ROW = [30, 38, 26, 34, 40, 30];
+  var BASE_MAIN_COL = [18, 22, 16, 20, 24, 18];
+  var BASE_CROSS_COL = [64, 84, 74, 92, 80, 70];
+
+  var state = {
+    flow: "row", main: "start", cross: "center", track: "start",
+    rowGap: 8, colGap: 8, count: 6, sel: 0, grow: 0
+  };
+  var items = [];
+  function resetItems(n) {
+    items = [];
+    var i;
+    for (i = 0; i < n; i++) items.push({ grow: 0 });
+  }
+  resetItems(6);
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var canvas = view.canvas;
+
+  function isRow() { return state.flow === "row" || state.flow === "row-wrap"; }
+  function isWrap() { return state.flow === "row-wrap" || state.flow === "col-wrap"; }
+
+  function computeTargets() {
+    var n = items.length;
+    var rowFlow = isRow();
+    var wrap = isWrap();
+    var padMain = wrap ? 48 : 10;
+    var inner = {
+      x: CONT.x + (rowFlow ? padMain : 10),
+      y: CONT.y + (rowFlow ? 10 : padMain),
+      w: CONT.w - (rowFlow ? padMain * 2 : 20),
+      h: CONT.h - (rowFlow ? 20 : padMain * 2)
+    };
+    var gapMain = rowFlow ? state.colGap : state.rowGap;
+    var gapCross = rowFlow ? state.rowGap : state.colGap;
+    var mainAvail = rowFlow ? inner.w : inner.h;
+    var crossAvail = rowFlow ? inner.h : inner.w;
+    var i, k;
+
+    function baseMain(idx) { return rowFlow ? BASE_MAIN_ROW[idx] : BASE_MAIN_COL[idx]; }
+    function baseCross(idx) { return rowFlow ? BASE_CROSS_ROW[idx] : BASE_CROSS_COL[idx]; }
+
+    var lines = [];
+    if (!wrap) {
+      var all = [];
+      for (i = 0; i < n; i++) all.push(i);
+      lines.push(all);
+    } else {
+      var cur = [], used = 0;
+      for (i = 0; i < n; i++) {
+        var add = (cur.length ? gapMain : 0) + baseMain(i);
+        if (cur.length && used + add > mainAvail) {
+          lines.push(cur);
+          cur = [];
+          used = 0;
+          add = baseMain(i);
+        }
+        cur.push(i);
+        used += add;
+      }
+      if (cur.length) lines.push(cur);
+    }
+
+    var lineCross = [];
+    for (i = 0; i < lines.length; i++) {
+      var mx = 0;
+      for (k = 0; k < lines[i].length; k++) mx = Math.max(mx, baseCross(lines[i][k]));
+      lineCross.push(mx);
+    }
+
+    var totalCross = 0;
+    for (i = 0; i < lineCross.length; i++) totalCross += lineCross[i];
+    totalCross += gapCross * (lines.length - 1);
+
+    var trackFree = Math.max(0, crossAvail - totalCross);
+    var trackOff = 0, trackExtra = 0;
+    if (state.track === "center") trackOff = trackFree / 2;
+    else if (state.track === "end") trackOff = trackFree;
+    else if (state.track === "between") trackExtra = lines.length > 1 ? trackFree / (lines.length - 1) : 0;
+    else if (state.track === "evenly") {
+      trackOff = trackFree / (lines.length + 1);
+      trackExtra = trackFree / (lines.length + 1);
+    }
+
+    var targets = [];
+    for (i = 0; i < n; i++) targets.push({ x: inner.x, y: inner.y, w: 0, h: 0 });
+
+    var crossCursor = (rowFlow ? inner.y : inner.x) + trackOff;
+    var li;
+    for (li = 0; li < lines.length; li++) {
+      var line = lines[li];
+      var lc = lineCross[li];
+      var sumBase = 0, growSum = 0;
+      for (k = 0; k < line.length; k++) {
+        sumBase += baseMain(line[k]);
+        growSum += items[line[k]].grow;
+      }
+      var gaps = gapMain * (line.length - 1);
+      var total = sumBase + gaps;
+      var scale = 1;
+      if (total > mainAvail) scale = Math.max(0.18, (mainAvail - gaps) / sumBase);
+
+      var sizes = [], sum = 0;
+      for (k = 0; k < line.length; k++) {
+        sizes.push(baseMain(line[k]) * scale);
+        sum += sizes[k];
+      }
+      var free = Math.max(0, mainAvail - sum - gaps);
+      if (growSum > 0 && free > 0) {
+        for (k = 0; k < line.length; k++) {
+          sizes[k] += free * (items[line[k]].grow / growSum);
+        }
+        free = 0;
+      }
+
+      var off = 0, extra = 0;
+      if (state.main === "center") off = free / 2;
+      else if (state.main === "end") off = free;
+      else if (state.main === "between") extra = line.length > 1 ? free / (line.length - 1) : 0;
+      else if (state.main === "around") {
+        var ga = free / line.length;
+        off = ga / 2;
+        extra = ga;
+      } else if (state.main === "evenly") {
+        var ge = free / (line.length + 1);
+        off = ge;
+        extra = ge;
+      }
+
+      var cursor = (rowFlow ? inner.x : inner.y) + off;
+      for (k = 0; k < line.length; k++) {
+        var idx = line[k];
+        var cw = rowFlow ? sizes[k] : baseCross(idx);
+        var ch = rowFlow ? baseCross(idx) : sizes[k];
+        var crossOff = 0;
+        if (state.cross === "center") crossOff = (lc - (rowFlow ? ch : cw)) / 2;
+        else if (state.cross === "end") crossOff = lc - (rowFlow ? ch : cw);
+        targets[idx] = {
+          x: rowFlow ? cursor : crossCursor + crossOff,
+          y: rowFlow ? crossCursor + crossOff : cursor,
+          w: cw, h: ch
+        };
+        cursor += sizes[k] + gapMain + extra;
+      }
+      crossCursor += lc + gapCross + trackExtra;
+    }
+    return targets;
+  }
+  var targets = computeTargets();
+  var disp = targets.map(function (t) {
+    return { x: t.x, y: t.y, w: t.w, h: t.h };
+  });
+
+  function drawContainer(c) {
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+    c.globalAlpha = 0.6;
+    K.text(c, "flex 容器 300×198 · 点击卡片选中", 12, 15, {
+      size: 10, color: K.theme.textFaint
+    });
+    c.globalAlpha = 1;
+    K.box(c, CONT.x, CONT.y, CONT.w, CONT.h, {
+      bg: "#fbfcfe", radius: 10, borderWidth: 1, border: "#9aa4b2", dash: [5, 4]
+    });
+    if (isWrap()) {
+      var pad = 48;
+      c.save();
+      c.strokeStyle = "#e3e8ef";
+      c.setLineDash([3, 4]);
+      c.lineWidth = 1;
+      c.beginPath();
+      if (isRow()) c.rect(CONT.x + pad, CONT.y + 10, CONT.w - pad * 2, CONT.h - 20);
+      else c.rect(CONT.x + 10, CONT.y + pad, CONT.w - 20, CONT.h - pad * 2);
+      c.stroke();
+      c.restore();
+    }
+  }
+
+  function drawCard(c, x, y, w, h, idx, selected) {
+    var color = COLORS[idx % COLORS.length];
+    K.box(c, x, y, w, h, {
+      bg: color, radius: 7,
+      shadow: K.alpha(color, 0.20), shadowBlur: 8, shadowY: 3
+    });
+    var num = String(idx + 1);
+    K.text(c, num, x + w / 2, y + h / 2, {
+      size: Math.min(17, Math.max(11, Math.min(w, h) * 0.45)),
+      weight: 700, color: "#ffffff", align: "center"
+    });
+    if (items[idx].grow > 0) {
+      K.text(c, "g" + items[idx].grow, x + w - 6, y + h - 8, {
+        size: 8.5, weight: 600, color: "#ffffff", align: "right", alpha: 0.85
+      });
+    }
+    if (selected) {
+      c.save();
+      K.roundRectPath(c, x - 2, y - 2, w + 4, h + 4, 9);
+      c.strokeStyle = "#1c2128";
+      c.lineWidth = 2;
+      c.stroke();
+      c.restore();
+    }
+  }
+
+  function drawScene(c) {
+    drawContainer(c);
+    var i;
+    for (i = 0; i < disp.length; i++) {
+      drawCard(c, disp[i].x, disp[i].y, disp[i].w, disp[i].h, i, i === state.sel);
+    }
+    c.globalAlpha = 0.5;
+    K.text(c, "选中 #" + (state.sel + 1) + " · grow " + items[state.sel].grow, W - 12, 15, {
+      size: 10, color: K.theme.primary, align: "right"
+    });
+    c.globalAlpha = 1;
+  }
+
+  var lastT = performance.now();
+  K.run(function (now) {
+    var dt = Math.min(64, now - lastT);
+    lastT = now;
+    targets = computeTargets();
+    while (disp.length < targets.length) {
+      disp.push({ x: targets[disp.length].x, y: targets[disp.length].y, w: 0, h: 0 });
+    }
+    if (disp.length > targets.length) disp.length = targets.length;
+    var k = 1 - Math.exp(-dt / 70);
+    var i;
+    for (i = 0; i < targets.length; i++) {
+      disp[i].x += (targets[i].x - disp[i].x) * k;
+      disp[i].y += (targets[i].y - disp[i].y) * k;
+      disp[i].w += (targets[i].w - disp[i].w) * k;
+      disp[i].h += (targets[i].h - disp[i].h) * k;
+    }
+    drawScene(view.ctx);
+  });
+
+  canvas.addEventListener("pointerdown", function (e) {
+    var r = canvas.getBoundingClientRect();
+    var x = e.clientX - r.left, y = e.clientY - r.top;
+    var i, d;
+    for (i = disp.length - 1; i >= 0; i--) {
+      d = disp[i];
+      if (x >= d.x && x <= d.x + d.w && y >= d.y && y <= d.y + d.h) {
+        selectItem(i);
+        return;
+      }
+    }
+  });
+  function syncSelUI() {
+    document.getElementById("sel-info").textContent = "已选中第 " + (state.sel + 1) + " 个卡片";
+    document.getElementById("o-sel").textContent = state.sel + 1;
+    var g = items[state.sel].grow;
+    document.getElementById("grow").value = g;
+    document.getElementById("o-grow").textContent = g;
+    state.grow = g;
+  }
+
+  function selectItem(i) {
+    state.sel = K.clamp(i, 0, items.length - 1);
+    syncSelUI();
+    renderCode();
+  }
+
+  function flowConst() {
+    if (state.flow === "col") return "LV_FLEX_FLOW_COLUMN";
+    if (state.flow === "row-wrap") return "LV_FLEX_FLOW_ROW_WRAP";
+    if (state.flow === "col-wrap") return "LV_FLEX_FLOW_COLUMN_WRAP";
+    return "LV_FLEX_FLOW_ROW";
+  }
+
+  function alignConst(v) {
+    if (v === "center") return "LV_FLEX_ALIGN_CENTER";
+    if (v === "end") return "LV_FLEX_ALIGN_END";
+    if (v === "between") return "LV_FLEX_ALIGN_SPACE_BETWEEN";
+    if (v === "around") return "LV_FLEX_ALIGN_SPACE_AROUND";
+    if (v === "evenly") return "LV_FLEX_ALIGN_SPACE_EVENLY";
+    return "LV_FLEX_ALIGN_START";
+  }
+
+  function renderCode() {
+    var L = [];
+    var rowFlow = isRow();
+    var i;
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * cont = " + K.fn("lv_obj_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_width") + "(cont, " + K.num(CONT.w) + ");");
+    L.push(K.fn("lv_obj_set_height") + "(cont, " + K.num(CONT.h) + ");");
+    L.push(K.fn("lv_obj_center") + "(cont);");
+    L.push(K.fn("lv_obj_set_flex_flow") + "(cont, " + K.num(flowConst()) + ");");
+    L.push(K.fn("lv_obj_set_flex_align") + "(cont, " + K.num(alignConst(state.main)) + ", " +
+      K.num(alignConst(state.cross)) + ", " + K.num(state.track === "between" ? "LV_FLEX_ALIGN_SPACE_BETWEEN" :
+      state.track === "evenly" ? "LV_FLEX_ALIGN_SPACE_EVENLY" : alignConst(state.track)) + ");");
+    L.push(K.fn("lv_obj_set_style_pad_row") + "(cont, " + K.num(state.rowGap) + ", 0);");
+    L.push(K.fn("lv_obj_set_style_pad_column") + "(cont, " + K.num(state.colGap) + ", 0);");
+    L.push(K.fn("lv_obj_set_style_pad_all") + "(cont, " + K.num(10) + ", 0);");
+    if (isWrap()) {
+      if (rowFlow) {
+        L.push(K.fn("lv_obj_set_style_pad_left") + "(cont, " + K.num(48) + ", 0);");
+        L.push(K.fn("lv_obj_set_style_pad_right") + "(cont, " + K.num(48) + ", 0);");
+      } else {
+        L.push(K.fn("lv_obj_set_style_pad_top") + "(cont, " + K.num(48) + ", 0);");
+        L.push(K.fn("lv_obj_set_style_pad_bottom") + "(cont, " + K.num(48) + ", 0);");
+      }
+      L.push(K.cm("/* 换行模式收窄主轴空间，便于观察轨道换行 */"));
+    }
+    L.push("");
+    for (i = 0; i < items.length; i++) {
+      var cw = rowFlow ? BASE_MAIN_ROW[i] : BASE_CROSS_COL[i];
+      var ch = rowFlow ? BASE_CROSS_ROW[i] : BASE_MAIN_COL[i];
+      L.push("lv_obj_t * c" + (i + 1) + " = " + K.fn("lv_obj_create") + "(cont);");
+      L.push(K.fn("lv_obj_set_size") + "(c" + (i + 1) + ", " + K.num(cw) + ", " + K.num(ch) + ");");
+      if (items[i].grow > 0) {
+        L.push(K.fn("lv_obj_set_style_flex_grow") + "(c" + (i + 1) + ", " + K.num(items[i].grow) + ", 0);");
+      }
+      L.push(K.fn("lv_obj_set_style_bg_color") + "(c" + (i + 1) + ", " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(COLORS[i])) + "), 0);");
+      L.push(K.fn("lv_obj_set_style_radius") + "(c" + (i + 1) + ", " + K.num(7) + ", 0);");
+      L.push(K.fn("lv_obj_set_style_border_width") + "(c" + (i + 1) + ", " + K.num(0) + ", 0);");
+      L.push("");
+    }
+    K.code(L);
+  }
+
+  K.bindSeg("flow", function (v) { state.flow = v; renderCode(); });
+  K.bindSeg("main", function (v) { state.main = v; renderCode(); });
+  K.bindSeg("cross", function (v) { state.cross = v; renderCode(); });
+  K.bindSeg("track", function (v) { state.track = v; renderCode(); });
+  K.bindRange("rowGap", function (v) { return v + " px"; }, function (v) { state.rowGap = v; renderCode(); });
+  K.bindRange("colGap", function (v) { return v + " px"; }, function (v) { state.colGap = v; renderCode(); });
+
+  K.bindSeg("count", function (v) {
+    var n = Number(v);
+    while (items.length < n) items.push({ grow: 0 });
+    if (items.length > n) items.length = n;
+    state.count = n;
+    if (state.sel >= n) state.sel = n - 1;
+    syncSelUI();
+    renderCode();
+  });
+
+  K.bindRange("grow", function (v) { return v; }, function (v) {
+    state.grow = v;
+    items[state.sel].grow = v;
+    syncSelUI();
+    renderCode();
+  });
+
+  document.getElementById("btn-png").addEventListener("click", function () {
+    K.exportPng(canvas, "flex.png");
+  });
+
+  syncSelUI();
+  renderCode();
+})();
+</script>
+</body>
+</html>

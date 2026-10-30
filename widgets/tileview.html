@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tileview：lv_tileview vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Cpath d='M11 4v24M21 4v24M4 11h24M4 21h24' stroke='%23fff' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Tileview：lv_tileview vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>：3×3 二维磁贴，双向拖动吸附，可一键切到任意行列方位并支持循环边界；
+      右列 ArkUI lite <b>没有对应的磁贴容器组件</b>，仅展示 LVGL 能力与替代思路（UISwipeView 只能单轴整页滑动）。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_tileview</code>
+        <span class="cmp-tag lv">二维磁贴 · 拖动吸附</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">拖动画布切换磁贴，松手自动吸附到最近的行列；右侧点指示器显示当前行列。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>跳转到行列方位 set_tile_by_index<span class="api">lv_tileview_set_tile_by_index(tv, col, row, LV_ANIM_ON)</span></label>
+            <div class="seg" id="goto">
+              <button type="button" data-v="0,0">左上</button>
+              <button type="button" data-v="1,0">上</button>
+              <button type="button" data-v="2,0">右上</button>
+              <button type="button" data-v="0,1">左</button>
+              <button type="button" data-v="1,1" class="active">中心</button>
+              <button type="button" data-v="2,1">右</button>
+              <button type="button" data-v="0,2">左下</button>
+              <button type="button" data-v="1,2">下</button>
+              <button type="button" data-v="2,2">右下</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>启用方向 add_tile(dir)<span class="api">lv_tileview_add_tile(tv, col, row, LV_DIR_ALL / HOR / VER)</span></label>
+            <div class="seg" id="dir">
+              <button type="button" data-v="all" class="active">全部</button>
+              <button type="button" data-v="hor">仅水平</button>
+              <button type="button" data-v="ver">仅垂直</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>动画时长 anim_duration<output id="o-dur">320 ms</output><span class="api">lv_obj_set_style_anim_duration</span></label>
+            <input type="range" id="dur" min="100" max="800" step="20" value="320">
+          </div>
+          <div class="field">
+            <label>显示网格线辅助线<span class="api">演示辅助：显示瓦片边界虚线</span></label>
+            <div class="check"><input type="checkbox" id="grid"><span>显示瓦片边界辅助线</span></div>
+          </div>
+
+          <div class="field">
+            <label>循环边界 wrap<span class="api">滑出边缘后从另一侧进入（ArkUI lite UISwipeView 无此能力）</span></label>
+            <div class="check"><input type="checkbox" id="loop"><span>边缘循环（3×3 首尾相接）</span></div>
+          </div>
+          <div class="field">
+            <label>自动巡游演示<span class="api">按蛇形路径循环切换磁贴（导出动图用）</span></label>
+            <div class="check"><input type="checkbox" id="auto" checked><span>按路径循环切换瓦片</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一轮巡游）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一轮巡游）</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">最接近的替代：UISwipeView 只能沿单轴整页滑动，二维行列磁贴与斜向切换无法直接实现，需自己管理行列状态与动画。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例（静态）</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列替代思路依据 foundation/arkui/ui_lite 的 UISwipeView 源码。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_tileview 复刻（迁移自旧版单页，补充行列方位切换 + 循环边界）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+  var N = 3;   // 固定 3×3 磁贴
+  var COLORS = ["#2b7de9", "#1f9d66", "#e6a23c", "#e04b4b", "#7b61ff", "#00a6a6", "#e8763a", "#3a8ee6", "#2bb3a3"];
+  var DESC = [
+    "起始瓦片，可向右 / 向下拖动", "顶部中间瓦片，左右可切换", "右上角瓦片，可向下移动",
+    "左侧中间瓦片，上下可切换", "中央瓦片，四个方向都可滑动", "右侧中间瓦片，上下可切换",
+    "左下角瓦片，可向上移动", "底部中间瓦片，左右可切换", "最后一块瓦片，拖动可回弹"
+  ];
+
+  var state = { dir: "all", dur: 320, auto: true, grid: false, loop: false };
+  var pos = { x: W, y: H };    // 初始位于中心瓦片 (1,1)
+  var anim = null;
+  var drag = null;
+  var t0 = performance.now();
+  var lastKey = "";
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var canvas = view.canvas;
+
+  function mod(v, m){ return ((v % m) + m) % m; }
+
+  function dirConst(){
+    if(state.dir === "hor") return "LV_DIR_HOR";
+    if(state.dir === "ver") return "LV_DIR_VER";
+    return "LV_DIR_ALL";
+  }
+
+  function path(){
+    var out = [], c, r;
+    if(state.dir === "hor"){
+      for(c = 0; c < N; c++) out.push([c, 1]);
+    }else if(state.dir === "ver"){
+      for(r = 0; r < N; r++) out.push([1, r]);
+    }else{
+      for(r = 0; r < N; r++){
+        if(r % 2 === 0){ for(c = 0; c < N; c++) out.push([c, r]); }
+        else{ for(c = N - 1; c >= 0; c--) out.push([c, r]); }
+      }
+    }
+    return out;
+  }
+
+  function stepDur(){ return state.dur + 420; }
+
+  function tourPos(t){
+    var p = path(), step = stepDur();
+    if(!p.length) return { x: 0, y: 0 };
+    if(!(t >= 0)) t = 0;
+    var i = Math.floor(t / step) % p.length;
+    var local = t % step;
+    var k = K.clamp(local / Math.max(1, state.dur), 0, 1);
+    var a = p[i], b = p[(i + 1) % p.length];
+    var e = K.ease(k);
+    return { x: K.lerp(a[0] * W, b[0] * W, e), y: K.lerp(a[1] * H, b[1] * H, e) };
+  }
+
+  function restartAuto(){
+    var p = path();
+    var col = mod(Math.round(pos.x / W), N);
+    var row = mod(Math.round(pos.y / H), N);
+    var idx = 0, i;
+    for(i = 0; i < p.length; i++){
+      if(p[i][0] === col && p[i][1] === row){ idx = i; break; }
+    }
+    t0 = performance.now() - idx * stepDur();
+    anim = null;
+  }
+
+  function drawTile(c, ox, oy, col, row){
+    var idx = row * N + col;
+    var accent = COLORS[idx % COLORS.length];
+    var x = ox + 20, y = oy + 20, w = W - 40, h = H - 40;
+    c.save();
+    c.fillStyle = "#ffffff";
+    c.fillRect(ox, oy, W, H);
+    K.box(c, x, y, w, h, {
+      bg: "#ffffff", radius: 14, borderWidth: 1, border: "#e3e8ef",
+      shadow: K.alpha("#1c2128", 0.07), shadowBlur: 14, shadowY: 4
+    });
+    var tag = dirConst();
+    var tw = K.measure(c, tag, { size: 10, mono: true }) + 16;
+    K.box(c, x + 12, y + 12, tw, 19, { bg: K.alpha(accent, 0.12), radius: 9 });
+    K.text(c, tag, x + 20, y + 22, { size: 10, mono: true, color: accent });
+    K.text(c, (col + 1) + "·" + (row + 1), ox + W / 2, oy + H / 2 - 22, {
+      size: 54, weight: 700, color: accent, align: "center"
+    });
+    K.text(c, "第 " + (col + 1) + " 列 · 第 " + (row + 1) + " 行", ox + W / 2, oy + H / 2 + 32, {
+      size: 14, color: K.theme.text, align: "center"
+    });
+    K.text(c, DESC[idx] || "平铺瓦片", ox + W / 2, oy + H / 2 + 55, {
+      size: 11.5, color: K.theme.textFaint, align: "center"
+    });
+    c.restore();
+  }
+
+  function drawDots(c, col, row){
+    var i, gap = 11, dotR = 3;
+    var pw = N * gap + 20;
+    var bx = W / 2 - pw / 2, by = H - 28;
+    K.box(c, bx, by, pw, 18, { bg: "rgba(255,255,255,0.94)", radius: 9, borderWidth: 1, border: "#e3e8ef" });
+    var start = bx + (pw - N * gap) / 2 + gap / 2;
+    for(i = 0; i < N; i++){
+      c.beginPath();
+      c.arc(start + i * gap, by + 9, dotR, 0, Math.PI * 2);
+      c.fillStyle = i === col ? K.theme.primary : "#c9d0da";
+      c.fill();
+    }
+    var ph = N * gap + 12, px0 = W - 26, py0 = H / 2 - ph / 2;
+    K.box(c, px0, py0, 16, ph, { bg: "rgba(255,255,255,0.94)", radius: 8, borderWidth: 1, border: "#e3e8ef" });
+    for(i = 0; i < N; i++){
+      c.beginPath();
+      c.arc(px0 + 8, py0 + 6 + gap / 2 + i * gap, dotR, 0, Math.PI * 2);
+      c.fillStyle = i === row ? K.theme.primary : "#c9d0da";
+      c.fill();
+    }
+  }
+
+  function activeTile(px, py){
+    return { col: mod(Math.round(px / W), N), row: mod(Math.round(py / H), N) };
+  }
+
+  function drawScene(c, px, py){
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+
+    /* 循环模式下把坐标卷绕到 [0, N*W) 后按周期重复绘制可见磁贴 */
+    var wpx = state.loop ? mod(px, N * W) : px;
+    var wpy = state.loop ? mod(py, N * H) : py;
+    var col, row, rep, ox, oy;
+    var repN = state.loop ? [-1, 0, 1] : [0];
+    for(rep = 0; rep < repN.length; rep++){
+      for(row = 0; row < N; row++){
+        for(col = 0; col < N; col++){
+          ox = col * W - wpx + repN[rep] * N * W;
+          oy = row * H - wpy + repN[rep] * N * H;
+          if(ox <= -W || ox >= W || oy <= -H || oy >= H) continue;
+          drawTile(c, ox, oy, col, row);
+        }
+      }
+    }
+
+    if(state.grid){
+      c.save();
+      c.strokeStyle = K.alpha("#2b7de9", 0.32);
+      c.setLineDash([5, 4]);
+      c.lineWidth = 1;
+      var i, gx, gy;
+      for(i = 0; i <= N; i++){
+        gx = mod(i * W - wpx + N * W, N * W);
+        if(gx >= 0 && gx <= W){ c.beginPath(); c.moveTo(gx, 0); c.lineTo(gx, H); c.stroke(); }
+        gy = mod(i * H - wpy + N * H, N * H);
+        if(gy >= 0 && gy <= H){ c.beginPath(); c.moveTo(0, gy); c.lineTo(W, gy); c.stroke(); }
+      }
+      c.restore();
+    }
+
+    c.globalAlpha = 0.38;
+    K.text(c, "拖动切换瓦片 · 松手吸附" + (state.loop ? " · 边缘循环" : ""), W / 2, 11, {
+      size: 10, color: K.theme.textMuted, align: "center"
+    });
+    c.globalAlpha = 1;
+    var a = activeTile(px, py);
+    drawDots(c, a.col, a.row);
+  }
+
+  /* 把目标瓦片换算为离当前位置最近的等价坐标（循环模式下走最短路径） */
+  function nearestTarget(v, cell, targetIdx){
+    if(!state.loop) return targetIdx * cell;
+    var total = N * cell;
+    var best = targetIdx * cell, bestDist = Math.abs(v - best);
+    for(var k = -1; k <= 1; k++){
+      var cand = targetIdx * cell + k * total;
+      var d = Math.abs(v - cand);
+      if(d < bestDist){ bestDist = d; best = cand; }
+    }
+    return best;
+  }
+
+  function snapTo(col, row){
+    var nx = nearestTarget(pos.x, W, col);
+    var ny = nearestTarget(pos.y, H, row);
+    if(Math.abs(nx - pos.x) < 0.5 && Math.abs(ny - pos.y) < 0.5){
+      pos.x = mod(nx, N * W); pos.y = mod(ny, N * H); anim = null; return;
+    }
+    anim = { fx: pos.x, fy: pos.y, tx: nx, ty: ny, start: performance.now() };
+  }
+
+  function snapNearest(){
+    var a = activeTile(pos.x, pos.y);
+    snapTo(a.col, a.row);
+  }
+
+  function rubber(v, min, max){
+    if(v < min) return min + (v - min) * 0.35;
+    if(v > max) return max + (v - max) * 0.35;
+    return v;
+  }
+
+  K.run(function(now){
+    var t = now - t0;
+    if(state.auto && !drag){
+      var p = tourPos(t);
+      pos.x = p.x; pos.y = p.y; anim = null;
+    }else if(anim){
+      var k = K.clamp((now - anim.start) / Math.max(1, state.dur), 0, 1);
+      var e = K.ease(k);
+      pos.x = K.lerp(anim.fx, anim.tx, e);
+      pos.y = K.lerp(anim.fy, anim.ty, e);
+      if(k >= 1){
+        pos.x = state.loop ? mod(anim.tx, N * W) : anim.tx;
+        pos.y = state.loop ? mod(anim.ty, N * H) : anim.ty;
+        anim = null;
+      }
+    }
+    drawScene(view.ctx, pos.x, pos.y);
+    syncCode();
+  });
+
+  function renderCode(){
+    var a = activeTile(pos.x, pos.y);
+    var col, row;
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成；" + N + "×" + N + " 瓦片 */"));
+    L.push("lv_obj_t * tv = " + K.fn("lv_tileview_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(tv, " + K.num(W) + ", " + K.num(H) + ");");
+    L.push(K.fn("lv_obj_center") + "(tv);");
+    L.push("");
+    for(row = 0; row < N; row++){
+      for(col = 0; col < N; col++){
+        L.push("lv_obj_t * t" + col + row + " = " + K.fn("lv_tileview_add_tile") +
+          "(tv, " + K.num(col) + ", " + K.num(row) + ", " + K.num(dirConst()) + ");");
+      }
+    }
+    L.push("");
+    L.push(K.cm("/* 当前活动瓦片：" + (a.col + 1) + " 列 " + (a.row + 1) + " 行 */"));
+    L.push(K.fn("lv_tileview_set_tile_by_index") + "(tv, " + K.num(a.col) + ", " + K.num(a.row) + ", " + K.num("LV_ANIM_ON") + ");");
+    L.push("lv_obj_t * active = " + K.fn("lv_tileview_get_tile_active") + "(tv);");
+    if(state.loop){
+      L.push("");
+      L.push(K.cm("/* 边缘循环：LVGL 无内置开关，需在 SCROLL 事件里判断越界后"));
+      L.push(K.cm("   lv_obj_scroll_to() 到对侧瓦片实现首尾相接 */"));
+    }
+    K.code(L);
+  }
+
+  function syncCode(){
+    var a = activeTile(pos.x, pos.y);
+    var key = a.col + "," + a.row + "|" + state.dir + "|" + state.loop;
+    if(key === lastKey) return;
+    lastKey = key;
+    renderCode();
+    syncGotoUI(a);
+  }
+
+  function syncGotoUI(a){
+    var btns = document.getElementById("goto").getElementsByTagName("button");
+    var v = a.col + "," + a.row;
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i].getAttribute("data-v") === v ? "active" : "";
+    }
+  }
+
+  /* ---------- 交互 ---------- */
+  canvas.addEventListener("pointerdown", function(e){
+    if(e.button && e.button !== 0) return;
+    state.auto = false;
+    document.getElementById("auto").checked = false;
+    drag = { sx: e.clientX, sy: e.clientY, px: pos.x, py: pos.y };
+    anim = null;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = "grabbing";
+  });
+
+  canvas.addEventListener("pointermove", function(e){
+    if(!drag){ canvas.style.cursor = "grab"; return; }
+    var dx = e.clientX - drag.sx;
+    var dy = e.clientY - drag.sy;
+    if(state.loop){
+      pos.x = drag.px - dx;
+      pos.y = drag.py - dy;
+      return;
+    }
+    var maxX = (N - 1) * W, maxY = (N - 1) * H;
+    if(state.dir === "hor"){
+      pos.x = rubber(drag.px - dx, 0, maxX);
+      pos.y = drag.py;
+    }else if(state.dir === "ver"){
+      pos.x = drag.px;
+      pos.y = rubber(drag.py - dy, 0, maxY);
+    }else{
+      pos.x = rubber(drag.px - dx, 0, maxX);
+      pos.y = rubber(drag.py - dy, 0, maxY);
+    }
+  });
+
+  function endDrag(){
+    if(!drag) return;
+    drag = null;
+    canvas.style.cursor = "grab";
+    snapNearest();
+  }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+  canvas.style.cursor = "grab";
+
+  /* ---------- 控件 ---------- */
+  document.getElementById("goto").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    var v = btn.getAttribute("data-v").split(",");
+    state.auto = false;
+    document.getElementById("auto").checked = false;
+    snapTo(Number(v[0]), Number(v[1]));
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
+  });
+
+  K.bindSeg("dir", function(v){
+    state.dir = v;
+    if(v === "hor"){ snapTo(activeTile(pos.x, pos.y).col, 1); }
+    else if(v === "ver"){ snapTo(1, activeTile(pos.x, pos.y).row); }
+    if(state.auto) restartAuto();
+    lastKey = "";
+    renderCode();
+  });
+
+  K.bindRange("dur", function(v){ return v + " ms"; }, function(v){
+    state.dur = v;
+    if(state.auto) restartAuto();
+    renderCode();
+  });
+
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    if(on) restartAuto();
+    else snapNearest();
+  });
+
+  K.bindCheck("grid", function(on){ state.grid = on; });
+
+  document.getElementById("loop").addEventListener("change", function(e){
+    state.loop = e.target.checked;
+    if(state.loop){
+      pos.x = mod(pos.x, N * W);
+      pos.y = mod(pos.y, N * H);
+    }else{
+      pos.x = K.clamp(pos.x, 0, (N - 1) * W);
+      pos.y = K.clamp(pos.y, 0, (N - 1) * H);
+      snapNearest();
+    }
+    anim = null;
+    if(state.auto) restartAuto();
+    lastKey = "";
+    renderCode();
+  });
+
+  /* ---------- 导出 ---------- */
+  function autoDuration(){ return path().length * stepDur(); }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(canvas, "tileview.png");
+  });
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "tileview.gif", w: W, h: H, fps: 20, duration: autoDuration(),
+      frame: function(c, t){
+        var p = tourPos(t);
+        drawScene(c, p.x, p.y);
+      },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: canvas, name: "tileview.webm", duration: autoDuration(),
+      before: function(){
+        var prev = { auto: state.auto, t0: t0 };
+        state.auto = true;
+        restartAuto();
+        return prev;
+      },
+      after: function(prev){
+        state.auto = prev.auto;
+        t0 = prev.t0;
+        document.getElementById("auto").checked = state.auto;
+      },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  restartAuto();
+  renderCode();
+  lastKey = activeTile(pos.x, pos.y).col + "," + activeTile(pos.x, pos.y).row + "|" + state.dir + "|" + state.loop;
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite 替代思路静态示例代码（UISwipeView 只能单轴，需自拼二维）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var L = [];
+  L.push('<span class="cm">/* ArkUI lite 没有 lv_tileview：</span>');
+  L.push('<span class="cm">   UISwipeView 只能单轴整页滑动，二维磁贴需自己维护行列状态。 */</span>');
+  L.push('');
+  L.push('static UIViewGroup * tiles[<span class="num">3</span>][<span class="num">3</span>];  <span class="cm">// 磁贴容器</span>');
+  L.push('static int16_t curCol = <span class="num">1</span>, curRow = <span class="num">1</span>;');
+  L.push('');
+  L.push('<span class="cm">// 每个磁贴放一个 UISwipeView 承载横向切换，纵向切换自己处理：</span>');
+  L.push('void <span class="fn">CreateTileView</span>(UIViewGroup * root, int16_t w, int16_t h)');
+  L.push('{');
+  L.push('    for (int r = <span class="num">0</span>; r &lt; <span class="num">3</span>; r++) {');
+  L.push('        for (int c = <span class="num">0</span>; c &lt; <span class="num">3</span>; c++) {');
+  L.push('            tiles[r][c] = new UIViewGroup();');
+  L.push('            tiles[r][c]-&gt;<span class="fn">SetPosition</span>(<span class="num">0</span>, <span class="num">0</span>, w, h);');
+  L.push('            tiles[r][c]-&gt;<span class="fn">SetVisible</span>(r == curRow &amp;&amp; c == curCol);');
+  L.push('            root-&gt;<span class="fn">Add</span>(tiles[r][c]);');
+  L.push('        }');
+  L.push('    }');
+  L.push('}');
+  L.push('');
+  L.push('<span class="cm">// 手势结束后自行切换行列（没有吸附动画，要自己补位移动画）：</span>');
+  L.push('void <span class="fn">SwitchTile</span>(int16_t col, int16_t row)');
+  L.push('{');
+  L.push('    tiles[curRow][curCol]-&gt;<span class="fn">SetVisible</span>(false);');
+  L.push('    curCol = col;');
+  L.push('    curRow = row;');
+  L.push('    tiles[curRow][curCol]-&gt;<span class="fn">SetVisible</span>(true);');
+  L.push('    <span class="cm">// 循环边界、斜向切换、拖拽跟随均需在此手工实现</span>');
+  L.push('}');
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

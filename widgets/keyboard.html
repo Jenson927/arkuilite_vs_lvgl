@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyboard：lv_keyboard vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='8' width='26' height='17' rx='4' fill='%232b7de9'/%3E%3Cg fill='%23fff'%3E%3Crect x='6' y='11' width='3' height='3'/%3E%3Crect x='10.5' y='11' width='3' height='3'/%3E%3Crect x='15' y='11' width='3' height='3'/%3E%3Crect x='19.5' y='11' width='3' height='3'/%3E%3Crect x='24' y='11' width='2' height='3'/%3E%3Crect x='6' y='15' width='4' height='3'/%3E%3Crect x='11.5' y='15' width='9' height='3'/%3E%3Crect x='22' y='15' width='4' height='3'/%3E%3Crect x='7' y='19.5' width='18' height='3'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Keyboard：lv_keyboard vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>：四种内置布局（lower/upper/special/number）、长按连发、与上方文本框联动；
+      右列 ArkUI lite <b>没有对应的软键盘组件</b>，仅展示 LVGL 能力与替代思路（按键需 UIButton 自绘）。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_keyboard</code>
+        <span class="cmp-tag lv">四种布局 · 与文本框联动</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击画布按键即输入；按住字符键或 ⌫ 不放可体验长按连发；模式键 123 / #+= / ABC 循环切换布局。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>键盘布局 set_mode<span class="api">lv_keyboard_set_mode(kb, LV_KEYBOARD_MODE_TEXT_LOWER / UPPER / SPECIAL / NUMBER)</span></label>
+            <div class="seg" id="mode">
+              <button type="button" data-v="lower" class="active">abc</button>
+              <button type="button" data-v="upper">ABC</button>
+              <button type="button" data-v="special">#+=</button>
+              <button type="button" data-v="number">123</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>按键大小 size<output id="o-scale">1.00×</output><span class="api">lv_obj_set_size(kb, w, h)：按键随键盘等比缩放</span></label>
+            <input type="range" id="scale" min="0.8" max="1.2" step="0.05" value="1">
+          </div>
+          <div class="field">
+            <label>弹泡提示 set_popovers<span class="api">lv_keyboard_set_popovers(kb, true)：按下时上方放大字符</span></label>
+            <div class="check"><input type="checkbox" id="popover" checked><span>按下时弹泡显示字符</span></div>
+          </div>
+
+          <div class="field">
+            <label>长按连发 repeat<span class="api">lv_indev 长按重复：按住字符键 / ⌫ 连续触发（500ms 后每 100ms 一次）</span></label>
+            <div class="check"><input type="checkbox" id="repeat" checked><span>长按连续输入 / 连续删除</span></div>
+          </div>
+          <div class="field">
+            <label>与文本框联动 textarea<span class="api">lv_keyboard_set_textarea(kb, ta)：按键写入上方输入框</span></label>
+            <div class="check"><input type="checkbox" id="preview" checked><span>按键输入到上方输入框</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>自动演示 · 依次敲入 “LVGL”<span class="api">导出动图用（自动切换到 upper 布局）</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>自动敲入 “LVGL” 并停留</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一轮输入）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一轮输入）</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">最接近的替代：没有软键盘控件，按键要用 UIButton 自绘，布局、高亮、长按与输入焦点联动全部自己维护。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例（静态）</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×280。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列替代思路依据 foundation/arkui/ui_lite 的 UIButton / UILabelButton 源码。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_keyboard 复刻（迁移自旧版单页，补充长按连发 / 联动开关）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 320, H = 280;
+
+  var MODE_CONST = {
+    lower: "LV_KEYBOARD_MODE_TEXT_LOWER",
+    upper: "LV_KEYBOARD_MODE_TEXT_UPPER",
+    special: "LV_KEYBOARD_MODE_SPECIAL",
+    number: "LV_KEYBOARD_MODE_NUMBER"
+  };
+
+  var LAYOUTS = {
+    lower: [
+      ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+      ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+      ["⇧", "z", "x", "c", "v", "b", "n", "m", "⌫"],
+      ["123", "空格", "↵"]
+    ],
+    upper: [
+      ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+      ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+      ["⇧", "Z", "X", "C", "V", "B", "N", "M", "⌫"],
+      ["123", "空格", "↵"]
+    ],
+    number: [
+      ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+      ["-", "/", ":", ";", "(", ")", "¥", "&", "@", "\""],
+      ["ABC", ".", ",", "?", "!", "'", "*", "+", "⌫"],
+      ["#+=", "空格", "↵"]
+    ],
+    special: [
+      ["~", "`", "|", "•", "√", "π", "÷", "×", "¶", "∆"],
+      ["£", "$", "€", "¢", "^", "°", "=", "{", "}", "\\"],
+      ["ABC", "%", "©", "®", "™", "✓", "[", "]", "⌫"],
+      ["123", "空格", "↵"]
+    ]
+  };
+
+  var state = {
+    mode: "lower",
+    scale: 1,
+    popover: true,
+    repeat: true,
+    preview: true,    // 与文本框联动
+    auto: false,
+    text: ""
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var canvas = view.canvas;
+
+  var t0 = performance.now();
+  var autoStart = 0;
+  var pressed = { label: null, at: -9999 };
+  var hits = [];
+
+  /* 长按连发状态 */
+  var hold = { label: null, timer: null, startTimer: null };
+  var REPEAT_DELAY = 500, REPEAT_INTERVAL = 100;
+
+  /* ---------- 自动演示时间线 ---------- */
+  var AUTO = { start: 350, step: 520, press: 200, hold: 2100 };
+  var AUTO_CYCLE = AUTO.start + 4 * AUTO.step + AUTO.hold;
+
+  function autoAt(t){
+    var tt = ((t % AUTO_CYCLE) + AUTO_CYCLE) % AUTO_CYCLE;
+    var res = { text: "", key: null };
+    if(tt < AUTO.start) return res;
+    var idx = Math.floor((tt - AUTO.start) / AUTO.step);
+    if(idx >= 4){
+      res.text = "LVGL";
+      return res;
+    }
+    var local = tt - AUTO.start - idx * AUTO.step;
+    if(local < AUTO.press){
+      res.text = "LVGL".slice(0, idx);
+      res.key = "LVGL".charAt(idx);
+    }else{
+      res.text = "LVGL".slice(0, idx + 1);
+    }
+    return res;
+  }
+
+  /* ---------- 几何 ---------- */
+  function kbGeom(){
+    var s = state.scale;
+    var g = Math.max(2, 4 * s);
+    var keyH = 30 * s;
+    var pad = 7 * s;
+    var kbW = 264 * s;
+    var panelH = pad * 2 + 4 * keyH + 3 * g;
+    var top = state.preview ? 76 : 10;
+    var areaH = (H - 8) - top;
+    return {
+      s: s, g: g, keyH: keyH, pad: pad,
+      x: (W - kbW) / 2,
+      y: top + (areaH - panelH) / 2,
+      w: kbW,
+      h: panelH
+    };
+  }
+
+  /* ---------- 文本预览 ---------- */
+  function drawPreview(c, txt, t){
+    var x = 16, y = 12, w = 288, h = 52;
+    K.box(c, x, y, w, h, {
+      bg: "#ffffff", radius: 10, borderWidth: 1, border: K.theme.border,
+      shadow: K.alpha("#1c2128", 0.06), shadowBlur: 8, shadowY: 2
+    });
+
+    var innerW = w - 20;
+    var lines = [];
+    String(txt).split("\n").forEach(function(p){
+      lines = lines.concat(K.wrap(c, p, innerW, { size: 15 }));
+    });
+    if(lines.length === 0) lines = [""];
+
+    var start = Math.max(0, lines.length - 2);
+    var visible = lines.slice(start);
+    var caretX, caretY;
+
+    if(txt === ""){
+      K.text(c, "点击下方键盘输入…", x + 16, y + 27, { size: 13, color: K.theme.textFaint });
+      caretX = x + 11;
+      caretY = y + 19;
+    }else{
+      for(var i = 0; i < visible.length; i++){
+        K.text(c, visible[i], x + 10, y + 18 + i * 17, { size: 15, color: K.theme.text });
+      }
+      var last = visible[visible.length - 1];
+      caretX = x + 10 + K.measure(c, last, { size: 15 }) + 1;
+      caretY = y + 18 + (visible.length - 1) * 17 - 8;
+    }
+
+    if(Math.floor(t / 520) % 2 === 0){
+      c.fillStyle = K.theme.primary;
+      c.fillRect(caretX, caretY, 2, 16);
+    }
+  }
+
+  /* ---------- 键盘 ---------- */
+  function keyRole(label){
+    if(label === "⇧" || label === "⌫" || label === "↵" || label === "空格") return "func";
+    if(label === "123" || label === "#+=" || label === "ABC") return "func";
+    return "char";
+  }
+
+  function isRepeatable(label){
+    return label !== "⇧" && label !== "123" && label !== "#+=" && label !== "ABC" && label !== "↵";
+  }
+
+  function drawKeyboard(c, mode, pressLabel){
+    var gm = kbGeom();
+    var s = gm.s;
+    var pressedRect = null;
+
+    K.box(c, gm.x, gm.y, gm.w, gm.h, {
+      bg: "#f2f4f7", radius: 12, borderWidth: 1, border: K.theme.border
+    });
+
+    hits = [];
+    var rows = LAYOUTS[mode];
+    var innerX = gm.x + gm.pad;
+    var innerW = gm.w - 2 * gm.pad;
+
+    for(var r = 0; r < rows.length; r++){
+      var row = rows[r];
+      var n = row.length;
+      var kw = (innerW - (n - 1) * gm.g) / n;
+      var ky = gm.y + gm.pad + r * (gm.keyH + gm.g);
+      var kx = innerX;
+
+      for(var i = 0; i < n; i++){
+        var label = row[i];
+        var role = keyRole(label);
+        var isPressed = pressLabel !== null && pressLabel === label;
+        var shiftOn = (label === "⇧" && mode === "upper");
+
+        var bg = role === "func" ? "#e8effc" : "#ffffff";
+        var fg = role === "func" ? K.theme.primary : K.theme.text;
+        var border = role === "func" ? K.mix("#c9dbf7", K.theme.primary, 0.3) : K.theme.border;
+
+        if(shiftOn){ bg = K.theme.primary; fg = "#ffffff"; border = K.theme.primary; }
+        if(isPressed){ bg = K.theme.primary; fg = "#ffffff"; border = K.theme.primary; }
+
+        var oy = isPressed ? 1 : 0;
+        K.box(c, kx, ky + oy, kw, gm.keyH, {
+          bg: bg,
+          radius: Math.max(3, 6 * s),
+          borderWidth: 1,
+          border: border,
+          shadow: isPressed ? null : K.alpha("#1c2128", 0.05),
+          shadowBlur: 3,
+          shadowY: 1
+        });
+
+        var fs = role === "func" ? 11 * s : 14 * s;
+        if(label === "空格") fs = 10.5 * s;
+        K.text(c, label, kx + kw / 2, ky + gm.keyH / 2 + oy + 0.5, {
+          size: K.clamp(fs, 8, 19),
+          weight: role === "func" ? 600 : 500,
+          color: fg,
+          align: "center"
+        });
+
+        if(isPressed) pressedRect = { x: kx, y: ky, w: kw, h: gm.keyH, label: label };
+
+        hits.push({ x: kx, y: ky, w: kw, h: gm.keyH, label: label });
+        kx += kw + gm.g;
+      }
+    }
+
+    if(pressedRect && state.popover){
+      var pr = pressedRect;
+      var bw = Math.max(32 * s, K.measure(c, pr.label, { size: 18 * s }) + 18);
+      var bh = 32 * s;
+      var bx = pr.x + pr.w / 2 - bw / 2;
+      var by = pr.y - bh - 5;
+      if(by < 4) by = pr.y + pr.h + 5;
+      K.box(c, bx, by, bw, bh, {
+        bg: "#ffffff", radius: 8, borderWidth: 1, border: K.theme.border,
+        shadow: K.alpha("#1c2128", 0.18), shadowBlur: 8, shadowY: 3
+      });
+      K.text(c, pr.label, bx + bw / 2, by + bh / 2 + 1, {
+        size: K.clamp(18 * s, 12, 22), weight: 600, color: K.theme.primary, align: "center"
+      });
+    }
+  }
+
+  /* ---------- 场景 ---------- */
+  function drawScene(c, t, forceAuto){
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+
+    var autoOn = forceAuto || state.auto;
+    var mode = state.mode;
+    var txt = state.text;
+    var pressLabel = null;
+
+    if(autoOn){
+      var a = autoAt(t);
+      mode = "upper";
+      txt = a.text;
+      pressLabel = a.key;
+    }else if(pressed.label !== null && performance.now() - pressed.at < 165){
+      pressLabel = pressed.label;
+    }else if(hold.label !== null){
+      pressLabel = hold.label;
+    }
+
+    if(state.preview) drawPreview(c, txt, t);
+    drawKeyboard(c, mode, pressLabel);
+  }
+
+  K.run(function(now){
+    var t = state.auto ? now - autoStart : now - t0;
+    drawScene(view.ctx, t, false);
+    if(state.auto && state.mode !== "upper"){
+      state.mode = "upper";
+      syncModeUI();
+      renderCode();
+    }
+  });
+
+  /* ---------- 按键动作 ---------- */
+  function stopAuto(){
+    if(state.auto){ state.auto = false; document.getElementById("auto").checked = false; }
+  }
+
+  function applyKey(label){
+    /* 布局切换类按键始终生效；字符类按键仅在联动开启时写入文本框 */
+    if(label === "⇧"){
+      state.mode = state.mode === "upper" ? "lower" : "upper";
+      syncModeUI();
+    }else if(label === "123"){
+      state.mode = "number";
+      syncModeUI();
+    }else if(label === "#+="){
+      state.mode = "special";
+      syncModeUI();
+    }else if(label === "ABC"){
+      state.mode = "lower";
+      syncModeUI();
+    }else if(!state.preview){
+      return;   // 未联动：按键不写入文本框
+    }else if(label === "⌫"){
+      state.text = state.text.slice(0, -1);
+    }else if(label === "↵"){
+      state.text += "\n";
+    }else if(label === "空格"){
+      state.text += " ";
+    }else{
+      state.text += label;
+    }
+  }
+
+  function activateKey(label){
+    stopAuto();
+    pressed.label = label;
+    pressed.at = performance.now();
+    applyKey(label);
+    renderCode();
+  }
+
+  /* ---------- 长按连发 ---------- */
+  function clearHold(){
+    if(hold.timer){ clearInterval(hold.timer); hold.timer = null; }
+    if(hold.startTimer){ clearTimeout(hold.startTimer); hold.startTimer = null; }
+    hold.label = null;
+  }
+
+  function startHold(label){
+    clearHold();
+    if(!state.repeat || !isRepeatable(label)) return;
+    hold.label = label;
+    hold.startTimer = setTimeout(function(){
+      hold.startTimer = null;
+      hold.timer = setInterval(function(){
+        applyKey(label);
+        pressed.label = label;
+        pressed.at = performance.now();
+        renderCode();
+      }, REPEAT_INTERVAL);
+    }, REPEAT_DELAY);
+  }
+
+  /* ---------- 交互 ---------- */
+  function posOf(e){
+    var r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  canvas.addEventListener("pointerdown", function(e){
+    var p = posOf(e);
+    for(var i = hits.length - 1; i >= 0; i--){
+      var h = hits[i];
+      if(p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h){
+        activateKey(h.label);
+        startHold(h.label);
+        return;
+      }
+    }
+  });
+  canvas.addEventListener("pointerup", clearHold);
+  canvas.addEventListener("pointerleave", clearHold);
+  canvas.addEventListener("pointercancel", clearHold);
+
+  /* ---------- 参数 ---------- */
+  function syncModeUI(){
+    var btns = document.getElementById("mode").getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i].getAttribute("data-v") === state.mode ? "active" : "";
+    }
+  }
+
+  document.getElementById("mode").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    stopAuto();
+    state.mode = btn.getAttribute("data-v");
+    pressed.label = null;
+    clearHold();
+    syncModeUI();
+    renderCode();
+  });
+
+  K.bindRange("scale", function(v){ return v.toFixed(2) + "×"; }, function(v){
+    state.scale = v;
+    renderCode();
+  });
+  K.bindCheck("popover", function(on){ state.popover = on; renderCode(); });
+  K.bindCheck("repeat", function(on){ state.repeat = on; if(!on) clearHold(); });
+  K.bindCheck("preview", function(on){ state.preview = on; renderCode(); });
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    autoStart = performance.now();
+    if(on){
+      state.mode = "upper";
+      syncModeUI();
+      renderCode();
+    }
+  });
+
+  /* ---------- C 代码 ---------- */
+  function renderCode(){
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * ta = " + K.fn("lv_textarea_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(ta, " + K.num(288) + ", " + K.num(52) + ");");
+    L.push(K.fn("lv_obj_align") + "(ta, LV_ALIGN_TOP_MID, " + K.num(0) + ", " + K.num(12) + ");");
+    if(!state.preview){
+      L.push(K.fn("lv_obj_add_flag") + "(ta, " + K.num("LV_OBJ_FLAG_HIDDEN") + ");" + K.cm("  /* 关闭与文本框联动 */"));
+    }
+    L.push("");
+    L.push("lv_obj_t * kb = " + K.fn("lv_keyboard_create") + "(lv_screen_active());");
+    if(state.preview){
+      L.push(K.fn("lv_keyboard_set_textarea") + "(kb, ta);" + K.cm("  /* 按键写入上方输入框 */"));
+    }else{
+      L.push(K.fn("lv_keyboard_set_textarea") + "(kb, NULL);" + K.cm("  /* 不联动 */"));
+    }
+    L.push(K.fn("lv_keyboard_set_mode") + "(kb, " + K.num(MODE_CONST[state.mode]) + ");");
+    L.push(K.fn("lv_keyboard_set_popovers") + "(kb, " + K.num(state.popover ? "true" : "false") + ");");
+    L.push(K.fn("lv_obj_set_size") + "(kb, " + K.num(264) + ", " + K.num(Math.round(146 * state.scale)) + ");" +
+      K.cm("  /* 按键缩放 " + state.scale.toFixed(2) + "× */"));
+    L.push(K.fn("lv_obj_align") + "(kb, LV_ALIGN_BOTTOM_MID, " + K.num(0) + ", " + K.num(-8) + ");");
+    if(state.repeat){
+      L.push(K.cm("/* 长按连发：lv_indev 内置（500ms 后每 100ms 重发），无需额外代码 */"));
+    }
+    L.push(K.cm("/* 当前已输入：" + JSON.stringify(state.text) + " */"));
+    K.code(L);
+  }
+
+  /* ---------- 导出 ---------- */
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(canvas, "keyboard.png");
+  });
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "keyboard.gif", w: W, h: H, fps: 16, duration: AUTO_CYCLE,
+      frame: function(c, t){ drawScene(c, t, true); },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: canvas, name: "keyboard.webm", duration: AUTO_CYCLE,
+      before: function(){
+        var old = state.auto;
+        state.auto = true;
+        autoStart = performance.now();
+        document.getElementById("auto").checked = true;
+        state.mode = "upper";
+        syncModeUI();
+        renderCode();
+        return old;
+      },
+      after: function(old){
+        state.auto = old;
+        document.getElementById("auto").checked = old;
+      },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  syncModeUI();
+  renderCode();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite 替代思路静态示例代码（UIButton 自绘软键盘）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var L = [];
+  L.push('<span class="cm">/* ArkUI lite 没有 lv_keyboard：按键布局、长按连发、与输入框联动</span>');
+  L.push('<span class="cm">   都要自己用 UIButton 逐个实现。 */</span>');
+  L.push('');
+  L.push('static UIButton * keys[<span class="num">4</span>][<span class="num">10</span>];');
+  L.push('static UILabel  * editBox;   <span class="cm">// 联动目标：自绘输入框（UIEditText 亦可）</span>');
+  L.push('static char      text[<span class="num">64</span>] = {<span class="num">0</span>};');
+  L.push('');
+  L.push('<span class="cm">// 按键点击回调：手动维护字符映射与模式切换</span>');
+  L.push('bool <span class="fn">OnKeyPress</span>(UIView * view, const ClickEvent &amp; event)');
+  L.push('{');
+  L.push('    KeyParam * kp = reinterpret_cast&lt;KeyParam *&gt;(view-&gt;<span class="fn">GetViewId</span>());');
+  L.push('    if (kp-&gt;ch) {');
+  L.push('        size_t len = strlen(text);');
+  L.push('        if (len &lt; <span class="num">63</span>) { text[len] = kp-&gt;ch; text[len + <span class="num">1</span>] = <span class="num">0</span>; }');
+  L.push('    } else if (kp-&gt;isBackspace &amp;&amp; text[<span class="num">0</span>]) {');
+  L.push('        text[strlen(text) - <span class="num">1</span>] = <span class="num">0</span>;');
+  L.push('    }');
+  L.push('    editBox-&gt;<span class="fn">SetText</span>(text);   <span class="cm">// 联动要自己写</span>');
+  L.push('    return true;');
+  L.push('}');
+  L.push('');
+  L.push('<span class="cm">// 布局切换：4 套映射表各建一组按钮，切换时 Remove 重建；</span>');
+  L.push('<span class="cm">// 长按连发要用 Animator 或定时器模拟，UI_Lite 无按键重复事件。</span>');
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scale：lv_scale vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M16 16l6-4' stroke='%232b7de9' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Scale：lv_scale vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（水平/垂直/圆盘三种模式、主次刻度与标签自动排布、区间角度、彩色分段与指针联动），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_scale</code>
+        <span class="cmp-tag lv">刻度自动排布 · 指针联动</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">刻度与标签按总数/主刻度间隔自动排布（过密时自动跳标签）；圆盘模式在画布上拖动可改指针值，关闭指针联动后指针隐藏。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>模式 lv_scale_set_mode<span class="api">LV_SCALE_MODE_HORIZONTAL_BOTTOM / VERTICAL_LEFT / ROUND_INNER</span></label>
+            <div class="seg" id="mode">
+              <button type="button" data-val="h" class="active">水平</button>
+              <button type="button" data-val="v">垂直</button>
+              <button type="button" data-val="r">圆盘</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>总刻度数 total_tick_count<output id="o-ticks">31</output><span class="api">lv_scale_set_total_tick_count</span></label>
+            <input type="range" id="ticks" min="10" max="60" step="1" value="31">
+          </div>
+          <div class="field">
+            <label>主刻度间隔 major_tick_every<output id="o-major">5</output><span class="api">lv_scale_set_major_tick_every</span></label>
+            <input type="range" id="major" min="2" max="10" step="1" value="5">
+          </div>
+
+          <div class="field">
+            <label>最小值 range min<output id="o-min">0</output><span class="api">lv_scale_set_range</span></label>
+            <input type="range" id="min" min="-50" max="50" step="5" value="0">
+          </div>
+          <div class="field">
+            <label>最大值 range max<output id="o-max">100</output><span class="api">lv_scale_set_range</span></label>
+            <input type="range" id="max" min="50" max="200" step="5" value="100">
+          </div>
+
+          <div class="field" id="field-angle">
+            <label>区间角度 angle_range<output id="o-angle">270°</output><span class="api">lv_scale_set_angle_range（圆盘模式）</span></label>
+            <input type="range" id="angle" min="90" max="360" step="5" value="270">
+          </div>
+          <div class="field" id="field-rot">
+            <label>起始角 rotation<output id="o-rot">135°</output><span class="api">lv_scale_set_rotation（圆盘模式）</span></label>
+            <input type="range" id="rot" min="0" max="360" step="5" value="135">
+          </div>
+
+          <div class="field">
+            <label>显示标签 label_show<span class="api">lv_scale_set_label_show + set_text_src</span></label>
+            <div class="check"><input type="checkbox" id="labels" checked><span>主刻度显示数值</span></div>
+          </div>
+          <div class="field">
+            <label>显示彩色区间 sections<span class="api">lv_scale_add_section + set_section_range</span></label>
+            <div class="check"><input type="checkbox" id="sections" checked><span>绿 / 黄 / 红三段</span></div>
+          </div>
+
+          <div class="field">
+            <label>指针值 set_line_needle_value<output id="o-value">45</output><span class="api">lv_scale_set_line_needle_value</span></label>
+            <input type="range" id="value" min="0" max="100" step="1" value="45">
+          </div>
+          <div class="field">
+            <label>指针联动<span class="api">指针随 value 实时转动（圆盘模式可拖动改值）</span></label>
+            <div class="check"><input type="checkbox" id="needle" checked><span>显示并联动指针</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有刻度尺/表盘：UILabel 放数值 + 在 UIView::OnDraw 里自绘刻线，刻度排布与指针联动全部自己算。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240。静态页提供 PNG 导出（GIF 需联网，WebM 离线可用，本页未启用）。右列代码为按 compare-data.js 最接近实现给出的替代拼装骨架。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_scale 复刻（迁移自旧页，新增指针联动开关）
+   ===================================================================== */
+(function () {
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+  var SECTIONS = [
+    { from: 0, to: 1 / 3, color: "#1f9d66" },
+    { from: 1 / 3, to: 2 / 3, color: "#e6a23c" },
+    { from: 2 / 3, to: 1, color: "#e04b4b" }
+  ];
+  var state = {
+    mode: "h", ticks: 31, major: 5,
+    min: 0, max: 100, angle: 270, rot: 135,
+    labels: true, sections: true,
+    value: 45, needle: true
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var canvas = view.canvas;
+  var ROUND = { cx: 160, cy: 118, r: 104 };
+  var drawing = false;
+
+  function ratio(v) {
+    var span = state.max - state.min;
+    if (span <= 0) return 0;
+    return K.clamp((v - state.min) / span, 0, 1);
+  }
+
+  function tickVal(i) {
+    return state.min + (state.max - state.min) * (i / Math.max(1, state.ticks - 1));
+  }
+
+  function modeConst() {
+    if (state.mode === "v") return "LV_SCALE_MODE_VERTICAL_LEFT";
+    if (state.mode === "r") return "LV_SCALE_MODE_ROUND_INNER";
+    return "LV_SCALE_MODE_HORIZONTAL_BOTTOM";
+  }
+
+  function labelSkip(stepPx) {
+    return Math.max(1, Math.ceil(30 / Math.max(1, stepPx)));
+  }
+
+  function drawNeedleRound(c) {
+    if (!state.needle) return;
+    var cx = ROUND.cx, cy = ROUND.cy, R = ROUND.r;
+    var av = state.rot + state.angle * ratio(state.value);
+    var nx = cx + (R - 40) * Math.cos(K.rad(av));
+    var ny = cy + (R - 40) * Math.sin(K.rad(av));
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.lineTo(nx, ny);
+    c.strokeStyle = K.theme.primary;
+    c.lineWidth = 3;
+    c.lineCap = "round";
+    c.stroke();
+    c.beginPath();
+    c.arc(cx, cy, 6, 0, Math.PI * 2);
+    c.fillStyle = "#ffffff";
+    c.fill();
+    c.strokeStyle = K.theme.primary;
+    c.lineWidth = 2.5;
+    c.stroke();
+    c.beginPath();
+    c.arc(nx, ny, 4, 0, Math.PI * 2);
+    c.fillStyle = K.theme.primary;
+    c.fill();
+  }
+
+  function drawRound(c) {
+    var cx = ROUND.cx, cy = ROUND.cy, R = ROUND.r;
+    var start = state.rot, sweep = state.angle;
+    var i, ang, major, v, r1, r2;
+
+    if (state.sections) {
+      var s;
+      for (s = 0; s < SECTIONS.length; s++) {
+        var a0 = start + sweep * SECTIONS[s].from;
+        var a1 = start + sweep * SECTIONS[s].to;
+        c.beginPath();
+        c.arc(cx, cy, R - 7, K.rad(a0), K.rad(a1), false);
+        c.strokeStyle = SECTIONS[s].color;
+        c.globalAlpha = 0.75;
+        c.lineWidth = 8;
+        c.lineCap = "butt";
+        c.stroke();
+        c.globalAlpha = 1;
+      }
+    }
+
+    var stepArc = K.rad(sweep) * (R - 4) / Math.max(1, state.ticks - 1) * state.major;
+    var skip = labelSkip(stepArc);
+
+    for (i = 0; i < state.ticks; i++) {
+      ang = start + sweep * (i / Math.max(1, state.ticks - 1));
+      major = (i % state.major === 0) || (i === state.ticks - 1);
+      r1 = R - 3;
+      r2 = r1 - (major ? 15 : 8);
+      c.beginPath();
+      c.moveTo(cx + r1 * Math.cos(K.rad(ang)), cy + r1 * Math.sin(K.rad(ang)));
+      c.lineTo(cx + r2 * Math.cos(K.rad(ang)), cy + r2 * Math.sin(K.rad(ang)));
+      c.strokeStyle = major ? "#4b5563" : "#aeb7c2";
+      c.lineWidth = major ? 2 : 1;
+      c.stroke();
+
+      if (state.labels && major) {
+        var mi = Math.floor(i / state.major);
+        var show = (mi % skip === 0) || i === 0 || i === state.ticks - 1;
+        if (show) {
+          v = Math.round(tickVal(i));
+          var lr = R - 30;
+          K.text(c, v, cx + lr * Math.cos(K.rad(ang)), cy + lr * Math.sin(K.rad(ang)), {
+            size: 10, color: K.theme.textMuted, align: "center"
+          });
+        }
+      }
+    }
+
+    drawNeedleRound(c);
+  }
+
+  function drawHorizontal(c) {
+    var x0 = 26, x1 = 294, y = 152;
+    var i, x, major, v;
+
+    if (state.sections) {
+      var s;
+      for (s = 0; s < SECTIONS.length; s++) {
+        var sx0 = K.lerp(x0, x1, SECTIONS[s].from);
+        var sx1 = K.lerp(x0, x1, SECTIONS[s].to);
+        c.beginPath();
+        c.moveTo(sx0, y);
+        c.lineTo(sx1, y);
+        c.strokeStyle = SECTIONS[s].color;
+        c.globalAlpha = 0.75;
+        c.lineWidth = 8;
+        c.stroke();
+        c.globalAlpha = 1;
+      }
+    }
+
+    c.beginPath();
+    c.moveTo(x0, y);
+    c.lineTo(x1, y);
+    c.strokeStyle = "#c3cad4";
+    c.lineWidth = 1.5;
+    c.stroke();
+
+    var stepPx = (x1 - x0) / Math.max(1, state.ticks - 1) * state.major;
+    var skip = labelSkip(stepPx);
+
+    for (i = 0; i < state.ticks; i++) {
+      x = K.lerp(x0, x1, i / Math.max(1, state.ticks - 1));
+      major = (i % state.major === 0) || (i === state.ticks - 1);
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(x, y - (major ? 17 : 9));
+      c.strokeStyle = major ? "#4b5563" : "#aeb7c2";
+      c.lineWidth = major ? 2 : 1;
+      c.stroke();
+
+      if (state.labels && major) {
+        var mi = Math.floor(i / state.major);
+        if (mi % skip === 0 || i === 0 || i === state.ticks - 1) {
+          v = Math.round(tickVal(i));
+          K.text(c, v, x, y + 21, {
+            size: 11, color: K.theme.textMuted, align: "center"
+          });
+        }
+      }
+    }
+
+    if (!state.needle) return;
+    var nx = K.lerp(x0, x1, ratio(state.value));
+    c.beginPath();
+    c.moveTo(nx, y);
+    c.lineTo(nx, y - 50);
+    c.strokeStyle = K.theme.primary;
+    c.lineWidth = 2.5;
+    c.lineCap = "round";
+    c.stroke();
+    c.beginPath();
+    c.moveTo(nx, y - 60);
+    c.lineTo(nx - 6, y - 48);
+    c.lineTo(nx + 6, y - 48);
+    c.closePath();
+    c.fillStyle = K.theme.primary;
+    c.fill();
+  }
+
+  function drawVertical(c) {
+    var x = 160, y0 = 30, y1 = 212;
+    var i, y, major, v;
+
+    if (state.sections) {
+      var s;
+      for (s = 0; s < SECTIONS.length; s++) {
+        var sy0 = K.lerp(y0, y1, SECTIONS[s].from);
+        var sy1 = K.lerp(y0, y1, SECTIONS[s].to);
+        c.beginPath();
+        c.moveTo(x, sy0);
+        c.lineTo(x, sy1);
+        c.strokeStyle = SECTIONS[s].color;
+        c.globalAlpha = 0.75;
+        c.lineWidth = 8;
+        c.stroke();
+        c.globalAlpha = 1;
+      }
+    }
+
+    c.beginPath();
+    c.moveTo(x, y0);
+    c.lineTo(x, y1);
+    c.strokeStyle = "#c3cad4";
+    c.lineWidth = 1.5;
+    c.stroke();
+
+    var stepPx = (y1 - y0) / Math.max(1, state.ticks - 1) * state.major;
+    var skip = labelSkip(stepPx);
+
+    for (i = 0; i < state.ticks; i++) {
+      y = K.lerp(y0, y1, i / Math.max(1, state.ticks - 1));
+      major = (i % state.major === 0) || (i === state.ticks - 1);
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(x - (major ? 17 : 9), y);
+      c.strokeStyle = major ? "#4b5563" : "#aeb7c2";
+      c.lineWidth = major ? 2 : 1;
+      c.stroke();
+
+      if (state.labels && major) {
+        var mi = Math.floor(i / state.major);
+        if (mi % skip === 0 || i === 0 || i === state.ticks - 1) {
+          v = Math.round(tickVal(i));
+          K.text(c, v, x - 24, y + 1, {
+            size: 11, color: K.theme.textMuted, align: "right"
+          });
+        }
+      }
+    }
+
+    if (!state.needle) return;
+    var ny = K.lerp(y0, y1, ratio(state.value));
+    c.beginPath();
+    c.moveTo(x, ny);
+    c.lineTo(x + 82, ny);
+    c.strokeStyle = K.theme.primary;
+    c.lineWidth = 2.5;
+    c.lineCap = "round";
+    c.stroke();
+    c.beginPath();
+    c.moveTo(x + 92, ny);
+    c.lineTo(x + 80, ny - 6);
+    c.lineTo(x + 80, ny + 6);
+    c.closePath();
+    c.fillStyle = K.theme.primary;
+    c.fill();
+  }
+
+  function drawScene(c) {
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+    c.globalAlpha = 0.55;
+    K.text(c, modeConst(), 12, 14, { size: 9.5, mono: true, color: K.theme.textFaint });
+    c.globalAlpha = 1;
+
+    if (state.mode === "r") drawRound(c);
+    else if (state.mode === "v") drawVertical(c);
+    else drawHorizontal(c);
+
+    K.text(c, (state.needle ? "值 " : "指针隐藏 · 值 ") + Math.round(state.value) + " / " + state.max, W - 12, 14, {
+      size: 11.5, weight: 600, color: K.theme.primary, align: "right"
+    });
+  }
+
+  function renderCode() {
+    var L = [], i;
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * scale = " + K.fn("lv_scale_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(scale, " + K.num(W) + ", " + K.num(H) + ");");
+    L.push(K.fn("lv_obj_center") + "(scale);");
+    L.push(K.fn("lv_scale_set_mode") + "(scale, " + K.num(modeConst()) + ");");
+    L.push(K.fn("lv_scale_set_total_tick_count") + "(scale, " + K.num(state.ticks) + ");");
+    L.push(K.fn("lv_scale_set_major_tick_every") + "(scale, " + K.num(state.major) + ");");
+    L.push(K.fn("lv_scale_set_range") + "(scale, " + K.num(state.min) + ", " + K.num(state.max) + ");");
+    L.push(K.fn("lv_scale_set_label_show") + "(scale, " + K.num(state.labels ? "true" : "false") + ");");
+    if (state.mode === "r") {
+      L.push(K.fn("lv_scale_set_angle_range") + "(scale, " + K.num(state.angle) + ");");
+      L.push(K.fn("lv_scale_set_rotation") + "(scale, " + K.num(state.rot) + ");");
+    }
+    if (state.labels) {
+      var labelsTxt = [];
+      var count = Math.min(6, Math.ceil(state.ticks / state.major));
+      for (i = 0; i < count; i++) {
+        var idx = Math.min(state.ticks - 1, i * state.major);
+        labelsTxt.push("\"" + Math.round(tickVal(idx)) + "\"");
+      }
+      L.push("static const char * txt_src[] = {" + labelsTxt.join(", ") + ", NULL};");
+      L.push(K.fn("lv_scale_set_text_src") + "(scale, txt_src);");
+    }
+    L.push("");
+    if (state.sections) {
+      var range = state.max - state.min;
+      var s, a, b;
+      for (s = 0; s < SECTIONS.length; s++) {
+        a = Math.round(state.min + range * SECTIONS[s].from);
+        b = Math.round(state.min + range * SECTIONS[s].to);
+        L.push("static lv_style_t style_sec" + (s + 1) + ";");
+        L.push(K.fn("lv_style_init") + "(&style_sec" + (s + 1) + ");");
+        L.push(K.fn("lv_style_set_line_color") + "(&style_sec" + (s + 1) + ", " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(SECTIONS[s].color)) + "));");
+        L.push(K.fn("lv_style_set_line_width") + "(&style_sec" + (s + 1) + ", " + K.num(6) + ");");
+        L.push("lv_scale_section_t * sec" + (s + 1) + " = " + K.fn("lv_scale_add_section") + "(scale);");
+        L.push(K.fn("lv_scale_set_section_range") + "(scale, sec" + (s + 1) + ", " + K.num(a) + ", " + K.num(b) + ");");
+        L.push(K.fn("lv_scale_set_section_style_main") + "(scale, sec" + (s + 1) + ", &style_sec" + (s + 1) + ");");
+        L.push(K.cm("/* 旧接口等价：lv_scale_section_set_range(sec" + (s + 1) + ", " + a + ", " + b + "); */"));
+        L.push("");
+      }
+    }
+    if (state.needle) {
+      L.push("lv_obj_t * needle_line = " + K.fn("lv_line_create") + "(scale);");
+      L.push(K.fn("lv_obj_set_style_line_width") + "(needle_line, " + K.num(3) + ", 0);");
+      L.push(K.fn("lv_obj_set_style_line_color") + "(needle_line, " + K.fn("lv_color_hex") + "(" + K.num("0x2b7de9") + "), 0);");
+      L.push(K.fn("lv_scale_set_line_needle_value") + "(scale, needle_line, " + K.num(-60) + ", " + K.num(Math.round(state.value)) + ");");
+    } else {
+      L.push(K.cm("/* 指针联动关闭：不创建 needle_line */"));
+    }
+    K.code(L);
+  }
+
+  function updateRoundFields() {
+    var isRound = state.mode === "r";
+    var ids = ["field-angle", "field-rot"];
+    var i;
+    for (i = 0; i < ids.length; i++) {
+      var box = document.getElementById(ids[i]);
+      box.style.opacity = isRound ? "1" : "0.4";
+      var input = box.querySelector("input");
+      input.disabled = !isRound;
+    }
+  }
+
+  function syncValueUI() {
+    state.value = K.clamp(state.value, state.min, state.max);
+    var n = Math.round(state.value);
+    document.getElementById("value").value = n;
+    document.getElementById("o-value").textContent = n;
+  }
+
+  function syncRangeUI() {
+    document.getElementById("o-min").textContent = state.min;
+    document.getElementById("o-max").textContent = state.max;
+    document.getElementById("min").value = state.min;
+    document.getElementById("max").value = state.max;
+    var vEl = document.getElementById("value");
+    vEl.min = state.min;
+    vEl.max = state.max;
+    syncValueUI();
+  }
+
+  document.getElementById("min").addEventListener("input", function (e) {
+    state.min = Number(e.target.value);
+    if (state.min >= state.max) {
+      state.max = state.min + 5;
+      if (state.max > 200) { state.max = 200; state.min = 195; }
+    }
+    syncRangeUI();
+    renderCode();
+  });
+
+  document.getElementById("max").addEventListener("input", function (e) {
+    state.max = Number(e.target.value);
+    if (state.max <= state.min) {
+      state.min = state.max - 5;
+      if (state.min < -50) { state.min = -50; state.max = -45; }
+    }
+    syncRangeUI();
+    renderCode();
+  });
+
+  document.getElementById("value").addEventListener("input", function (e) {
+    state.value = Number(e.target.value);
+    document.getElementById("o-value").textContent = Math.round(state.value);
+    renderCode();
+  });
+
+  K.bindRange("ticks", function (v) { return v; }, function (v) {
+    state.ticks = v;
+    renderCode();
+  });
+  K.bindRange("major", function (v) { return v; }, function (v) {
+    state.major = v;
+    renderCode();
+  });
+  K.bindRange("angle", function (v) { return v + "°"; }, function (v) {
+    state.angle = v;
+    renderCode();
+  });
+  K.bindRange("rot", function (v) { return v + "°"; }, function (v) {
+    state.rot = v;
+    renderCode();
+  });
+
+  K.bindSeg("mode", function (v) {
+    state.mode = v;
+    updateRoundFields();
+    renderCode();
+    K.status(v === "r" ? "圆盘模式：画布上拖动可改指针值" : (v === "v" ? "垂直模式" : "水平模式"));
+  });
+  K.bindCheck("labels", function (on) { state.labels = on; renderCode(); });
+  K.bindCheck("sections", function (on) { state.sections = on; renderCode(); });
+  K.bindCheck("needle", function (on) {
+    state.needle = on;
+    renderCode();
+    K.status(on ? "指针联动已开启" : "指针联动已关闭：仅显示刻度");
+  });
+
+  function angleAt(e) {
+    var r = canvas.getBoundingClientRect();
+    var x = (e.clientX - r.left) * (W / r.width) - ROUND.cx;
+    var y = (e.clientY - r.top) * (H / r.height) - ROUND.cy;
+    return K.normDeg(K.deg(Math.atan2(y, x)));
+  }
+
+  function applyDrag(e) {
+    var a = angleAt(e);
+    var rel = K.normDeg(a - state.rot);
+    if (rel > state.angle) return;
+    state.value = state.min + (rel / state.angle) * (state.max - state.min);
+    syncValueUI();
+    renderCode();
+  }
+
+  canvas.addEventListener("pointerdown", function (e) {
+    if (state.mode !== "r") return;
+    if (e.button && e.button !== 0) return;
+    drawing = true;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor = "crosshair";
+    applyDrag(e);
+  });
+  canvas.addEventListener("pointermove", function (e) {
+    if (!drawing) {
+      canvas.style.cursor = state.mode === "r" ? "crosshair" : "default";
+      return;
+    }
+    applyDrag(e);
+  });
+  function stopDrag() {
+    drawing = false;
+    canvas.style.cursor = state.mode === "r" ? "crosshair" : "default";
+  }
+  canvas.addEventListener("pointerup", stopDrag);
+  canvas.addEventListener("pointercancel", stopDrag);
+
+  K.run(function () {
+    drawScene(view.ctx);
+  });
+
+  document.getElementById("btn-png").addEventListener("click", function () {
+    K.exportPng(canvas, "scale.png");
+  });
+
+  updateRoundFields();
+  syncRangeUI();
+  renderCode();
+  canvas.style.cursor = "default";
+  K.status("刻度与标签自动排布；圆盘模式可拖动改指针值");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js scale.alt：UILabel + 自绘刻线
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_scale，以下为替代自绘骨架（静态示例） */"));
+  L.push(cm("/* 思路：UIView::OnDraw 自绘刻线，UILabel 放数值文本 */"));
+  L.push("");
+  L.push("class ScaleView : " + fn("public") + " UIView {");
+  L.push("public:");
+  L.push("    void " + fn("OnDraw") + "(const Rect&amp; invalidatedArea) " + fn("override") + " {");
+  L.push("        " + cm("/* 逐刻度画线：位置/长度/粗细全部自己算，无自动排布 */"));
+  L.push("        " + fn("for") + " (int16_t i = " + num(0) + "; i &lt; tickCount_; i++) {");
+  L.push("            int16_t x = " + fn("Lerp") + "(x0_, x1_, i / (tickCount_ - " + num(1) + "));");
+  L.push("            bool major = (i % majorEvery_ == " + num(0) + ");");
+  L.push("            canvas_-&gt;" + fn("DrawLine") + "(x, y0_, x, y0_ - (major ? " + num(17) + " : " + num(9) + "),");
+  L.push("                                   major ? " + num(2) + " : " + num(1) + ", tickColor_);");
+  L.push("        }");
+  L.push("        " + cm("/* 标签：主刻度处挂 UILabel（数量/间距自己控制，无跳标签逻辑） */"));
+  L.push("    }");
+  L.push("};");
+  L.push("");
+  L.push("UILabel * valueText = " + fn("new") + " UILabel();");
+  L.push("valueText-&gt;" + fn("SetText") + "(\"45\");   " + cm("/* 数值显示 */"));
+  L.push("");
+  L.push(cm("/* 圆盘模式：角度区间/起始角换算成弧度自绘；"));
+  L.push("   指针联动：value 变化时重算指针终点坐标并 Invalidate()，无现成 needle 组件。 */");
+  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(" + fn("new") + " ScaleView());");
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canvas：LVGL lv_canvas vs ArkUI lite UICanvas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='6' width='24' height='20' rx='2' fill='%23fff' stroke='%23d6d9df'/%3E%3Cpath d='M8 20l5-6 4 4 7-8' fill='none' stroke='%232b7de9' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Canvas：lv_canvas vs UICanvas</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（280×180 像素缓冲自由绘制 + 第二图层混合叠加），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b>
+      源码 <code>ui_canvas.cpp</code> 有限图元行为渲染的 UICanvas。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_canvas</code>
+        <span class="cmp-tag lv">像素缓冲 · 图层混合</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">在白色画布内按住拖动即可绘制；开启第二图层后预置图形画入独立缓冲并半透明叠加，混合模式可切换，贝塞尔曲线为实时叠加路径。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>工具<span class="api">lv_canvas_set_px：逐像素写入轨迹</span></label>
+            <div class="seg" id="tool">
+              <button type="button" data-v="pen" class="active">画笔</button>
+              <button type="button" data-v="eraser">橡皮</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>画笔颜色 color<output id="o-color">#2b7de9</output><span class="api">lv_color_hex 写入缓冲</span></label>
+            <input type="color" id="color" value="#2b7de9">
+          </div>
+
+          <div class="field wide">
+            <label>笔宽 line_width<output id="o-width">3 px</output><span class="api">轨迹宽度自定义（UICanvas 无自由绘制）</span></label>
+            <input type="range" id="width" min="1" max="16" step="1" value="3">
+          </div>
+
+          <div class="field wide">
+            <label>图层叠加（ArkUI lite 无此能力）<span class="api">lv_canvas_init_layer / lv_canvas_finish_layer：独立绘制层合成到画布</span></label>
+            <div class="check"><input type="checkbox" id="layer2"><span>启用第二图层（独立缓冲 · 半透明叠加 · 预置图形画入该层）</span></div>
+          </div>
+
+          <div class="field">
+            <label>混合模式 blend_mode<span class="api">lv_layer_t.blend_mode</span></label>
+            <div class="seg" id="blend">
+              <button type="button" data-v="source-over" class="active">normal</button>
+              <button type="button" data-v="multiply">multiply</button>
+              <button type="button" data-v="screen">screen</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>贝塞尔曲线<span class="api">lv_draw_line：设置 p3 / p4 即绘制三次贝塞尔</span></label>
+            <div class="check"><input type="checkbox" id="bezier" checked><span>叠加贝塞尔路径</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>操作说明</label>
+            <div class="check"><span style="font-size:12px">自由绘制始终作用于第一图层；开启第二图层后预置图形（矩形 / 圆 / 对角线 / 文字）画入第二图层并按混合模式合成。撤销最多保留 30 步快照。</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-undo">撤销</button>
+          <button type="button" class="btn" id="btn-clear">清空</button>
+          <button type="button" class="btn" id="btn-rect">矩形</button>
+          <button type="button" class="btn" id="btn-circle">圆</button>
+          <button type="button" class="btn" id="btn-diag">对角线</button>
+          <button type="button" class="btn" id="btn-text">文字</button>
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UICanvas</code>
+        <span class="cmp-tag ui">有限图元 · 无图层</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UICanvas 只能画直线、圆弧、矩形等有限图元；选择图元后右下方实时代码随之更新。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>绘制图元 primitive<span class="api">SetDrawLinePath / SetArcParamInfo / SetDrawRect：仅这三类基础图元</span></label>
+            <div class="seg" id="udraw">
+              <button type="button" data-v="all" class="active">全部</button>
+              <button type="button" data-v="line">直线</button>
+              <button type="button" data-v="arc">圆弧</button>
+              <button type="button" data-v="rect">矩形</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>frameworks/components/ui_canvas.cpp</code> ——
+          <code>SetStartPosition</code> + <code>SetDrawLinePath</code> 画线段，
+          <code>SetArcParamInfo</code> 画圆弧，<code>SetDrawRect</code> 画矩形；
+          没有图层 / 混合模式 / 贝塞尔路径 / 自由绘制，复杂图形要在 <code>UIView::OnDraw</code> 里用底层绘制接口自绘。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240（绘图缓冲 280×180 · LV_COLOR_FORMAT_ARGB8888 · 201600 B）。PNG 导出离线可用。右列渲染参数取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_canvas 复刻（自由绘制 + 第二图层混合叠加 + 贝塞尔）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 320, H = 240;
+  var CW = 280, CH = 180;
+  var BX = (W - CW) / 2, BY = 18;
+  var MAX_HISTORY = 30;
+  var MONO = 'ui-monospace, Consolas, "Liberation Mono", monospace';
+  var FAMILY = '-apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+  var THEME = { text: "#1c2128", muted: "#5b6470", faint: "#8a929c", primary: "#2b7de9" };
+
+  var state = {
+    eraser: false,
+    color: "#2b7de9",
+    width: 3,
+    layer2: false,          /* 第二图层 */
+    blend: "source-over",   /* source-over | multiply | screen */
+    bezier: true            /* 贝塞尔叠加路径 */
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function roundRectPath(c, x, y, w, h, r){
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function text(c, s, x, y, o){
+    o = o || {};
+    c.save();
+    c.font = (o.weight ? o.weight + " " : "") + (o.size || 12) + "px " + (o.mono ? MONO : FAMILY);
+    c.fillStyle = o.color || THEME.text;
+    c.textAlign = o.align || "left";
+    c.textBaseline = o.baseline || "middle";
+    c.fillText(s, x, y);
+    c.restore();
+  }
+
+  function hexCode(hex){ return "0x" + hex.replace("#", ""); }
+
+  /* ---------- 双缓冲（第一图层 + 第二图层） ---------- */
+  var buf = document.createElement("canvas");
+  buf.width = CW; buf.height = CH;
+  var bctx = buf.getContext("2d");
+
+  var buf2 = document.createElement("canvas");
+  buf2.width = CW; buf2.height = CH;
+  var b2ctx = buf2.getContext("2d");
+
+  var history = [];
+
+  function fillWhite(t){
+    t.save();
+    t.setTransform(1, 0, 0, 1, 0, 0);
+    t.fillStyle = "#ffffff";
+    t.fillRect(0, 0, CW, CH);
+    t.restore();
+  }
+  function clearLayer2(){ b2ctx.clearRect(0, 0, CW, CH); }
+  fillWhite(bctx);
+
+  function snapshot(){
+    return [bctx.getImageData(0, 0, CW, CH), b2ctx.getImageData(0, 0, CW, CH)];
+  }
+  function pushHistory(){
+    if(history.length >= MAX_HISTORY) history.shift();
+    history.push(snapshot());
+  }
+
+  /* ---------- 初始内容（便于直接观察） ---------- */
+  (function seedArt(){
+    bctx.strokeStyle = state.color;
+    bctx.lineWidth = state.width;
+    bctx.lineCap = "round";
+    bctx.lineJoin = "round";
+    roundRectPath(bctx, 32, 30, 96, 62, 6);
+    bctx.stroke();
+    bctx.beginPath();
+    bctx.arc(148, 92, 42, 0, Math.PI * 2);
+    bctx.stroke();
+  })();
+
+  /* ---------- 场景绘制 ---------- */
+  function drawBezier(c){
+    c.save();
+    c.translate(BX, BY);
+    c.strokeStyle = THEME.primary;
+    c.lineWidth = 2;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(30, 150);
+    c.bezierCurveTo(90, 20, 190, 160, 250, 30);
+    c.stroke();
+
+    c.setLineDash([3, 3]);
+    c.strokeStyle = "rgba(43,125,233,0.4)";
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(30, 150); c.lineTo(90, 20);
+    c.moveTo(250, 30); c.lineTo(190, 160);
+    c.stroke();
+    c.setLineDash([]);
+
+    [[30, 150], [90, 20], [190, 160], [250, 30]].forEach(function(p, i){
+      c.beginPath();
+      c.arc(p[0], p[1], 2.6, 0, Math.PI * 2);
+      c.fillStyle = i === 0 || i === 3 ? THEME.primary : "rgba(43,125,233,0.55)";
+      c.fill();
+    });
+    c.restore();
+  }
+
+  function drawScene(c){
+    c.clearRect(0, 0, W, H);
+
+    c.save();
+    c.shadowColor = "rgba(28,33,40,0.16)";
+    c.shadowBlur = 12;
+    c.shadowOffsetY = 4;
+    c.fillStyle = "#ffffff";
+    roundRectPath(c, BX, BY, CW, CH, 3);
+    c.fill();
+    c.restore();
+
+    /* 第一图层 */
+    c.drawImage(buf, BX, BY);
+
+    /* 第二图层：半透明 + 混合模式叠加 */
+    if(state.layer2){
+      c.save();
+      c.globalAlpha = 0.82;
+      c.globalCompositeOperation = state.blend;
+      c.drawImage(buf2, BX, BY);
+      c.restore();
+    }
+
+    c.strokeStyle = "#d6d9df";
+    c.lineWidth = 1;
+    c.strokeRect(BX + 0.5, BY + 0.5, CW - 1, CH - 1);
+
+    if(state.bezier) drawBezier(c);
+
+    var info = "280×180 · LV_COLOR_FORMAT_ARGB8888";
+    if(state.layer2) info += " · layer2:" + state.blend;
+    text(c, info, W / 2, 212, { size: 11, mono: true, color: THEME.muted, align: "center" });
+    text(c, "280*180*4 = 201600 B", W / 2, 227, { size: 11, mono: true, color: THEME.faint, align: "center" });
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.cursor = "crosshair";
+  }
+
+  function loop(){
+    drawScene(ctx);
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 指针 → 缓冲坐标（按实际渲染尺寸缩放） ---------- */
+  function toBuffer(e){
+    var r = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * (W / r.width) - BX,
+      y: (e.clientY - r.top) * (H / r.height) - BY
+    };
+  }
+  function inside(p){ return p.x >= 0 && p.x <= CW && p.y >= 0 && p.y <= CH; }
+  function clampToBuffer(p){ return { x: clamp(p.x, 0, CW), y: clamp(p.y, 0, CH) }; }
+
+  function strokeStyle(t){
+    t.strokeStyle = state.eraser ? "#ffffff" : state.color;
+    t.fillStyle = t.strokeStyle;
+    t.lineWidth = state.width;
+    t.lineCap = "round";
+    t.lineJoin = "round";
+  }
+
+  var drawing = false;
+  var last = { x: 0, y: 0 };
+
+  canvas.addEventListener("pointerdown", function(e){
+    var p = toBuffer(e);
+    if(!inside(p)) return;
+    p = clampToBuffer(p);
+    pushHistory();
+    drawing = true;
+    last = p;
+    strokeStyle(bctx);
+    bctx.beginPath();
+    bctx.arc(p.x, p.y, state.width / 2, 0, Math.PI * 2);
+    bctx.fill();
+    canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener("pointermove", function(e){
+    if(!drawing) return;
+    var p = clampToBuffer(toBuffer(e));
+    strokeStyle(bctx);
+    bctx.beginPath();
+    bctx.moveTo(last.x, last.y);
+    bctx.lineTo(p.x, p.y);
+    bctx.stroke();
+    last = p;
+  });
+
+  function endStroke(){ drawing = false; }
+  canvas.addEventListener("pointerup", endStroke);
+  canvas.addEventListener("pointercancel", endStroke);
+
+  /* ---------- 预置图形（开启第二图层时画入第二图层） ---------- */
+  function targetCtx(){ return state.layer2 ? b2ctx : bctx; }
+  function layerTip(){ return state.layer2 ? "，已画入第二图层" : ""; }
+
+  function rectPreset(){
+    pushHistory();
+    var t = targetCtx();
+    strokeStyle(t);
+    roundRectPath(t, 32, 30, 96, 62, 6);
+    t.stroke();
+    setStatus("已绘制矩形" + layerTip() + "（撤销可回退）", true);
+  }
+  function circlePreset(){
+    pushHistory();
+    var t = targetCtx();
+    strokeStyle(t);
+    t.beginPath();
+    t.arc(148, 92, 42, 0, Math.PI * 2);
+    t.stroke();
+    setStatus("已绘制圆形" + layerTip() + "（撤销可回退）", true);
+  }
+  function diagonalPreset(){
+    pushHistory();
+    var t = targetCtx();
+    strokeStyle(t);
+    t.beginPath();
+    t.moveTo(24, 24);
+    t.lineTo(256, 156);
+    t.stroke();
+    setStatus("已绘制对角线" + layerTip() + "（撤销可回退）", true);
+  }
+  function textPreset(){
+    pushHistory();
+    var t = targetCtx();
+    text(t, "LVGL 画布", 140, 92, {
+      size: 24, weight: 600, color: state.eraser ? "#ffffff" : state.color, align: "center"
+    });
+    setStatus("已写入文字" + layerTip() + "（撤销可回退）", true);
+  }
+
+  function undo(){
+    if(!history.length){ setStatus("没有可撤销的操作"); return; }
+    var s = history.pop();
+    bctx.putImageData(s[0], 0, 0);
+    b2ctx.putImageData(s[1], 0, 0);
+    setStatus("已撤销，剩余 " + history.length + " 步快照", true);
+  }
+
+  function clearAll(){
+    pushHistory();
+    fillWhite(bctx);
+    clearLayer2();
+    setStatus("画布已清空（撤销可恢复）", true);
+  }
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var blendName = state.blend === "multiply" ? "LV_BLEND_MODE_MULTIPLY"
+                  : state.blend === "screen" ? "LV_BLEND_MODE_SCREEN"
+                  : "LV_BLEND_MODE_NORMAL";
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成 · 280 × 180 ARGB8888 */</span>');
+    L.push('#define CANVAS_W <span class="num">' + CW + '</span>');
+    L.push('#define CANVAS_H <span class="num">' + CH + '</span>');
+    L.push('static uint8_t canvas_buf[CANVAS_W * CANVAS_H * 4];   <span class="cm">/* 201600 B */</span>');
+    L.push('');
+    L.push('lv_obj_t * canvas = <span class="fn">lv_canvas_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_canvas_set_buffer</span>(canvas, canvas_buf, CANVAS_W, CANVAS_H, <span class="num">LV_COLOR_FORMAT_ARGB8888</span>);');
+    L.push('<span class="fn">lv_canvas_fill_bg</span>(canvas, <span class="fn">lv_color_hex</span>(<span class="num">0xffffff</span>), LV_OPA_COVER);');
+    L.push('<span class="fn">lv_obj_center</span>(canvas);');
+    L.push('');
+    if(state.eraser){
+      L.push('<span class="cm">/* 橡皮：用白色像素覆盖轨迹 */</span>');
+      L.push('<span class="fn">lv_canvas_set_px</span>(canvas, x, y, <span class="fn">lv_color_hex</span>(<span class="num">0xffffff</span>), LV_OPA_COVER);');
+    }else{
+      L.push('<span class="cm">/* 画笔：沿轨迹逐点写入，宽度 ' + state.width + ' px */</span>');
+      L.push('<span class="fn">lv_canvas_set_px</span>(canvas, x, y, <span class="fn">lv_color_hex</span>(<span class="num">' + hexCode(state.color) + '</span>), LV_OPA_COVER);');
+    }
+    L.push('');
+    L.push('<span class="cm">/* 预置图形：init_layer → lv_draw_rect / lv_draw_line → finish_layer */</span>');
+    L.push('lv_layer_t layer;');
+    L.push('<span class="fn">lv_canvas_init_layer</span>(canvas, &amp;layer);');
+    L.push('');
+    L.push('lv_draw_rect_dsc_t rect_dsc;');
+    L.push('<span class="fn">lv_draw_rect_dsc_init</span>(&amp;rect_dsc);');
+    L.push('rect_dsc.bg_opa = LV_OPA_TRANSP;');
+    L.push('rect_dsc.border_color = <span class="fn">lv_color_hex</span>(<span class="num">' + hexCode(state.color) + '</span>);');
+    L.push('rect_dsc.border_width = <span class="num">' + state.width + '</span>;');
+    L.push('rect_dsc.radius = 40;   <span class="cm">/* 半径取宽高一半即为圆 */</span>');
+    L.push('lv_area_t coords = {30, 30, 150, 120};');
+    L.push('<span class="fn">lv_draw_rect</span>(&amp;layer, &amp;rect_dsc, &amp;coords);');
+    L.push('');
+    L.push('lv_draw_line_dsc_t line_dsc;');
+    L.push('<span class="fn">lv_draw_line_dsc_init</span>(&amp;line_dsc);');
+    L.push('line_dsc.color = <span class="fn">lv_color_hex</span>(<span class="num">' + hexCode(state.color) + '</span>);');
+    L.push('line_dsc.width = <span class="num">' + state.width + '</span>;');
+    L.push('line_dsc.round_start = 1;');
+    L.push('line_dsc.round_end = 1;');
+    L.push('line_dsc.p1.x = 24;  line_dsc.p1.y = 24;');
+    L.push('line_dsc.p2.x = 256; line_dsc.p2.y = 156;');
+    L.push('<span class="fn">lv_draw_line</span>(&amp;layer, &amp;line_dsc);');
+    if(state.bezier){
+      L.push('');
+      L.push('<span class="cm">/* 贝塞尔曲线：设置 p3 / p4 后 lv_draw_line 绘制三次贝塞尔 */</span>');
+      L.push('line_dsc.p1 = (lv_point_precise_t){<span class="num">30</span>, <span class="num">150</span>};');
+      L.push('line_dsc.p2 = (lv_point_precise_t){<span class="num">90</span>, <span class="num">20</span>};');
+      L.push('line_dsc.p3 = (lv_point_precise_t){<span class="num">190</span>, <span class="num">160</span>};');
+      L.push('line_dsc.p4 = (lv_point_precise_t){<span class="num">250</span>, <span class="num">30</span>};');
+      L.push('<span class="fn">lv_draw_line</span>(&amp;layer, &amp;line_dsc);');
+    }
+    L.push('<span class="fn">lv_canvas_finish_layer</span>(canvas, &amp;layer);');
+    if(state.layer2){
+      L.push('');
+      L.push('<span class="cm">/* 第二图层：独立绘制层，按混合模式合成到画布 */</span>');
+      L.push('lv_layer_t layer2;');
+      L.push('<span class="fn">lv_canvas_init_layer</span>(canvas, &amp;layer2);');
+      L.push('layer2.blend_mode = <span class="num">' + blendName + '</span>;');
+      L.push('<span class="cm">/* 在 layer2 上绘制图形（lv_draw_rect / lv_draw_line …），再合成 */</span>');
+      L.push('<span class="fn">lv_canvas_finish_layer</span>(canvas, &amp;layer2);');
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  function bindSeg(id, apply){
+    var seg = document.getElementById(id);
+    seg.addEventListener("click", function(e){
+      var btn = e.target.closest ? e.target.closest("button") : null;
+      if(!btn || btn.parentNode !== seg) return;
+      var btns = seg.getElementsByTagName("button");
+      for(var i = 0; i < btns.length; i++){
+        btns[i].className = btns[i] === btn ? "active" : "";
+      }
+      apply(btn.getAttribute("data-v"));
+      renderCode();
+    });
+  }
+
+  bindSeg("tool", function(v){ state.eraser = v === "eraser"; });
+  bindSeg("blend", function(v){ state.blend = v; });
+
+  document.getElementById("color").addEventListener("input", function(e){
+    state.color = e.target.value;
+    document.getElementById("o-color").textContent = state.color;
+    renderCode();
+  });
+
+  (function(){
+    var el = document.getElementById("width");
+    var out = document.getElementById("o-width");
+    el.addEventListener("input", function(){
+      state.width = Number(el.value);
+      out.textContent = state.width + " px";
+      renderCode();
+    });
+  })();
+
+  document.getElementById("layer2").addEventListener("change", function(e){
+    state.layer2 = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("bezier").addEventListener("change", function(e){
+    state.bezier = e.target.checked;
+    renderCode();
+  });
+
+  document.getElementById("btn-undo").addEventListener("click", undo);
+  document.getElementById("btn-clear").addEventListener("click", clearAll);
+  document.getElementById("btn-rect").addEventListener("click", rectPreset);
+  document.getElementById("btn-circle").addEventListener("click", circlePreset);
+  document.getElementById("btn-diag").addEventListener("click", diagonalPreset);
+  document.getElementById("btn-text").addEventListener("click", textPreset);
+
+  /* ---------- PNG 导出 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      if(blob){ download(blob, "canvas.png"); setStatus("PNG 已保存", true); }
+    });
+  });
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UICanvas 操作绑定 + 实时代码
+   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.canvas）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var u = { which: "all" };
+
+  function $(id){ return document.getElementById(id); }
+  function api(){ return window.LV2 && window.LV2.api; }
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 frameworks/components/ui_canvas.cpp） */</span>');
+    L.push('UICanvas * canvas = <span class="fn">new</span> UICanvas();');
+    L.push('canvas-&gt;<span class="fn">SetPosition</span>(<span class="num">60</span>, <span class="num">40</span>, <span class="num">190</span>, <span class="num">120</span>);');
+    if(u.which === "all" || u.which === "line"){
+      L.push('<span class="cm">/* 直线 */</span>');
+      L.push('canvas-&gt;<span class="fn">SetStartPosition</span>({<span class="num">16</span>, <span class="num">92</span>});');
+      L.push('canvas-&gt;<span class="fn">SetDrawLinePath</span>({<span class="num">150</span>, <span class="num">26</span>});');
+    }
+    if(u.which === "all" || u.which === "arc"){
+      L.push('<span class="cm">/* 圆弧：圆心 / 半径 / 起始角 / 终止角 */</span>');
+      L.push('canvas-&gt;<span class="fn">SetArcParamInfo</span>({<span class="num">150</span>, <span class="num">84</span>}, <span class="num">20</span>, <span class="num">180</span>, <span class="num">288</span>);');
+    }
+    if(u.which === "all" || u.which === "rect"){
+      L.push('<span class="cm">/* 矩形 */</span>');
+      L.push('canvas-&gt;<span class="fn">SetDrawRect</span>(<span class="num">24</span>, <span class="num">20</span>, <span class="num">34</span>, <span class="num">24</span>);');
+    }
+    L.push('canvas-&gt;<span class="fn">Invalidate</span>();');
+    L.push('<span class="cm">/* 无图层 / 混合模式；无贝塞尔 / 自由绘制；无图像变换 */</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  $("udraw").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    u.which = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    var a = api();
+    if(a && a.draw) a.draw(u.which);
+    renderCode();
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

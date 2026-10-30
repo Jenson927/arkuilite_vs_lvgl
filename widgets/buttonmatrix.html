@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buttonmatrix：lv_buttonmatrix vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='%232b7de9'%3E%3Crect x='4' y='4' width='7' height='7' rx='2'/%3E%3Crect x='13' y='4' width='7' height='7' rx='2'/%3E%3Crect x='22' y='4' width='6' height='7' rx='2'/%3E%3Crect x='4' y='13' width='7' height='7' rx='2'/%3E%3Crect x='13' y='13' width='7' height='7' rx='2'/%3E%3Crect x='22' y='13' width='6' height='7' rx='2'/%3E%3Crect x='4' y='22' width='7' height='6' rx='2'/%3E%3Crect x='13' y='22' width='7' height='6' rx='2'/%3E%3Crect x='22' y='22' width='6' height='6' rx='2'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Buttonmatrix：lv_buttonmatrix vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（矩阵布局、映射表控制符、单选/多选、禁用、列宽比例与行列级样式），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_buttonmatrix</code>
+        <span class="cmp-tag lv">映射表 · 行列样式</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击画布按钮选中 / 取消，禁用按钮不响应。切换「控制符映射」可看到映射表里的换行符与禁用控制键；行列级样式可让整行 / 整列联动高亮。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>矩阵尺寸<span class="api">lv_buttonmatrix_set_map（行数由 \n 控制符决定）</span></label>
+            <div class="seg" id="gridsize">
+              <button type="button" data-val="2">2×2</button>
+              <button type="button" data-val="3" class="active">3×3</button>
+              <button type="button" data-val="4">4×4</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>单选 set_one_checked<span class="api">lv_buttonmatrix_set_one_checked</span></label>
+            <div class="check"><input type="checkbox" id="one" checked><span>同一时间只允许一个按钮选中</span></div>
+          </div>
+          <div class="field">
+            <label>显示按钮边框<span class="api">lv_obj_set_style_border_width(LV_PART_ITEMS)</span></label>
+            <div class="check"><input type="checkbox" id="borders" checked><span>关闭后按钮无描边</span></div>
+          </div>
+
+          <div class="field">
+            <label>选中按钮 id<output id="o-sel">0</output><span class="api">lv_buttonmatrix_set_selected_button</span></label>
+            <input type="range" id="sel" min="0" max="8" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>禁用按钮 id<output id="o-dis">4</output><span class="api">lv_buttonmatrix_set_button_ctrl(DISABLED)</span></label>
+            <input type="range" id="dis" min="-1" max="8" step="1" value="4">
+          </div>
+
+          <div class="field wide">
+            <label>映射表演示<span class="api">lv_buttonmatrix_set_map：控制符映射含 "\n" 换行与禁用控制键</span></label>
+            <div class="seg" id="mapmode">
+              <button type="button" data-val="num" class="active">数字映射</button>
+              <button type="button" data-val="ctrl">控制符映射（\n + 禁用键）</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>末列宽度比例<output id="o-colw">1×</output><span class="api">lv_buttonmatrix_set_button_width（相对平均宽度）</span></label>
+            <input type="range" id="colw" min="1" max="3" step="0.5" value="1">
+          </div>
+          <div class="field">
+            <label>行列级样式<span class="api">lv_buttonmatrix_set_button_ctrl 逐键下发（行 / 列联动）</span></label>
+            <div class="seg" id="rcstyle">
+              <button type="button" data-val="none" class="active">无</button>
+              <button type="button" data-val="row">整行联动</button>
+              <button type="button" data-val="col">整列联动</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有按钮矩阵：只能 new 多个 UIButton 手动 SetPosition 排网格，映射表与行列样式全部自己维护。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240。静态页提供 PNG 导出（GIF 需联网，WebM 离线可用，本页未启用）。右列代码为按 compare-data.js 最接近实现给出的替代拼装骨架。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_buttonmatrix 复刻（迁移自旧页，新增控制符映射、列宽比例与行列级样式）
+   ===================================================================== */
+(function () {
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+
+  var state = {
+    grid: 3, one: true, sel: 0, dis: 4, borders: true,
+    colw: 1, mapMode: "num", rcstyle: "none"
+  };
+  var selected = [0];
+  var pressedId = -1;
+  var pressedAt = -9999;
+  var rects = [];
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  view.canvas.style.cursor = "pointer";
+
+  function count() { return state.grid * state.grid; }
+
+  function isSel(id) {
+    for (var i = 0; i < selected.length; i++) if (selected[i] === id) return true;
+    return false;
+  }
+
+  function isCtrlLast(id) { return state.mapMode === "ctrl" && id === count() - 1; }
+  function isDisabled(id) { return id === state.dis || isCtrlLast(id); }
+
+  function labelOf(id) {
+    if (isCtrlLast(id)) return "✕";
+    if (state.mapMode === "ctrl") return String.fromCharCode(65 + id);
+    return String(id + 1);
+  }
+
+  function geom() {
+    var rows = state.grid, cols = state.grid;
+    var cardX = 24, cardY = 22, cardW = 272, cardH = 196;
+    var pad = 12, gap = 8;
+    var innerW = cardW - 2 * pad;
+    var innerH = cardH - 2 * pad;
+    var rowH = (innerH - (rows - 1) * gap) / rows;
+    var unit, lastW;
+    if (state.colw !== 1 && cols > 1) {
+      unit = (innerW - (cols - 1) * gap) / (cols - 1 + state.colw);
+      lastW = unit * state.colw;
+    } else {
+      unit = (innerW - (cols - 1) * gap) / cols;
+      lastW = unit;
+    }
+    return {
+      cols: cols, rows: rows, cardX: cardX, cardY: cardY, cardW: cardW, cardH: cardH,
+      pad: pad, gap: gap, unit: unit, lastW: lastW, rowH: rowH,
+      innerX: cardX + pad, innerY: cardY + pad
+    };
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw() {
+    var c = view.ctx;
+    var g = geom();
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+
+    K.box(c, g.cardX, g.cardY, g.cardW, g.cardH, {
+      bg: "#f7f8fa", radius: 14, borderWidth: 1, border: "#e2e6eb"
+    });
+
+    rects = [];
+    var n = count();
+    var fsz = state.grid === 2 ? 22 : (state.grid === 3 ? 19 : 16);
+    var selRow = Math.floor(state.sel / g.cols);
+    var selCol = state.sel % g.cols;
+
+    for (var r = 0; r < g.rows; r++) {
+      for (var col = 0; col < g.cols; col++) {
+        var id = r * g.cols + col;
+        if (id >= n) continue;
+        var bw = (col === g.cols - 1) ? g.lastW : g.unit;
+        var bx = g.innerX + col * (g.unit + g.gap);
+        var by = g.innerY + r * (g.rowH + g.gap);
+
+        var disabled = isDisabled(id);
+        var checked = isSel(id) && !disabled;
+        var pressed = (pressedId === id && performance.now() - pressedAt < 140);
+        var rcHit = !disabled && !checked && state.rcstyle !== "none" &&
+          ((state.rcstyle === "row" && r === selRow) || (state.rcstyle === "col" && col === selCol));
+
+        var bg, fg, border, borderW;
+        if (disabled) {
+          bg = "#eef1f4"; fg = "#b8bfc9"; border = "#e0e4e9"; borderW = state.borders ? 1.5 : 0;
+        } else if (checked) {
+          bg = pressed ? K.shade(K.theme.primary, -0.12) : K.theme.primary;
+          fg = "#ffffff"; border = K.theme.primary; borderW = 1.5;
+        } else if (rcHit) {
+          bg = "#e8f1fd"; fg = K.theme.primary; border = K.alpha("#2b7de9", 0.45); borderW = state.borders ? 1.5 : 0;
+        } else {
+          bg = state.borders ? "#ffffff" : "#eef1f4";
+          fg = K.theme.text; border = "#d6d9df"; borderW = state.borders ? 1.5 : 0;
+        }
+
+        K.box(c, bx, by, bw, g.rowH, {
+          bg: bg, radius: 9, borderWidth: borderW, border: border,
+          shadow: (state.borders && !checked) ? K.alpha("#1c2128", 0.05) : null,
+          shadowBlur: 4, shadowY: 1
+        });
+
+        if (isCtrlLast(id)) {
+          K.icon(c, "close", bx + bw / 2 - fsz * 0.42, by + g.rowH / 2 - fsz * 0.42, fsz * 0.84, fg);
+        } else {
+          K.text(c, labelOf(id), bx + bw / 2, by + g.rowH / 2 + 1, {
+            size: fsz, weight: checked ? 600 : 500, color: fg, align: "center"
+          });
+        }
+
+        rects.push({ id: id, x: bx, y: by, w: bw, h: g.rowH });
+      }
+    }
+
+    K.text(c, state.mapMode === "ctrl"
+      ? "映射表含 \"\\n\" 换行控制符 · 末键为禁用控制键"
+      : "点击按钮选中 / 取消，禁用按钮不响应", W / 2, H - 12, {
+      size: 11, color: K.theme.textFaint, align: "center"
+    });
+  }
+
+  K.run(function () { draw(); });
+
+  /* ---------- 交互 ---------- */
+  function posOf(e) {
+    var r = view.canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * (W / r.width),
+      y: (e.clientY - r.top) * (H / r.height)
+    };
+  }
+
+  view.canvas.addEventListener("pointerdown", function (e) {
+    var p = posOf(e);
+    var found = null;
+    for (var i = rects.length - 1; i >= 0; i--) {
+      var b = rects[i];
+      if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) { found = b; break; }
+    }
+    if (!found || isDisabled(found.id)) return;
+
+    pressedId = found.id;
+    pressedAt = performance.now();
+    state.sel = found.id;
+
+    if (state.one) {
+      selected = [found.id];
+    } else {
+      var idx = -1;
+      for (var j = 0; j < selected.length; j++) if (selected[j] === found.id) idx = j;
+      if (idx >= 0) selected.splice(idx, 1);
+      else selected.push(found.id);
+    }
+    syncSelUI();
+    renderCode();
+    K.status("按钮 " + found.id + "（" + labelOf(found.id) + "）" + (isSel(found.id) ? "选中" : "取消选中"));
+  });
+
+  function syncSelUI() {
+    var el = document.getElementById("sel");
+    el.value = state.sel;
+    document.getElementById("o-sel").textContent = state.sel;
+  }
+
+  /* ---------- 参数 ---------- */
+  function syncLimits() {
+    var n = count();
+    var selEl = document.getElementById("sel");
+    var disEl = document.getElementById("dis");
+    if (state.sel > n - 1) state.sel = n - 1;
+    if (state.dis > n - 1) state.dis = -1;
+    selEl.max = n - 1;
+    disEl.max = n - 1;
+    selEl.value = state.sel;
+    disEl.value = state.dis;
+    document.getElementById("o-sel").textContent = state.sel;
+    document.getElementById("o-dis").textContent = state.dis < 0 ? "-1（无）" : state.dis;
+    selected = selected.filter(function (id) { return id < n && !isDisabled(id); });
+    if (state.one) selected = isDisabled(state.sel) ? [] : [state.sel];
+  }
+
+  K.bindSeg("gridsize", function (v) {
+    state.grid = Number(v);
+    syncLimits();
+    renderCode();
+  });
+
+  K.bindCheck("one", function (on) {
+    state.one = on;
+    if (on) selected = isDisabled(state.sel) ? [] : [state.sel];
+    renderCode();
+  });
+
+  K.bindCheck("borders", function (on) { state.borders = on; renderCode(); });
+
+  K.bindRange("sel", null, function (v) {
+    state.sel = v;
+    selected = isDisabled(v) ? [] : [v];
+    renderCode();
+  });
+
+  K.bindRange("dis", function (v) { return v < 0 ? "-1（无）" : v; }, function (v) {
+    state.dis = v;
+    selected = selected.filter(function (id) { return !isDisabled(id); });
+    if (state.one && state.sel !== v) selected = isDisabled(state.sel) ? [] : [state.sel];
+    if (state.sel === v) selected = [];
+    renderCode();
+  });
+
+  K.bindRange("colw", function (v) { return v + "×"; }, function (v) {
+    state.colw = v;
+    renderCode();
+  });
+
+  K.bindSeg("mapmode", function (v) {
+    state.mapMode = v;
+    syncLimits();
+    renderCode();
+    K.status(v === "ctrl" ? "控制符映射：末键为禁用控制键，行由 \\n 分隔" : "数字映射");
+  });
+
+  K.bindSeg("rcstyle", function (v) {
+    state.rcstyle = v;
+    renderCode();
+    K.status(v === "none" ? "行列级样式关闭" : (v === "row" ? "整行联动高亮（逐键下发 CHECKED）" : "整列联动高亮（逐键下发 CHECKED）"));
+  });
+
+  /* ---------- C 代码 ---------- */
+  function renderCode() {
+    var n = count();
+    var g = state.grid;
+    var mapName = "map_" + g + "x" + g;
+    var items = [];
+    for (var i = 0; i < n; i++) {
+      items.push(isCtrlLast(i) ? K.num("LV_SYMBOL_CLOSE") : JSON.stringify(labelOf(i)));
+      if ((i + 1) % g === 0 && i !== n - 1) items.push("\"\\n\"");
+    }
+    items.push("\"\"");
+
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("static const char * const " + mapName + "[] = {" + items.join(", ") + "};");
+    L.push("");
+    L.push("lv_obj_t * btnm = " + K.fn("lv_buttonmatrix_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(btnm, " + K.num(272) + ", " + K.num(196) + ");");
+    L.push(K.fn("lv_obj_center") + "(btnm);");
+    L.push(K.fn("lv_buttonmatrix_set_map") + "(btnm, " + mapName + ");");
+    L.push(K.fn("lv_buttonmatrix_set_button_ctrl_all") + "(btnm, " + K.num("LV_BUTTONMATRIX_CTRL_CHECKABLE") + ");");
+    L.push(K.fn("lv_buttonmatrix_set_one_checked") + "(btnm, " + K.num(state.one ? "true" : "false") + ");");
+
+    if (state.colw !== 1) {
+      for (var r = 0; r < g; r++) {
+        L.push(K.fn("lv_buttonmatrix_set_button_width") + "(btnm, " + K.num(r * g + g - 1) + ", " +
+          K.num(Math.round(state.colw * 2)) + ");" + K.cm("  /* 末列 " + state.colw + " 倍宽 */"));
+      }
+    }
+
+    if (state.dis >= 0) {
+      L.push(K.fn("lv_buttonmatrix_set_button_ctrl") + "(btnm, " + K.num(state.dis) + ", " +
+        K.num("LV_BUTTONMATRIX_CTRL_DISABLED") + ");");
+    }
+    if (state.mapMode === "ctrl") {
+      L.push(K.fn("lv_buttonmatrix_set_button_ctrl") + "(btnm, " + K.num(n - 1) + ", " +
+        K.num("LV_BUTTONMATRIX_CTRL_DISABLED") + ");" + K.cm(" /* 禁用控制键 */"));
+    }
+
+    if (selected.length) {
+      L.push(K.fn("lv_buttonmatrix_set_selected_button") + "(btnm, " + K.num(state.sel) + ");");
+      for (var s = 0; s < selected.length; s++) {
+        if (selected[s] !== state.sel) {
+          L.push(K.fn("lv_buttonmatrix_set_button_ctrl") + "(btnm, " + K.num(selected[s]) + ", " +
+            K.num("LV_BUTTONMATRIX_CTRL_CHECKED") + ");");
+        }
+      }
+    }
+
+    if (state.rcstyle !== "none") {
+      var selRow = Math.floor(state.sel / g), selCol = state.sel % g;
+      L.push(K.cm("/* " + (state.rcstyle === "row" ? "整行" : "整列") + "联动样式：逐键下发 CHECKED */"));
+      for (var k = 0; k < g; k++) {
+        var rid = state.rcstyle === "row" ? selRow * g + k : k * g + selCol;
+        L.push(K.fn("lv_buttonmatrix_set_button_ctrl") + "(btnm, " + K.num(rid) + ", " +
+          K.num("LV_BUTTONMATRIX_CTRL_CHECKED") + ");");
+      }
+    }
+
+    if (!state.borders) {
+      L.push(K.fn("lv_obj_set_style_border_width") + "(btnm, " + K.num(0) + ", LV_PART_ITEMS);");
+    }
+    L.push(K.fn("lv_obj_set_style_bg_color") + "(btnm, " + K.fn("lv_color_hex") + "(" + K.num("0x2b7de9") + "), " +
+      K.num("LV_PART_ITEMS") + " | LV_STATE_CHECKED);");
+    K.code(L);
+  }
+
+  /* ---------- 导出 ---------- */
+  document.getElementById("btn-png").addEventListener("click", function () {
+    K.exportPng(view.canvas, "buttonmatrix.png");
+  });
+
+  syncLimits();
+  renderCode();
+  K.status("点击画布按钮切换选中状态");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js buttonmatrix.alt：多个 UIButton 手动 SetPosition 排网格
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_buttonmatrix，以下为替代拼装骨架（静态示例） */"));
+  L.push(cm("/* 思路：3×3 = 9 个 UIButton，手动 SetPosition 排成网格 */"));
+  L.push("");
+  L.push("static const int16_t GRID = " + num(3) + ", GAP = " + num(8) + ", BW = " + num(80) + ", BH = " + num(56) + ";");
+  L.push("UIButton * keys[GRID * GRID];");
+  L.push("");
+  L.push(cm("/* 逐键创建 + 手动排版（无映射表，无 \\n 换行控制符） */"));
+  L.push("for (int16_t id = " + num(0) + "; id &lt; GRID * GRID; id++) {");
+  L.push("    keys[id] = " + fn("new") + " UIButton();");
+  L.push("    keys[id]-&gt;" + fn("SetPosition") + "(" + num(24) + " + (id % GRID) * (BW + GAP),");
+  L.push("                                 " + num(22) + " + (id / GRID) * (BH + GAP));");
+  L.push("    keys[id]-&gt;" + fn("SetWidth") + "(BW);   " + cm("/* 列宽比例要自己算，无 set_button_width */"));
+  L.push("    keys[id]-&gt;" + fn("SetHeight") + "(BH);");
+  L.push("    UILabel * t = " + fn("new") + " UILabel();");
+  L.push("    t-&gt;" + fn("SetText") + "(LabelOf(id));   " + cm("/* 文本映射自己维护 */"));
+  L.push("    keys[id]-&gt;" + fn("Add") + "(t);");
+  L.push("    keys[id]-&gt;" + fn("SetOnClickListener") + "(" + num("&keyListener") + ");");
+  L.push("    UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(keys[id]);");
+  L.push("}");
+  L.push("");
+  L.push(cm("/* 禁用 / 单选 / 行列样式："));
+  L.push("   keys[id]-&gt;SetState(UIButton::INACTIVE);      // 禁用");
+  L.push("   选中态与整行整列高亮需在 keyListener 里逐键改样式，无 CTRL 位可用。 */");
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

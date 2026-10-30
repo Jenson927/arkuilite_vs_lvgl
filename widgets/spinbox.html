@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spinbox：lv_spinbox vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='10' width='24' height='13' rx='3' fill='none' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M10 16h5M17 16h5' stroke='%232b7de9' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Spinbox：lv_spinbox vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（− / + 步进、长按连发、光标位、循环回绕、整数/小数/前缀格式化），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_spinbox</code>
+        <span class="cmp-tag lv">步进 · 循环 · 格式化</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击 − / + 单步变化，按住连续步进；点击数字框移动光标位。循环回绕、长按连发与格式化可实时切换——这些能力 ArkUI lite 都要自己写。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>最小值 set_range min<span class="api">lv_spinbox_set_range</span></label>
+            <input type="text" id="min" value="0" maxlength="7">
+          </div>
+          <div class="field">
+            <label>最大值 set_range max<span class="api">lv_spinbox_set_range</span></label>
+            <input type="text" id="max" value="9999" maxlength="7">
+          </div>
+
+          <div class="field">
+            <label>步进值 set_step<span class="api">lv_spinbox_set_step</span></label>
+            <div class="seg" id="step">
+              <button type="button" data-val="1" class="active">1</button>
+              <button type="button" data-val="10">10</button>
+              <button type="button" data-val="100">100</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>位数 digit_count<output id="o-digits">4 位</output><span class="api">lv_spinbox_set_digit_format</span></label>
+            <input type="range" id="digits" min="1" max="6" step="1" value="4">
+          </div>
+
+          <div class="field">
+            <label>小数点位 sep_pos<output id="o-dec">无小数</output><span class="api">lv_spinbox_set_digit_format(digit_count, sep_pos)</span></label>
+            <input type="range" id="dec" min="0" max="6" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>循环 rollover<span class="api">lv_spinbox_set_rollover</span></label>
+            <div class="check"><input type="checkbox" id="rollover"><span>越界后回绕到另一端</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>显示格式<span class="api">lv_spinbox_set_digit_format · 前缀为自定义格式化（LVGL 无内置前缀接口）</span></label>
+            <div class="seg" id="fmt">
+              <button type="button" data-val="int" class="active">整数</button>
+              <button type="button" data-val="dec">小数</button>
+              <button type="button" data-val="prefix">前缀 ¥</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>长按连续步进<span class="api">LV_EVENT_LONG_PRESSED_REPEAT</span></label>
+            <div class="check"><input type="checkbox" id="repeat" checked><span>按住时自动重复步进</span></div>
+          </div>
+          <div class="field">
+            <label>初始值 set_value<span class="api">lv_spinbox_set_value</span></label>
+            <input type="text" id="value" value="1234" maxlength="7">
+          </div>
+
+          <div class="field wide">
+            <label>当前值 / 光标位</label>
+            <div class="check"><span style="font-size:12px" id="o-state">当前值 1234 · 光标位 1 / 4</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有数值步进框：用两个 UIButton 增减、UILabel 显示数字，长按连发用 UIRepeatButton 近似。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240。静态页提供 PNG 导出（GIF 需联网，WebM 离线可用，本页未启用）。右列代码为按 compare-data.js 最接近实现给出的替代拼装骨架。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_spinbox 复刻（迁移自旧页，新增长按连发开关与前缀/格式化演示）
+   ===================================================================== */
+(function () {
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+  var SB_X = 74, SB_Y = 96, SB_W = 172, SB_H = 48;
+  var BTN_CY = 120, BTN_R = 18, MINUS_X = 40, PLUS_X = 280;
+
+  var state = {
+    min: 0, max: 9999,
+    step: 1,
+    digitCount: 4,
+    decPos: 0,
+    rollover: false,
+    repeat: true,
+    prefix: "",
+    value: 1234,
+    cursor: 0,
+    pressed: ""
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  view.canvas.style.cursor = "pointer";
+
+  function digitString() {
+    var s = String(Math.abs(Math.round(state.value)));
+    while (s.length < state.digitCount) s = "0" + s;
+    if (s.length > state.digitCount) s = s.slice(s.length - state.digitCount);
+    return s;
+  }
+
+  function displayChars() {
+    var ds = digitString();
+    var chars = [], i;
+    if (state.prefix) chars.push({ ch: state.prefix, digit: false, index: -1, prefix: true });
+    if (state.value < 0) chars.push({ ch: "-", digit: false, index: -1 });
+    for (i = 0; i < ds.length; i++) {
+      if (state.decPos > 0 && i === state.digitCount - state.decPos) {
+        chars.push({ ch: ".", digit: false, index: -1 });
+      }
+      chars.push({ ch: ds.charAt(i), digit: true, index: i });
+    }
+    return chars;
+  }
+
+  function formatted() {
+    var ds = digitString();
+    if (state.decPos > 0) {
+      ds = ds.slice(0, state.digitCount - state.decPos) + "." + ds.slice(state.digitCount - state.decPos);
+    }
+    return (state.prefix || "") + (state.value < 0 ? "-" : "") + ds;
+  }
+
+  function charLayout() {
+    var chars = displayChars();
+    var slot = 18;
+    return {
+      chars: chars,
+      slot: slot,
+      x0: SB_X + SB_W / 2 - chars.length * slot / 2
+    };
+  }
+
+  function drawButton(c, cx, iconName, pressed) {
+    c.beginPath();
+    c.arc(cx, BTN_CY, BTN_R, 0, Math.PI * 2);
+    c.fillStyle = pressed ? "#e8f1fd" : "#f4f6f9";
+    c.fill();
+    c.lineWidth = 1;
+    c.strokeStyle = pressed ? K.theme.primary : "#d6d9df";
+    c.stroke();
+    K.icon(c, iconName, cx - 7, BTN_CY - 7, 14, K.theme.primary);
+  }
+
+  function draw(c) {
+    c.clearRect(0, 0, W, H);
+
+    K.text(c, "Spinbox · lv_spinbox", W / 2, 56, {
+      size: 12.5, color: K.theme.textMuted, align: "center"
+    });
+
+    drawButton(c, MINUS_X, "minus", state.pressed === "dec");
+    drawButton(c, PLUS_X, "plus", state.pressed === "inc");
+
+    K.box(c, SB_X, SB_Y, SB_W, SB_H, {
+      bg: "#ffffff", radius: 8, borderWidth: 1.5, border: K.theme.primary,
+      shadow: K.alpha("#2b7de9", 0.12), shadowBlur: 10, shadowY: 3
+    });
+
+    var lay = charLayout();
+    var cy = SB_Y + SB_H / 2;
+    var i, ch;
+    for (i = 0; i < lay.chars.length; i++) {
+      ch = lay.chars[i];
+      var cx = lay.x0 + i * lay.slot + lay.slot / 2;
+      if (ch.digit && ch.index === state.cursor) {
+        K.box(c, cx - 8, cy - 15, 16, 30, { bg: K.theme.primary, radius: 5 });
+        K.text(c, ch.ch, cx, cy + 1, {
+          size: 24, mono: true, weight: 600, color: "#ffffff", align: "center"
+        });
+      } else if (ch.prefix) {
+        K.text(c, ch.ch, cx, cy + 1, {
+          size: 18, weight: 600, color: K.theme.textMuted, align: "center"
+        });
+      } else {
+        K.text(c, ch.ch, cx, cy + 1, {
+          size: 24, mono: true, weight: 500,
+          color: ch.digit ? K.theme.text : K.theme.textFaint, align: "center"
+        });
+      }
+    }
+
+    K.text(c, "范围 " + state.min + " ~ " + state.max + " · 步长 " + state.step +
+      ((state.decPos > 0 || state.prefix) ? " · 显示 " + formatted() : ""),
+      W / 2, 166, { size: 12, color: K.theme.textMuted, align: "center" });
+
+    K.text(c, "当前值 " + state.value + " · 光标位 " + (state.cursor + 1) + " / " + state.digitCount,
+      W / 2, 186, { size: 12, color: K.theme.text, align: "center" });
+
+    K.text(c, "点击 − / + 单步变化" + (state.repeat ? "，按住连续变化" : "") + " · 点击数字框移动光标位",
+      W / 2, 216, { size: 11, color: K.theme.textFaint, align: "center" });
+  }
+
+  K.run(function () { draw(view.ctx); });
+
+  function updateStateUI() {
+    document.getElementById("o-state").textContent =
+      "当前值 " + state.value + " · 光标位 " + (state.cursor + 1) + " / " + state.digitCount;
+  }
+
+  function applyDelta(dir) {
+    var v = state.value + dir * state.step;
+    if (v > state.max) v = state.rollover ? state.min : state.max;
+    if (v < state.min) v = state.rollover ? state.max : state.min;
+    state.value = K.clamp(v, state.min, state.max);
+    updateStateUI();
+    renderCode();
+    K.status("当前值 " + state.value + ((state.decPos > 0 || state.prefix) ? "（显示 " + formatted() + "）" : ""));
+  }
+
+  /* ---------- 按住连续变化（受长按连发开关控制） ---------- */
+  var holdTimeout = null, holdInterval = null;
+
+  function startHold(dir) {
+    stopHold();
+    state.pressed = dir > 0 ? "inc" : "dec";
+    applyDelta(dir);
+    if (!state.repeat) return;
+    holdTimeout = setTimeout(function () {
+      holdInterval = setInterval(function () { applyDelta(dir); }, 90);
+    }, 350);
+  }
+
+  function stopHold() {
+    if (holdTimeout) { clearTimeout(holdTimeout); holdTimeout = null; }
+    if (holdInterval) { clearInterval(holdInterval); holdInterval = null; }
+    state.pressed = "";
+  }
+
+  window.addEventListener("pointerup", stopHold);
+  window.addEventListener("pointercancel", stopHold);
+
+  function inCircle(px, py, cx) {
+    var dx = px - cx, dy = py - BTN_CY;
+    return dx * dx + dy * dy <= 20 * 20;
+  }
+
+  view.canvas.addEventListener("pointerdown", function (e) {
+    var rect = view.canvas.getBoundingClientRect();
+    var px = (e.clientX - rect.left) * (W / rect.width);
+    var py = (e.clientY - rect.top) * (H / rect.height);
+
+    if (inCircle(px, py, MINUS_X)) { startHold(-1); return; }
+    if (inCircle(px, py, PLUS_X)) { startHold(1); return; }
+
+    if (px >= SB_X && px <= SB_X + SB_W && py >= SB_Y && py <= SB_Y + SB_H) {
+      var lay = charLayout();
+      var best = -1, bestDist = 1e9, i, ch;
+      for (i = 0; i < lay.chars.length; i++) {
+        ch = lay.chars[i];
+        if (!ch.digit) continue;
+        var cx = lay.x0 + i * lay.slot + lay.slot / 2;
+        var d = Math.abs(px - cx);
+        if (d < bestDist) { bestDist = d; best = ch.index; }
+      }
+      if (best >= 0) {
+        state.cursor = best;
+        updateStateUI();
+        renderCode();
+        K.status("光标移动到第 " + (best + 1) + " 位");
+      }
+    }
+  });
+
+  /* ---------- 参数 ---------- */
+  document.getElementById("min").addEventListener("input", function (e) {
+    var v = parseInt(e.target.value, 10);
+    if (isNaN(v)) return;
+    state.min = v;
+    if (state.min >= state.max) {
+      state.max = state.min + 1;
+      document.getElementById("max").value = state.max;
+    }
+    state.value = K.clamp(state.value, state.min, state.max);
+    updateStateUI();
+    renderCode();
+  });
+
+  document.getElementById("max").addEventListener("input", function (e) {
+    var v = parseInt(e.target.value, 10);
+    if (isNaN(v)) return;
+    state.max = v;
+    if (state.max <= state.min) {
+      state.min = state.max - 1;
+      document.getElementById("min").value = state.min;
+    }
+    state.value = K.clamp(state.value, state.min, state.max);
+    updateStateUI();
+    renderCode();
+  });
+
+  document.getElementById("value").addEventListener("input", function (e) {
+    var v = parseInt(e.target.value, 10);
+    if (isNaN(v)) return;
+    state.value = K.clamp(v, state.min, state.max);
+    state.cursor = K.clamp(state.cursor, 0, state.digitCount - 1);
+    updateStateUI();
+    renderCode();
+  });
+
+  K.bindSeg("step", function (v) {
+    state.step = Number(v);
+    renderCode();
+  });
+
+  K.bindRange("digits", function (v) { return v + " 位"; }, function (v) {
+    state.digitCount = v;
+    state.cursor = K.clamp(state.cursor, 0, v - 1);
+    var dec = document.getElementById("dec");
+    dec.max = Math.max(0, v - 1);
+    if (state.decPos > v - 1) state.decPos = Math.max(0, v - 1);
+    dec.value = state.decPos;
+    document.getElementById("o-dec").textContent = state.decPos === 0 ? "无小数" : ("sep_pos " + state.decPos);
+    updateStateUI();
+    renderCode();
+  });
+
+  K.bindRange("dec", function (v) { return v === 0 ? "无小数" : ("sep_pos " + v); }, function (v) {
+    state.decPos = v;
+    renderCode();
+  });
+
+  K.bindCheck("rollover", function (on) {
+    state.rollover = on;
+    renderCode();
+  });
+
+  K.bindCheck("repeat", function (on) {
+    state.repeat = on;
+    stopHold();
+    renderCode();
+    K.status(on ? "长按连续步进已开启" : "长按连续步进已关闭：仅单击步进");
+  });
+
+  /* 显示格式：整数 / 小数 / 前缀 */
+  K.bindSeg("fmt", function (v) {
+    var dec = document.getElementById("dec");
+    if (v === "int") {
+      state.prefix = "";
+      state.decPos = 0;
+    } else if (v === "dec") {
+      state.prefix = "";
+      state.decPos = Math.min(2, state.digitCount - 1);
+    } else {
+      state.prefix = "¥";
+      state.decPos = 0;
+    }
+    dec.value = state.decPos;
+    document.getElementById("o-dec").textContent = state.decPos === 0 ? "无小数" : ("sep_pos " + state.decPos);
+    renderCode();
+    K.status("显示格式：" + (v === "int" ? "整数" : v === "dec" ? "小数（" + formatted() + "）" : "前缀（" + formatted() + "）"));
+  });
+
+  /* ---------- C 代码 ---------- */
+  function renderCode() {
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * sb = " + K.fn("lv_spinbox_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(sb, " + K.num(SB_W) + ", " + K.num(SB_H) + ");");
+    L.push(K.fn("lv_spinbox_set_range") + "(sb, " + K.num(state.min) + ", " + K.num(state.max) + ");");
+    L.push(K.fn("lv_spinbox_set_digit_format") + "(sb, " + K.num(state.digitCount) + ", " + K.num(state.decPos) + ");");
+    L.push(K.fn("lv_spinbox_set_step") + "(sb, " + K.num(state.step) + ");");
+    L.push(K.fn("lv_spinbox_set_rollover") + "(sb, " + K.num(state.rollover ? "true" : "false") + ");");
+    if (state.prefix) {
+      L.push(K.cm("/* 前缀 '" + state.prefix + "'：自定义格式化，渲染文本时自行拼接符号 */"));
+    }
+    L.push(K.fn("lv_spinbox_set_value") + "(sb, " + K.num(state.value) + ");");
+    L.push(K.fn("lv_spinbox_set_cursor_pos") + "(sb, " + K.num(state.cursor) + ");");
+    L.push(K.cm("/* 当前显示：" + formatted() + " */"));
+    L.push(K.fn("lv_obj_center") + "(sb);");
+    L.push("");
+    L.push(K.cm("/* 左右按钮：点击调用 increment / decrement" +
+      (state.repeat ? "；长按自动连发（LONG_PRESSED_REPEAT）" : "；长按不连发") + " */"));
+    L.push("static void inc_cb(lv_event_t * e) { " + K.fn("lv_spinbox_increment") + "(lv_event_get_user_data(e)); }");
+    L.push("static void dec_cb(lv_event_t * e) { " + K.fn("lv_spinbox_decrement") + "(lv_event_get_user_data(e)); }");
+    L.push(K.fn("lv_obj_add_event_cb") + "(btn_plus, inc_cb, " +
+      K.num(state.repeat ? "LV_EVENT_LONG_PRESSED_REPEAT" : "LV_EVENT_CLICKED") + ", sb);");
+    L.push(K.fn("lv_obj_add_event_cb") + "(btn_minus, dec_cb, " +
+      K.num(state.repeat ? "LV_EVENT_LONG_PRESSED_REPEAT" : "LV_EVENT_CLICKED") + ", sb);");
+    K.code(L);
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function () {
+    K.exportPng(view.canvas, "spinbox.png");
+  });
+
+  updateStateUI();
+  renderCode();
+  K.status("点击 − / + 调整数值，按住可连续变化");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js spinbox.alt：2×UIButton + UILabel，长按用 UIRepeatButton
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_spinbox，以下为替代拼装骨架（静态示例） */"));
+  L.push(cm("/* 思路：两个 UIButton 负责增减，UILabel 显示数字，长按连发用 UIRepeatButton 近似 */"));
+  L.push("");
+  L.push(cm("/* 1. 数值显示：UILabel（格式化与循环逻辑全部自己写） */"));
+  L.push("UILabel * numText = " + fn("new") + " UILabel();");
+  L.push("numText-&gt;" + fn("SetText") + "(\"1234\");");
+  L.push("numText-&gt;" + fn("SetPosition") + "(" + num(124) + ", " + num(104) + ");");
+  L.push("numText-&gt;" + fn("Resize") + "(" + num(72) + ", " + num(32) + ");");
+  L.push("");
+  L.push(cm("/* 2. 减少按钮：UIRepeatButton 支持长按重复回调（近似 LVGL 长按连发） */"));
+  L.push("UIRepeatButton * btnMinus = " + fn("new") + " UIRepeatButton();");
+  L.push("btnMinus-&gt;" + fn("SetPosition") + "(" + num(24) + ", " + num(102) + ");");
+  L.push("btnMinus-&gt;" + fn("SetWidth") + "(" + num(44) + ");");
+  L.push("btnMinus-&gt;" + fn("SetHeight") + "(" + num(44) + ");");
+  L.push("btnMinus-&gt;" + fn("SetOnClickListener") + "(" + num("&decListener") + ");");
+  L.push("");
+  L.push(cm("/* 3. 增加按钮：同上 */"));
+  L.push("UIRepeatButton * btnPlus = " + fn("new") + " UIRepeatButton();");
+  L.push("btnPlus-&gt;" + fn("SetPosition") + "(" + num(252) + ", " + num(102) + ");");
+  L.push("btnPlus-&gt;" + fn("SetWidth") + "(" + num(44) + ");");
+  L.push("btnPlus-&gt;" + fn("SetHeight") + "(" + num(44) + ");");
+  L.push("btnPlus-&gt;" + fn("SetOnClickListener") + "(" + num("&incListener") + ");");
+  L.push("");
+  L.push(cm("/* decListener / incListener::OnClick 内："));
+  L.push("   value = clamp(value -/+ step, min, max);   // 范围与循环自己维护");
+  L.push("   numText-&gt;SetText(Format(value));            // 位数/小数/前缀格式化自己拼");
+  L.push("   无光标位概念，无法按位编辑。 */");
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

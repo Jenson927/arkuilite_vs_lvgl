@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Button：LVGL lv_button vs ArkUI lite UIButton</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='8' width='26' height='16' rx='6' fill='%232b7de9'/%3E%3Crect x='10' y='15' width='12' height='2.5' rx='1.25' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Button：lv_button vs UIButton</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+      <code>ui_button.cpp</code> 色值与动画参数忠实渲染的 UIButton。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_button</code>
+        <span class="cmp-tag lv">状态可叠加 · 按钮即容器</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击画布上的按钮切换勾选；按下 / 勾选 / 焦点 / 禁用可任意叠加，文字对齐可实时切换。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>状态叠加 state<span class="api">lv_obj_add_state / lv_obj_remove_state：按下 + 勾选 + 焦点 + 禁用可同时叠加（ArkUI lite 三态互斥）</span></label>
+            <div class="stack" id="mode">
+              <div class="check"><input type="checkbox" id="st-pressed"><span>按下 PRESSED</span></div>
+              <div class="check"><input type="checkbox" id="st-checked"><span>勾选 CHECKED</span></div>
+              <div class="check"><input type="checkbox" id="st-focused"><span>焦点 FOCUSED</span></div>
+              <div class="check"><input type="checkbox" id="st-disabled"><span>禁用 DISABLED</span></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>宽度 width<output id="o-w">140 px</output><span class="api">lv_obj_set_width</span></label>
+            <input type="range" id="w" min="80" max="240" step="1" value="140">
+          </div>
+          <div class="field">
+            <label>高度 height<output id="o-h">48 px</output><span class="api">lv_obj_set_height</span></label>
+            <input type="range" id="h" min="36" max="80" step="1" value="48">
+          </div>
+
+          <div class="field">
+            <label>圆角 radius<output id="o-radius">22 %</output><span class="api">lv_obj_set_style_radius</span></label>
+            <input type="range" id="radius" min="0" max="100" step="1" value="22">
+          </div>
+          <div class="field">
+            <label>水平内边距 pad_hor<output id="o-padh">18 px</output><span class="api">lv_obj_set_style_pad_hor</span></label>
+            <input type="range" id="padh" min="0" max="60" step="1" value="18">
+          </div>
+
+          <div class="field">
+            <label>背景色 bg_color<output id="o-bg">#4a5563</output><span class="api">lv_obj_set_style_bg_color</span></label>
+            <input type="color" id="bg" value="#4a5563">
+          </div>
+          <div class="field">
+            <label>文字色 text_color<output id="o-text">#ffffff</output><span class="api">lv_obj_set_style_text_color</span></label>
+            <input type="color" id="text" value="#ffffff">
+          </div>
+
+          <div class="field wide">
+            <label>文字内容对齐 text_align<span class="api">lv_obj_set_style_text_align(btn, LV_TEXT_ALIGN_LEFT / CENTER / RIGHT, LV_PART_MAIN)</span></label>
+            <div class="seg" id="align">
+              <button type="button" data-v="left">左对齐</button>
+              <button type="button" data-v="center" class="active">居中</button>
+              <button type="button" data-v="right">右对齐</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>阴影 shadow<span class="api">lv_obj_set_style_shadow_width</span></label>
+            <div class="check"><input type="checkbox" id="shadow" checked><span>开启投影</span></div>
+          </div>
+          <div class="field">
+            <label>自动演示<span class="api">约 1.2 s 轮换：默认 → 按下 → 勾选</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>自动循环三种状态</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一轮三态）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一轮三态）</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIButton</code>
+        <span class="cmp-tag ui">3 状态互斥 · 不画文字</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="stage-canvas-box"><canvas id="uview"></canvas></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">按住画布上的按钮可体验真实按下动效（缩放 0.8 + 白色蒙层）；无阴影——Style 没有阴影字段。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>状态 state<span class="api">SetState(ButtonState)：三态互斥，无勾选/焦点，Disable() = INACTIVE + 不可触摸</span></label>
+            <div class="seg" id="umode">
+              <button type="button" data-v="released" class="active">RELEASED</button>
+              <button type="button" data-v="pressed">PRESSED</button>
+              <button type="button" data-v="inactive">INACTIVE</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>宽度 width<output id="o-uw">140 px</output><span class="api">SetWidth(int16_t)</span></label>
+            <input type="range" id="uw" min="80" max="240" step="1" value="140">
+          </div>
+          <div class="field">
+            <label>高度 height<output id="o-uh">48 px</output><span class="api">SetHeight(int16_t)</span></label>
+            <input type="range" id="uh" min="36" max="80" step="1" value="48">
+          </div>
+
+          <div class="field">
+            <label>圆角 border_radius<output id="o-uradius">200 px（胶囊）</output><span class="api">SetStyleForState(STYLE_BORDER_RADIUS, v, state)</span></label>
+            <input type="range" id="uradius" min="0" max="200" step="1" value="200">
+          </div>
+          <div class="field">
+            <label>背景色（当前状态）<output id="o-ubg">#007dff</output><span class="api">SetStyleForState(STYLE_BACKGROUND_COLOR, v, state)</span></label>
+            <input type="color" id="ubg" value="#007dff">
+          </div>
+
+          <div class="field">
+            <label>按下动效 animation<span class="api">EnableButtonAnimation(bool)：缩放 0.8（150ms）+ 白色蒙层 25/255</span></label>
+            <div class="check"><input type="checkbox" id="uanim" checked><span>开启动画与蒙层</span></div>
+          </div>
+          <div class="field">
+            <label>文字<span class="api">UIButton 不画文字，需 Add(new UILabel)</span></label>
+            <div class="check"><input type="checkbox" id="ulabel" checked><span>挂 UILabel 子控件显示文字</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>UILabel 文本 text<span class="api">label-&gt;SetText(const char*)</span></label>
+            <input type="text" id="utext" value="Button">
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_button.cpp</code> / <code>style.cpp</code> ——
+          RELEASED <code>#007dff</code> · PRESSED <code>#1996ff</code> · INACTIVE <code>#617e9d</code>；
+          按下缩放 <code>SHRINK_SCALE 0.8</code>（150ms 收缩 / 200ms 恢复，Bezier 控制点 0.2），
+          白色蒙层 <code>MASK_OPA 25/255</code>；文字默认白色（<code>Style::textColor_ = Color::White()</code>）。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列 GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列渲染参数全部取自 foundation/arkui/ui_lite 与 graphic_utils_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_button 复刻（保持原有实现）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var state = {
+    pressed: false,    // LV_STATE_PRESSED
+    checked: false,    // LV_STATE_CHECKED
+    focused: false,    // LV_STATE_FOCUSED
+    disabled: false,   // LV_STATE_DISABLED
+    align: "center",   // left | center | right
+    w: 140,
+    h: 48,
+    radius: 22,        // 百分比，100% = LV_RADIUS_CIRCLE
+    padh: 18,
+    bg: "#4a5563",
+    text: "#ffffff",
+    shadow: true,
+    auto: false
+  };
+
+  var STAGE_W = 360;          // 舞台逻辑尺寸（导出画布同尺寸）
+  var STAGE_H = 220;
+  var ACCENT = "#2b7de9";     // 勾选态使用的主色
+  var STEP = 1200;            // 自动演示每个状态停留时间
+  var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var autoEl = document.getElementById("auto");
+  var t0 = performance.now();
+  var lastAuto = null;
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function roundRect(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function rgbOf(hex){
+    var h = hex.replace("#", "");
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+
+  function shade(hex, k){
+    var c = rgbOf(hex);
+    return "rgb(" + Math.round(c[0] * (1 - k)) + "," + Math.round(c[1] * (1 - k)) + "," + Math.round(c[2] * (1 - k)) + ")";
+  }
+
+  function mix(hex, hex2, t){
+    var a = rgbOf(hex), b = rgbOf(hex2);
+    return "rgb(" + Math.round(a[0] + (b[0] - a[0]) * t) + "," +
+                    Math.round(a[1] + (b[1] - a[1]) * t) + "," +
+                    Math.round(a[2] + (b[2] - a[2]) * t) + ")";
+  }
+
+  /* 圆角百分比 → 像素，100% 即 LV_RADIUS_CIRCLE */
+  function radiusPx(){
+    return (state.radius / 100) * Math.min(state.w, state.h) / 2;
+  }
+
+  /* 自动演示某时刻的状态叠加（轮换：默认 → 按下 → 勾选） */
+  function stateAt(tMs){
+    if(!state.auto) return state;
+    var i = Math.floor(tMs / STEP) % 3;
+    return {
+      pressed: i === 1,
+      checked: i === 2,
+      focused: state.focused,
+      disabled: state.disabled,
+      align: state.align
+    };
+  }
+
+  /* 状态叠加后的配色：禁用 > 勾选 > 按下 */
+  function colorsOf(s){
+    var bg = state.bg;
+    var fg = state.text;
+    if(s.pressed) bg = shade(bg, 0.18);
+    if(s.checked) bg = ACCENT;
+    if(s.disabled){
+      bg = mix(bg, "#ffffff", 0.62);
+      fg = mix(fg, "#ffffff", 0.55);
+    }
+    return { bg: bg, fg: fg };
+  }
+
+  function fitText(c, txt, maxW){
+    if(c.measureText(txt).width <= maxW) return txt;
+    var n = txt.length - 1;
+    while(n > 0 && c.measureText(txt.slice(0, n) + "…").width > maxW) n--;
+    return n > 0 ? txt.slice(0, n) + "…" : "";
+  }
+
+  function drawCheck(c, x, y, fs, color){
+    c.save();
+    c.strokeStyle = color;
+    c.lineWidth = Math.max(2, fs * 0.11);
+    c.lineCap = "round";
+    c.lineJoin = "round";
+    c.beginPath();
+    c.moveTo(x - fs * 0.26, y + fs * 0.02);
+    c.lineTo(x - fs * 0.07, y + fs * 0.21);
+    c.lineTo(x + fs * 0.29, y - fs * 0.21);
+    c.stroke();
+    c.restore();
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c, tMs){
+    c.clearRect(0, 0, STAGE_W, STAGE_H);
+
+    var s = stateAt(tMs);
+    var col = colorsOf(s);
+    var w = state.w, h = state.h;
+    var r = radiusPx();
+    var cx = STAGE_W / 2;
+    var cy = STAGE_H / 2 + (s.pressed ? 1 : 0);   // 按下时下沉 1px
+    var x = cx - w / 2, y = cy - h / 2;
+
+    /* 投影 */
+    if(state.shadow && !s.disabled){
+      c.save();
+      c.shadowColor = "rgba(26,38,56,0.32)";
+      c.shadowBlur = s.pressed ? 6 : 14;
+      c.shadowOffsetY = s.pressed ? 1 : 5;
+      roundRect(c, x, y, w, h, r);
+      c.fillStyle = col.bg;
+      c.fill();
+      c.restore();
+    }
+
+    roundRect(c, x, y, w, h, r);
+    c.fillStyle = col.bg;
+    c.fill();
+
+    /* 勾选态加一圈轻微内描边，强调选中 */
+    if(s.checked){
+      roundRect(c, x + 1.5, y + 1.5, w - 3, h - 3, Math.max(0, r - 1.5));
+      c.strokeStyle = "rgba(255,255,255,0.30)";
+      c.lineWidth = 2;
+      c.stroke();
+    }
+
+    /* 焦点描边：LV_STATE_FOCUSED 的外圈高亮环 */
+    if(s.focused){
+      roundRect(c, x - 4, y - 4, w + 8, h + 8, r + 4);
+      c.strokeStyle = "rgba(43,125,233,0.85)";
+      c.lineWidth = 2.5;
+      c.stroke();
+    }
+
+    /* 文字（超出内边距时省略），对齐方式由 text_align 决定 */
+    var fs = clamp(Math.round(h * 0.36), 12, 26);
+    var fontStr = "600 " + fs + "px " + FAMILY;
+    c.font = fontStr;
+    c.textBaseline = "middle";
+    c.textAlign = "left";
+
+    var txt = "Button";
+    var innerW = Math.max(0, w - 2 * state.padh);
+    var showCheck = s.checked;
+    var gap = showCheck ? 6 : 0;
+    var checkW = showCheck ? Math.round(fs * 0.8) : 0;
+    var avail = Math.max(0, innerW - checkW - gap);
+
+    if(showCheck && avail < fs * 1.6){
+      showCheck = false;
+      checkW = 0;
+      gap = 0;
+      avail = innerW;
+    }
+
+    if(c.measureText(txt).width > avail) txt = fitText(c, txt, avail);
+    var tw = c.measureText(txt).width;
+    var startX;
+    if(s.align === "left") startX = x + state.padh;
+    else if(s.align === "right") startX = x + w - state.padh - (showCheck ? checkW + gap : 0) - tw;
+    else startX = cx - (checkW + gap + tw) / 2;
+
+    c.save();
+    c.beginPath();
+    c.rect(x + state.padh, y, innerW, h);
+    c.clip();
+    if(showCheck) drawCheck(c, startX + checkW / 2, cy, fs, col.fg);
+    c.fillStyle = col.fg;
+    c.fillText(txt, startX + checkW + gap, cy);
+    c.restore();
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = STAGE_W * dpr;
+    canvas.height = STAGE_H * dpr;
+    canvas.style.width = STAGE_W + "px";
+    canvas.style.height = STAGE_H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.cursor = "pointer";
+  }
+
+  function setSeg(id, value){
+    var el = document.getElementById(id);
+    var btns = el.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i].getAttribute("data-v") === value ? "active" : "";
+    }
+  }
+
+  /* 自动演示时同步状态勾选框 */
+  function syncStateBoxes(s){
+    document.getElementById("st-pressed").checked = s.pressed;
+    document.getElementById("st-checked").checked = s.checked;
+  }
+
+  function loop(now){
+    var t = now - t0;
+    var s = stateAt(t);
+    draw(ctx, t);
+    if(state.auto){
+      var key = (s.pressed ? 1 : 0) | (s.checked ? 2 : 0);
+      if(key !== lastAuto){ lastAuto = key; syncStateBoxes(s); }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var hex = function(c){ return "0x" + c.replace("#", ""); };
+    var rp = Math.round(radiusPx());
+    var arg = state.radius >= 100 ? "LV_RADIUS_CIRCLE" : rp;
+    var L = [];
+
+    L.push('<span class="cm">/* 由页面参数实时生成 */</span>');
+    L.push('lv_obj_t * btn = <span class="fn">lv_button_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_obj_set_size</span>(btn, <span class="num">' + state.w + '</span>, <span class="num">' + state.h + '</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(btn);');
+    L.push('<span class="fn">lv_obj_set_style_radius</span>(btn, <span class="num">' + arg + '</span>, LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_pad_hor</span>(btn, <span class="num">' + state.padh + '</span>, LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_bg_color</span>(btn, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.bg) + '</span>), LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_text_color</span>(btn, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.text) + '</span>), LV_PART_MAIN);');
+
+    if(state.shadow){
+      L.push('<span class="fn">lv_obj_set_style_shadow_width</span>(btn, <span class="num">14</span>, LV_PART_MAIN);');
+      L.push('<span class="fn">lv_obj_set_style_shadow_offset_y</span>(btn, <span class="num">5</span>, LV_PART_MAIN);');
+      L.push('<span class="fn">lv_obj_set_style_shadow_opa</span>(btn, LV_OPA_30, LV_PART_MAIN);');
+    }else{
+      L.push('<span class="fn">lv_obj_set_style_shadow_width</span>(btn, <span class="num">0</span>, LV_PART_MAIN);');
+    }
+
+    /* 状态叠加：可同时 add 多个 LV_STATE */
+    if(state.pressed)  L.push('<span class="fn">lv_obj_add_state</span>(btn, LV_STATE_PRESSED);');
+    if(state.checked){
+      L.push('<span class="fn">lv_obj_add_state</span>(btn, LV_STATE_CHECKED);');
+      L.push('<span class="cm">/* 勾选态改用主题主色 */</span>');
+      L.push('<span class="fn">lv_obj_set_style_bg_color</span>(btn, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(ACCENT) + '</span>), LV_PART_MAIN | LV_STATE_CHECKED);');
+    }
+    if(state.focused){
+      L.push('<span class="fn">lv_obj_add_state</span>(btn, LV_STATE_FOCUSED);');
+      L.push('<span class="fn">lv_obj_set_style_outline_width</span>(btn, <span class="num">3</span>, LV_PART_MAIN | LV_STATE_FOCUSED);');
+      L.push('<span class="fn">lv_obj_set_style_outline_color</span>(btn, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(ACCENT) + '</span>), LV_PART_MAIN | LV_STATE_FOCUSED);');
+    }
+    if(state.disabled) L.push('<span class="fn">lv_obj_add_state</span>(btn, LV_STATE_DISABLED);');
+
+    L.push('');
+    L.push('lv_obj_t * label = <span class="fn">lv_label_create</span>(btn);');
+    L.push('<span class="fn">lv_label_set_text</span>(label, "Button");');
+    var alignApi = state.align === "left" ? "LV_TEXT_ALIGN_LEFT" :
+                   state.align === "right" ? "LV_TEXT_ALIGN_RIGHT" : "LV_TEXT_ALIGN_CENTER";
+    L.push('<span class="fn">lv_obj_set_style_text_align</span>(btn, ' + alignApi + ', LV_PART_MAIN);');
+    if(state.align === "center"){
+      L.push('<span class="fn">lv_obj_center</span>(label);');
+    }else{
+      L.push('<span class="cm">/* 对齐由父按钮 text_align 决定，label 跟随 */</span>');
+    }
+
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  function bindRange(id, key, outId, fmt){
+    var el = document.getElementById(id);
+    var out = document.getElementById(outId);
+    el.addEventListener("input", function(){
+      state[key] = Number(el.value);
+      out.textContent = fmt(Number(el.value));
+      renderCode();
+    });
+  }
+
+  bindRange("w",      "w",      "o-w",      function(v){ return v + " px"; });
+  bindRange("h",      "h",      "o-h",      function(v){ return v + " px"; });
+  bindRange("radius", "radius", "o-radius", function(v){ return v + " %"; });
+  bindRange("padh",   "padh",   "o-padh",   function(v){ return v + " px"; });
+
+  document.getElementById("bg").addEventListener("input", function(e){
+    state.bg = e.target.value;
+    document.getElementById("o-bg").textContent = state.bg;
+    renderCode();
+  });
+  document.getElementById("text").addEventListener("input", function(e){
+    state.text = e.target.value;
+    document.getElementById("o-text").textContent = state.text;
+    renderCode();
+  });
+  document.getElementById("shadow").addEventListener("change", function(e){
+    state.shadow = e.target.checked;
+    renderCode();
+  });
+  autoEl.addEventListener("change", function(e){
+    state.auto = e.target.checked;
+    lastAuto = null;
+    if(!state.auto) syncStateBoxes(state);
+  });
+
+  /* 状态叠加勾选 */
+  ["pressed", "checked", "focused", "disabled"].forEach(function(k){
+    document.getElementById("st-" + k).addEventListener("change", function(e){
+      state[k] = e.target.checked;
+      state.auto = false;
+      autoEl.checked = false;
+      renderCode();
+    });
+  });
+
+  /* 文字内容对齐 */
+  document.getElementById("align").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.align = btn.getAttribute("data-v");
+    setSeg("align", state.align);
+    renderCode();
+  });
+
+  /* ---------- 画布点击切换勾选 ---------- */
+  canvas.addEventListener("click", function(e){
+    var rect = canvas.getBoundingClientRect();
+    var px = e.clientX - rect.left;
+    var py = e.clientY - rect.top;
+    if(px < STAGE_W / 2 - state.w / 2 || px > STAGE_W / 2 + state.w / 2) return;
+    if(py < STAGE_H / 2 - state.h / 2 || py > STAGE_H / 2 + state.h / 2) return;
+    state.checked = !state.checked;
+    state.auto = false;
+    autoEl.checked = false;
+    syncStateBoxes(state);
+    renderCode();
+  });
+
+  /* ---------- 下载 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ---------- GIF 导出 ---------- */
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网），可改用 WebM")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    loadGif().then(function(GIF){
+      var fps = 20;
+      var cycle = STEP * 3;                       // 三态一轮
+      var frames = Math.max(2, Math.round(cycle / 1000 * fps));
+      var gif = new GIF({ workers: 2, quality: 10, width: STAGE_W, height: STAGE_H, workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = STAGE_W; off.height = STAGE_H;
+      var octx = off.getContext("2d");
+      var i = 0;
+      var prevAuto = state.auto;
+      state.auto = true;
+
+      function step(){
+        if(i < frames){
+          draw(octx, i / fps * 1000);
+          gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          function fail(msg){
+            state.auto = prevAuto;
+            lastAuto = null;
+            if(!state.auto) syncStateBoxes(state);
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("finished", function(blob){
+            state.auto = prevAuto;
+            lastAuto = null;
+            if(!state.auto) syncStateBoxes(state);
+            download(blob, "button.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  /* ---------- WebM 录制（原生，离线可用） ---------- */
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    if(!canvas.captureStream || typeof MediaRecorder === "undefined"){
+      setStatus("当前浏览器不支持 MediaRecorder，请用 Chrome/Edge");
+      return;
+    }
+    btn.disabled = true;
+    var prevAuto = state.auto;
+    state.auto = true;
+    var cycle = STEP * 3;
+
+    var stream = canvas.captureStream(30);
+    var rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    var chunks = [];
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      state.auto = prevAuto;
+      lastAuto = null;
+      if(!state.auto) syncStateBoxes(state);
+      download(new Blob(chunks, { type: "video/webm" }), "button.webm");
+      setStatus("WebM 已保存（一轮三态 " + cycle + " ms）", true);
+      btn.disabled = false;
+    };
+    setStatus("录制中，约 " + Math.round(cycle / 1000) + " 秒…");
+    rec.start();
+    setTimeout(function(){ rec.stop(); }, cycle);
+  });
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIButton 忠实渲染
+   色值/动画参数全部取自源码：
+   - frameworks/components/ui_button.cpp（SHRINK_SCALE 0.8、SHRINK_DURATION 150、
+     RECOVER_DURATION 200、MASK_OPA 25、BEZIER_CONTROL 0.2、DrawMask 白色蒙层）
+   - graphic_utils_lite/frameworks/style.cpp（RELEASED #007dff / PRESSED #1996ff /
+     INACTIVE #617e9d / border_radius 200 / 文字默认白色）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 360, H = 220;
+  var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+  var SHRINK_SCALE = 0.8;                 // 源码 SHRINK_SCALE
+  var SHRINK_DURATION = 150;              // 源码 SHRINK_DURATION
+  var RECOVER_DURATION = 200;             // 源码 RECOVER_DURATION
+  var MASK_OPA = 25 / 255;                // 源码 MASK_OPA = 25
+  var THEME = { released: "#007dff", pressed: "#1996ff", inactive: "#617e9d" };
+
+  var u = {
+    state: "released",                    // seg 选择的静态状态
+    live: false,                          // 鼠标真实按压中
+    w: 140, h: 48, radius: 200,
+    bg: { released: THEME.released, pressed: THEME.pressed, inactive: THEME.inactive },
+    anim: true,
+    label: true,
+    text: "Button",
+    scale: 1
+  };
+
+  /* ---------- 贝塞尔缓动（源码 BEZIER_CONTROL = 0.2） ---------- */
+  function cubicBezier(p1x, p1y, p2x, p2y){
+    function A(a1, a2){ return 1 - 3 * a2 + 3 * a1; }
+    function B(a1, a2){ return 3 * a2 - 6 * a1; }
+    function C(a1){ return 3 * a1; }
+    function calc(t, a1, a2){ return ((A(a1, a2) * t + B(a1, a2)) * t + C(a1)) * t; }
+    function slope(t, a1, a2){ return 3 * A(a1, a2) * t * t + 2 * B(a1, a2) * t + C(a1); }
+    return function(x){
+      if(x <= 0) return 0;
+      if(x >= 1) return 1;
+      var t = x;
+      for(var i = 0; i < 6; i++){
+        var sl = slope(t, p1x, p2x);
+        if(sl === 0) break;
+        t -= (calc(t, p1x, p2x) - x) / sl;
+      }
+      return calc(t, p1y, p2y);
+    };
+  }
+  var ease = cubicBezier(0.2, 0, 0.2, 1);
+
+  /* ---------- 缩放动画 ---------- */
+  var animFrom = 1, animTarget = 1, animT0 = 0, animDur = 0;
+
+  function setScaleTarget(target){
+    if(!u.anim){ u.scale = target; return; }
+    if(u.scale === target) return;
+    animFrom = u.scale;
+    animTarget = target;
+    animDur = target < animFrom ? SHRINK_DURATION : RECOVER_DURATION;
+    animT0 = performance.now();
+  }
+
+  function effState(){ return u.live ? "pressed" : u.state; }
+  function scaleTargetOf(st){ return st === "pressed" ? SHRINK_SCALE : 1; }
+
+  function applyState(){
+    if(u.state === "inactive"){ u.live = false; }
+    setScaleTarget(scaleTargetOf(effState()));
+  }
+
+  /* ---------- 绘制 ---------- */
+  var canvas = document.getElementById("uview");
+  var ctx = canvas.getContext("2d");
+
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function roundRectPath(c, x, y, w, h, r){
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function rgbOf(hex){
+    var s = hex.replace("#", "");
+    return [parseInt(s.substr(0, 2), 16), parseInt(s.substr(2, 2), 16), parseInt(s.substr(4, 2), 16)];
+  }
+  function hexOf(r, g, b){
+    function p(v){ v = Math.max(0, Math.min(255, Math.round(v))); return (v < 16 ? "0" : "") + v.toString(16); }
+    return "#" + p(r) + p(g) + p(b);
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+    var st = effState();
+    var bg = u.bg[st] || THEME[st];
+    var r = Math.min(u.radius, u.w / 2, u.h / 2);
+
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(u.scale, u.scale);
+
+    /* 背景（UI_Lite Style 无阴影字段：这里刻意没有任何投影） */
+    roundRectPath(ctx, -u.w / 2, -u.h / 2, u.w, u.h, r);
+    ctx.fillStyle = bg;
+    ctx.fill();
+
+    /* 文字：UIButton 本体不画文字，这里模拟子控件 UILabel */
+    if(u.label && u.text){
+      var fs = Math.max(12, Math.min(26, Math.round(u.h * 0.36)));
+      ctx.font = "600 " + fs + "px " + FAMILY;   // Style::textColor_ = White
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(u.text, 0, 0.5, Math.max(4, u.w - 12));
+    }
+
+    /* 白色蒙层：源码 DrawMask，仅 PRESSED 且开启动画时叠加 */
+    if(st === "pressed" && u.anim){
+      roundRectPath(ctx, -u.w / 2, -u.h / 2, u.w, u.h, r);
+      ctx.fillStyle = "rgba(255,255,255," + MASK_OPA + ")";
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function loop(now){
+    if(animDur > 0 && u.scale !== animTarget){
+      var t = (now - animT0) / animDur;
+      if(t >= 1){ u.scale = animTarget; animDur = 0; }
+      else{ u.scale = animFrom + (animTarget - animFrom) * ease(t); }
+    }
+    draw();
+    canvas.style.cursor = u.state === "inactive" ? "not-allowed" : "pointer";
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 等价 C++ 代码 ---------- */
+  function hexToRgbStr(hex){
+    var c = rgbOf(hex);
+    return "0x" + ("0" + c[0].toString(16)).slice(-2) + ", 0x" +
+           ("0" + c[1].toString(16)).slice(-2) + ", 0x" + ("0" + c[2].toString(16)).slice(-2);
+  }
+
+  function renderCode(){
+    var st = u.state;
+    var STATE = st.toUpperCase();
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_button.h / style.cpp） */</span>');
+    L.push('UIButton * btn = <span class="fn">new</span> UIButton();');
+    L.push('btn-&gt;<span class="fn">SetPosition</span>(<span class="num">' + Math.round((W - u.w) / 2) +
+      '</span>, <span class="num">' + Math.round((H - u.h) / 2) + '</span>);');
+    L.push('btn-&gt;<span class="fn">SetWidth</span>(<span class="num">' + u.w + '</span>);');
+    L.push('btn-&gt;<span class="fn">SetHeight</span>(<span class="num">' + u.h + '</span>);');
+    L.push('btn-&gt;<span class="fn">SetStyleForState</span>(STYLE_BORDER_RADIUS, <span class="num">' + u.radius +
+      '</span>, UIButton::<span class="num">' + STATE + '</span>);');
+    L.push('btn-&gt;<span class="fn">SetStyleForState</span>(STYLE_BACKGROUND_COLOR,');
+    L.push('    Color::<span class="fn">GetColorFromRGB</span>(' + hexToRgbStr(u.bg[st]) + ').full, UIButton::<span class="num">' + STATE + '</span>);');
+    L.push('btn-&gt;<span class="fn">EnableButtonAnimation</span>(' + (u.anim ? "true" : "false") + ');');
+
+    if(st === "inactive"){
+      L.push('btn-&gt;<span class="fn">Disable</span>();  <span class="cm">// INACTIVE + touchable_ = false</span>');
+    }else if(st === "pressed"){
+      L.push('btn-&gt;<span class="fn">SetStateForStyle</span>(UIButton::PRESSED);');
+    }
+
+    if(u.label){
+      L.push('');
+      L.push('<span class="cm">/* UIButton 只画背景与图片，文字必须另挂 UILabel */</span>');
+      L.push('UILabel * label = <span class="fn">new</span> UILabel();');
+      L.push('label-&gt;<span class="fn">SetText</span>("' + u.text.replace(/&/g, "&amp;").replace(/</g, "&lt;") + '");');
+      L.push('btn-&gt;<span class="fn">Add</span>(label);');
+    }else{
+      L.push('<span class="cm">/* 未挂 UILabel：UIButton 本体不绘制文字 */</span>');
+    }
+    document.getElementById("ucode").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function $(id){ return document.getElementById(id); }
+
+  function bindRange(id, key, outId, fmt){
+    $(id).addEventListener("input", function(){
+      u[key] = Number(this.value);
+      $(outId).textContent = fmt(u[key]);
+      renderCode();
+    });
+  }
+  bindRange("uw", "w", "o-uw", function(v){ return v + " px"; });
+  bindRange("uh", "h", "o-uh", function(v){ return v + " px"; });
+  bindRange("uradius", "radius", "o-uradius", function(v){ return v + " px" + (v >= 200 ? "（胶囊）" : ""); });
+
+  $("umode").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    u.state = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    $("ubg").value = u.bg[u.state];
+    $("o-ubg").textContent = u.bg[u.state];
+    applyState();
+    renderCode();
+  });
+
+  $("ubg").addEventListener("input", function(){
+    u.bg[u.state] = this.value;           // 等价 SetStyleForState(bg, 当前状态)
+    $("o-ubg").textContent = this.value;
+    renderCode();
+  });
+
+  $("uanim").addEventListener("change", function(){
+    u.anim = this.checked;
+    applyState();
+    if(!u.anim) u.scale = scaleTargetOf(effState());
+    renderCode();
+  });
+
+  $("ulabel").addEventListener("change", function(){
+    u.label = this.checked;
+    $("utext").disabled = !u.label;
+    $("utext").style.opacity = u.label ? "" : ".45";
+    renderCode();
+  });
+
+  $("utext").addEventListener("input", function(){
+    u.text = this.value;
+    renderCode();
+  });
+
+  /* ---------- 画布真实按压交互 ---------- */
+  function inButton(px, py){
+    return Math.abs(px - W / 2) <= u.w / 2 && Math.abs(py - H / 2) <= u.h / 2;
+  }
+  function pos(e){
+    var rect = canvas.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
+  }
+  canvas.addEventListener("pointerdown", function(e){
+    if(u.state !== "released") return;    // INACTIVE 不可触摸；PRESSED 已是静态展示
+    var p = pos(e);
+    if(!inButton(p[0], p[1])) return;
+    u.live = true;
+    applyState();
+  });
+  function release(){
+    if(!u.live) return;
+    u.live = false;
+    applyState();
+  }
+  canvas.addEventListener("pointerup", release);
+  canvas.addEventListener("pointerleave", release);
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = ["内置按压缩放动效（需自行实现）"];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

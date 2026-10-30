@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LVGL 基础样式 lv_style_t 复刻与导出</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Cpath d='M10 16l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../index.html">← 返回画廊</a>
+    <h1>LVGL 基础样式 lv_style_t 本地复刻</h1>
+    <p>一个矩形样式试验台：背景、透明度、圆角、边框、阴影、outline、内边距、旋转与缩放，逐项对齐 <code>lv_style_set_*()</code>，子对象随 padding 收缩。</p>
+  </header>
+
+  <div class="stage">
+    <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+  </div>
+
+  <section class="panel">
+    <h2>参数（对应 LVGL 样式属性）</h2>
+    <div class="grid">
+      <div class="field">
+        <label>宽度 width <output id="o-w">180</output></label>
+        <input type="range" id="w" min="80" max="220" step="2" value="180">
+      </div>
+      <div class="field">
+        <label>高度 height <output id="o-h">110</output></label>
+        <input type="range" id="h" min="60" max="150" step="2" value="110">
+      </div>
+      <div class="field">
+        <label>圆角 radius <output id="o-radius">12 px</output></label>
+        <input type="range" id="radius" min="0" max="40" step="1" value="12">
+      </div>
+      <div class="field">
+        <label>内边距 pad_all <output id="o-pad">12 px</output></label>
+        <input type="range" id="pad" min="0" max="30" step="1" value="12">
+      </div>
+      <div class="field">
+        <label>背景色 bg_color</label>
+        <input type="color" id="bg" value="#2b7de9">
+      </div>
+      <div class="field">
+        <label>背景不透明度 bg_opa <output id="o-bgopa">100 %</output></label>
+        <input type="range" id="bgopa" min="0" max="100" step="1" value="100">
+      </div>
+      <div class="field">
+        <label>边框宽 border_width <output id="o-bw">2 px</output></label>
+        <input type="range" id="bw" min="0" max="8" step="1" value="2">
+      </div>
+      <div class="field">
+        <label>边框色 border_color</label>
+        <input type="color" id="bc" value="#1f6fd0">
+      </div>
+      <div class="field">
+        <label>阴影宽 shadow_width <output id="o-sw">20</output></label>
+        <input type="range" id="sw" min="0" max="40" step="1" value="20">
+      </div>
+      <div class="field">
+        <label>阴影色 shadow_color</label>
+        <input type="color" id="sc" value="#8a929c">
+      </div>
+      <div class="field">
+        <label>阴影偏移 shadow_offset_y <output id="o-sy">8 px</output></label>
+        <input type="range" id="sy" min="-10" max="24" step="1" value="8">
+      </div>
+      <div class="field">
+        <label>outline 宽 <output id="o-ow">3 px</output></label>
+        <input type="range" id="ow" min="0" max="8" step="1" value="3">
+      </div>
+      <div class="field">
+        <label>outline 色 outline_color</label>
+        <input type="color" id="oc" value="#e6a23c">
+      </div>
+      <div class="field">
+        <label>outline 偏移 outline_pad <output id="o-op">4 px</output></label>
+        <input type="range" id="op" min="0" max="8" step="1" value="4">
+      </div>
+      <div class="field">
+        <label>整体不透明度 opa <output id="o-opa">100 %</output></label>
+        <input type="range" id="opa" min="0" max="100" step="1" value="100">
+      </div>
+      <div class="field">
+        <label>旋转 transform_rotation <output id="o-rot">0 °</output></label>
+        <input type="range" id="rot" min="-180" max="180" step="1" value="0">
+      </div>
+      <div class="field">
+        <label>缩放 transform_scale <output id="o-scale">100 %</output></label>
+        <input type="range" id="scale" min="50" max="180" step="1" value="100">
+      </div>
+      <div class="field">
+        <label>说明</label>
+        <div class="check"><span style="font-size:12px">旋转 / 缩放以矩形中心为轴</span></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <pre class="code" id="code"></pre>
+
+  <footer>画布尺寸 320×240。样式为静态展示，可导出 PNG，完全离线可用。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+(function () {
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+
+  var state = {
+    w: 180, h: 110, radius: 12, pad: 12,
+    bg: "#2b7de9", bgOpa: 100,
+    bw: 2, bc: "#1f6fd0",
+    sw: 20, sc: "#8a929c", sy: 8,
+    ow: 3, oc: "#e6a23c", op: 4,
+    opa: 100, rot: 0, scale: 100
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var CX = 160, CY = 132;
+
+  function opaMacro(p) {
+    if (p <= 0) return K.num("LV_OPA_TRANSP");
+    if (p >= 100) return K.num("LV_OPA_COVER");
+    return K.num("LV_OPA_" + (Math.round(p / 10) * 10));
+  }
+
+  function draw(c) {
+    c.clearRect(0, 0, W, H);
+    K.text(c, "lv_style_t 样式试验台", 14, 16, { size: 11.5, color: K.theme.textMuted });
+    K.text(c, "中心为变换轴", W - 14, 16, { size: 11, color: K.theme.textFaint, align: "right" });
+
+    var w = state.w, h = state.h;
+    var x = CX - w / 2, y = CY - h / 2;
+
+    c.save();
+    c.globalAlpha = state.opa / 100;
+    c.translate(CX, CY);
+    c.rotate(K.rad(state.rot));
+    c.scale(state.scale / 100, state.scale / 100);
+    c.translate(-CX, -CY);
+
+    if (state.ow > 0) {
+      var oPad = state.op + state.ow / 2;
+      c.save();
+      c.strokeStyle = state.oc;
+      c.lineWidth = state.ow;
+      K.roundRectPath(c, x - oPad, y - oPad, w + oPad * 2, h + oPad * 2, Math.max(0, state.radius + oPad));
+      c.stroke();
+      c.restore();
+    }
+
+    K.box(c, x, y, w, h, {
+      bg: K.alpha(state.bg, state.bgOpa / 100),
+      radius: state.radius,
+      borderWidth: state.bw,
+      border: state.bc,
+      shadow: state.sw > 0 ? K.alpha(state.sc, 0.85) : null,
+      shadowBlur: state.sw,
+      shadowY: state.sy
+    });
+
+    var pad = Math.min(state.pad, Math.max(0, Math.min(w, h) / 2 - 6));
+    var iw = w - pad * 2, ih = h - pad * 2;
+    if (iw > 8 && ih > 8) {
+      K.box(c, x + pad, y + pad, iw, ih, {
+        bg: "rgba(255,255,255,0.70)", radius: Math.max(0, state.radius - 4),
+        borderWidth: 1, border: "rgba(255,255,255,0.95)", dash: [4, 3]
+      });
+      if (iw > 54 && ih > 34) {
+        K.text(c, "子对象", CX, CY - 7, { size: 12, color: "#5b6470", align: "center" });
+        K.text(c, "pad " + state.pad, CX, CY + 9, { size: 9.5, color: "#8a929c", align: "center" });
+      }
+    }
+    c.restore();
+
+    K.text(c, "阴影在外、边框贴身、outline 位于最外圈", W / 2, H - 12, {
+      size: 10.5, color: K.theme.textFaint, align: "center"
+    });
+  }
+
+  K.run(function () { draw(view.ctx); });
+
+  function renderCode() {
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("static lv_style_t style_box;");
+    L.push(K.fn("lv_style_init") + "(&style_box);");
+    L.push("");
+    L.push(K.fn("lv_style_set_size") + "(&style_box, " + K.num(state.w) + ", " + K.num(state.h) + ");");
+    L.push(K.fn("lv_style_set_bg_color") + "(&style_box, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.bg)) + "));");
+    L.push(K.fn("lv_style_set_bg_opa") + "(&style_box, " + opaMacro(state.bgOpa) + ");");
+    L.push(K.fn("lv_style_set_radius") + "(&style_box, " + K.num(state.radius) + ");");
+    L.push(K.fn("lv_style_set_border_width") + "(&style_box, " + K.num(state.bw) + ");");
+    L.push(K.fn("lv_style_set_border_color") + "(&style_box, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.bc)) + "));");
+    L.push(K.fn("lv_style_set_shadow_width") + "(&style_box, " + K.num(state.sw) + ");");
+    L.push(K.fn("lv_style_set_shadow_color") + "(&style_box, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.sc)) + "));");
+    L.push(K.fn("lv_style_set_shadow_offset_y") + "(&style_box, " + K.num(state.sy) + ");");
+    L.push(K.fn("lv_style_set_outline_width") + "(&style_box, " + K.num(state.ow) + ");");
+    L.push(K.fn("lv_style_set_outline_color") + "(&style_box, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.oc)) + "));");
+    L.push(K.fn("lv_style_set_outline_pad") + "(&style_box, " + K.num(state.op) + ");");
+    L.push(K.fn("lv_style_set_pad_all") + "(&style_box, " + K.num(state.pad) + ");");
+    L.push(K.fn("lv_style_set_opa") + "(&style_box, " + opaMacro(state.opa) + ");");
+    L.push(K.fn("lv_style_set_transform_rotation") + "(&style_box, " + K.num(state.rot * 10) + ");" + K.cm("  /* 0.1 度为单位 */"));
+    L.push(K.fn("lv_style_set_transform_scale") + "(&style_box, " + K.num(Math.round(256 * state.scale / 100)) + ");" + K.cm("  /* 256 = 1 倍 */"));
+    L.push("");
+    L.push("lv_obj_t * box = " + K.fn("lv_obj_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_add_style") + "(box, &style_box, 0);");
+    L.push(K.fn("lv_obj_center") + "(box);");
+    K.code(L);
+  }
+
+  K.bindRange("w", null, function (v) { state.w = v; renderCode(); });
+  K.bindRange("h", null, function (v) { state.h = v; renderCode(); });
+  K.bindRange("radius", function (v) { return v + " px"; }, function (v) { state.radius = v; renderCode(); });
+  K.bindRange("pad", function (v) { return v + " px"; }, function (v) { state.pad = v; renderCode(); });
+  document.getElementById("bg").addEventListener("input", function (e) { state.bg = e.target.value; renderCode(); });
+  K.bindRange("bgopa", function (v) { return v + " %"; }, function (v) { state.bgOpa = v; renderCode(); });
+  K.bindRange("bw", function (v) { return v + " px"; }, function (v) { state.bw = v; renderCode(); });
+  document.getElementById("bc").addEventListener("input", function (e) { state.bc = e.target.value; renderCode(); });
+  K.bindRange("sw", null, function (v) { state.sw = v; renderCode(); });
+  document.getElementById("sc").addEventListener("input", function (e) { state.sc = e.target.value; renderCode(); });
+  K.bindRange("sy", function (v) { return v + " px"; }, function (v) { state.sy = v; renderCode(); });
+  K.bindRange("ow", function (v) { return v + " px"; }, function (v) { state.ow = v; renderCode(); });
+  document.getElementById("oc").addEventListener("input", function (e) { state.oc = e.target.value; renderCode(); });
+  K.bindRange("op", function (v) { return v + " px"; }, function (v) { state.op = v; renderCode(); });
+  K.bindRange("opa", function (v) { return v + " %"; }, function (v) { state.opa = v; renderCode(); });
+  K.bindRange("rot", function (v) { return v + " °"; }, function (v) { state.rot = v; renderCode(); });
+  K.bindRange("scale", function (v) { return v + " %"; }, function (v) { state.scale = v; renderCode(); });
+
+  document.getElementById("btn-png").addEventListener("click", function () {
+    K.exportPng(view.canvas, "style-basic.png");
+  });
+
+  renderCode();
+})();
+</script>
+</body>
+</html>

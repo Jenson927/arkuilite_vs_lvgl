@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chart：LVGL lv_chart vs ArkUI lite UIChart</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='4' width='26' height='24' rx='3' fill='%23fff' stroke='%23d6d9df'/%3E%3Cpath d='M7 22l6-8 5 5 7-9' fill='none' stroke='%232b7de9' stroke-width='2.5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Chart：lv_chart vs UIChart</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（滚动折线 / 柱状 / 散点 + 多序列叠加 + 坐标轴刻度标签），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b>
+      源码 <code>ui_chart.cpp</code> 行为渲染的 UIChart。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_chart</code>
+        <span class="cmp-tag lv">多类型 · 多序列 · 坐标轴</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">数据从右侧流入、旧数据左移滚动；开启多序列后两条曲线叠加显示；关闭坐标轴刻度与标签可观察 UIChart 的「裸折线」形态。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>图表类型 type<span class="api">lv_chart_set_type(chart, LV_CHART_TYPE_LINE / BAR / SCATTER)</span></label>
+            <div class="seg" id="ctype">
+              <button type="button" data-v="line" class="active">折线</button>
+              <button type="button" data-v="bar">柱状</button>
+              <button type="button" data-v="scatter">散点</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>数据点数量 point_count<output id="o-count">20</output><span class="api">lv_chart_set_point_count</span></label>
+            <input type="range" id="count" min="5" max="50" step="1" value="20">
+          </div>
+          <div class="field">
+            <label>更新间隔 interval<output id="o-interval">200 ms</output><span class="api">lv_timer 周期（lv_chart_set_next_value 频率）</span></label>
+            <input type="range" id="interval" min="60" max="1000" step="20" value="200">
+          </div>
+
+          <div class="field">
+            <label>网格线数量 div_line_count<output id="o-div">4</output><span class="api">lv_chart_set_div_line_count</span></label>
+            <input type="range" id="div" min="2" max="8" step="1" value="4">
+          </div>
+          <div class="field">
+            <label>曲线 / 柱子颜色 series<span class="api">lv_chart_add_series(chart, lv_color_hex(...), axis)</span></label>
+            <input type="color" id="color" value="#2b7de9">
+          </div>
+
+          <div class="field">
+            <label>最小值 min<output id="o-min">0</output><span class="api">lv_chart_set_range(PRIMARY_Y, min, max)</span></label>
+            <input type="range" id="min" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>最大值 max<output id="o-max">100</output><span class="api">lv_chart_set_range(PRIMARY_Y, min, max)</span></label>
+            <input type="range" id="max" min="0" max="200" step="1" value="100">
+          </div>
+
+          <div class="field">
+            <label>多序列叠加 add_series<span class="api">lv_chart_add_series 两次：两条曲线同图叠加（UIChart 无多序列样式）</span></label>
+            <div class="check"><input type="checkbox" id="multi"><span>再画一条序列（第二色叠加）</span></div>
+          </div>
+          <div class="field">
+            <label>坐标轴刻度与标签<span class="api">lv_chart 自带刻度 / 标签 / 网格（UIChart 需自绘）</span></label>
+            <div class="check"><input type="checkbox" id="axis" checked><span>显示刻度数字与坐标轴</span></div>
+          </div>
+
+          <div class="field">
+            <label>暂停更新<span class="api">冻结数据，便于观察</span></label>
+            <div class="check"><input type="checkbox" id="pause"><span>冻结数据流</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（滚动一段）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（4 秒）</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIChart</code>
+        <span class="cmp-tag ui">折线 + 填充 · 无坐标轴</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UIChart 只画折线与渐变填充，没有坐标轴、刻度与图例；切换序列查看两条数据各自的效果。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>显示序列 series<span class="api">AddPoints(seriesId, points) / SetLineColor(seriesId, color)：按序列号切换</span></label>
+            <div class="seg" id="useries">
+              <button type="button" data-v="0" class="active">数据 A</button>
+              <button type="button" data-v="1">数据 B</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>frameworks/components/ui_chart.cpp</code> ——
+          <code>AddPoints</code> 追加数据点，<code>SetLineColor</code> / <code>SetFillColor</code> 配折线与渐变填充，
+          <code>SetMaxDataCount</code> 限制点数；坐标轴、刻度文字、图例与多序列叠加样式均需自绘，无数据更新动画。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 480×300；纵轴范围由 min / max 决定，左侧刻度随之变化；数据点数量变化时保留最近的样本。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列渲染参数取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_chart 复刻（滚动折线 + 多序列 + 坐标轴刻度标签）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var CW = 480, CH = 300;      // 画布尺寸
+  var PAD_L = 46, PAD_R = 12, PAD_T = 14, PAD_B = 24;
+  var V_DIV = 4;               // 竖向网格数量（固定）
+  var SERIES_2 = "#e2762d";    // 第二条序列的颜色
+
+  var state = {
+    type: "line",     // line | bar | scatter
+    count: 20,
+    interval: 200,
+    div: 4,
+    color: "#2b7de9",
+    min: 0,
+    max: 100,
+    multi: false,
+    axis: true,       /* 坐标轴刻度与标签 */
+    paused: false
+  };
+
+  var s1 = [];        // 归一化数据 0..1
+  var s2 = [];
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var lastStep = 0;
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function rgba(hex, a){
+    var v = hex.replace("#", "");
+    var r = parseInt(v.substr(0, 2), 16);
+    var g = parseInt(v.substr(2, 2), 16);
+    var b = parseInt(v.substr(4, 2), 16);
+    return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+  }
+
+  function walk(prev, amp){
+    var v = prev + (Math.random() - 0.5) * amp;
+    return clamp(v, 0.04, 0.96);
+  }
+
+  function seed(n){
+    s1 = [];
+    s2 = [];
+    for(var i = 0; i < n; i++){
+      s1.push(clamp(0.5 + 0.30 * Math.sin(i * 0.55) + (Math.random() - 0.5) * 0.06, 0.04, 0.96));
+      s2.push(clamp(0.42 + 0.24 * Math.sin(i * 0.38 + 1.1) + (Math.random() - 0.5) * 0.06, 0.04, 0.96));
+    }
+  }
+
+  function resize(n){
+    if(s1.length === n) return;
+    if(s1.length > n){
+      s1 = s1.slice(s1.length - n);
+      s2 = s2.slice(s2.length - n);
+    }else{
+      while(s1.length < n){
+        s1.push(walk(s1[s1.length - 1], 0.22));
+        s2.push(walk(s2[s2.length - 1], 0.20));
+      }
+    }
+  }
+
+  function stepData(){
+    resize(state.count);
+    s1.shift();
+    s2.shift();
+    s1.push(walk(s1[s1.length - 1], 0.22));
+    s2.push(walk(s2[s2.length - 1], 0.20));
+  }
+
+  /* 归一化值 → 纵轴坐标 */
+  function yOf(v){
+    var ph = CH - PAD_T - PAD_B;
+    return PAD_T + ph * (1 - clamp(v, 0, 1));
+  }
+
+  function xOf(i, n){
+    var pw = CW - PAD_L - PAD_R;
+    return n <= 1 ? PAD_L + pw / 2 : PAD_L + pw * i / (n - 1);
+  }
+
+  /* ---------- 绘制 ---------- */
+  function drawSeries(c, data, color, idx, total){
+    var n = data.length;
+    if(n === 0) return;
+    var pw = CW - PAD_L - PAD_R;
+    var ph = CH - PAD_T - PAD_B;
+    var i;
+
+    if(state.type === "line"){
+      /* 面积渐变（仅单序列时铺底，双序列只描线，避免互相遮挡） */
+      if(total === 1){
+        var g = c.createLinearGradient(0, PAD_T, 0, PAD_T + ph);
+        g.addColorStop(0, rgba(color, 0.30));
+        g.addColorStop(1, rgba(color, 0.02));
+        c.beginPath();
+        c.moveTo(xOf(0, n), yOf(data[0]));
+        for(i = 1; i < n; i++) c.lineTo(xOf(i, n), yOf(data[i]));
+        c.lineTo(xOf(n - 1, n), PAD_T + ph);
+        c.lineTo(xOf(0, n), PAD_T + ph);
+        c.closePath();
+        c.fillStyle = g;
+        c.fill();
+      }
+
+      c.beginPath();
+      c.moveTo(xOf(0, n), yOf(data[0]));
+      for(i = 1; i < n; i++) c.lineTo(xOf(i, n), yOf(data[i]));
+      c.strokeStyle = color;
+      c.lineWidth = total === 1 ? 2.2 : 1.8;
+      c.lineJoin = "round";
+      c.lineCap = "round";
+      c.stroke();
+
+      /* 末点高亮 */
+      c.beginPath();
+      c.arc(xOf(n - 1, n), yOf(data[n - 1]), total === 1 ? 3.4 : 2.8, 0, Math.PI * 2);
+      c.fillStyle = color;
+      c.fill();
+    }else if(state.type === "bar"){
+      var slot = pw / n;
+      var bw = Math.max(2, slot * 0.62 / total);
+      for(i = 0; i < n; i++){
+        var bx = PAD_L + slot * i + slot * 0.19 + bw * idx;
+        var by = yOf(data[i]);
+        var bh = Math.max(1, PAD_T + ph - by);
+        c.fillStyle = color;
+        c.fillRect(bx, by, bw, bh);
+      }
+    }else{
+      for(i = 0; i < n; i++){
+        c.beginPath();
+        c.arc(xOf(i, n), yOf(data[i]), total === 1 ? 3.2 : 2.8, 0, Math.PI * 2);
+        c.fillStyle = color;
+        c.fill();
+      }
+    }
+  }
+
+  function draw(c){
+    var pw = CW - PAD_L - PAD_R;
+    var ph = CH - PAD_T - PAD_B;
+    var i;
+
+    c.clearRect(0, 0, CW, CH);
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, CW, CH);
+
+    /* 横向网格线 */
+    c.strokeStyle = "#e9edf2";
+    c.lineWidth = 1;
+    var h = state.div;
+    for(i = 0; i < h; i++){
+      var gy = PAD_T + (h <= 1 ? 0 : ph * i / (h - 1));
+      c.beginPath();
+      c.moveTo(PAD_L, Math.round(gy) + 0.5);
+      c.lineTo(PAD_L + pw, Math.round(gy) + 0.5);
+      c.stroke();
+    }
+
+    /* 竖向网格线 */
+    for(i = 0; i <= V_DIV; i++){
+      var gx = PAD_L + pw * i / V_DIV;
+      c.beginPath();
+      c.moveTo(Math.round(gx) + 0.5, PAD_T);
+      c.lineTo(Math.round(gx) + 0.5, PAD_T + ph);
+      c.stroke();
+    }
+
+    /* 坐标轴 + 刻度数字（可关闭：UIChart 无此能力） */
+    if(state.axis){
+      c.strokeStyle = "#d6d9df";
+      c.beginPath();
+      c.moveTo(PAD_L + 0.5, PAD_T);
+      c.lineTo(PAD_L + 0.5, PAD_T + ph + 0.5);
+      c.lineTo(PAD_L + pw, PAD_T + ph + 0.5);
+      c.stroke();
+
+      var span = state.max - state.min;
+      c.fillStyle = "#8a929c";
+      c.font = '11px ui-monospace, Consolas, "Liberation Mono", monospace';
+      c.textAlign = "right";
+      c.textBaseline = "middle";
+      c.fillText(String(state.max), PAD_L - 7, PAD_T);
+      c.fillText(String(Math.round(state.min + span / 2)), PAD_L - 7, PAD_T + ph / 2);
+      c.fillText(String(state.min), PAD_L - 7, PAD_T + ph);
+    }
+
+    /* 数据区裁剪 */
+    c.save();
+    c.beginPath();
+    c.rect(PAD_L, PAD_T, pw, ph);
+    c.clip();
+    if(state.multi){
+      drawSeries(c, s2, SERIES_2, 1, 2);
+      drawSeries(c, s1, state.color, 0, 2);
+    }else{
+      drawSeries(c, s1, state.color, 0, 1);
+    }
+    c.restore();
+
+    /* 右上角信息 */
+    c.textAlign = "right";
+    c.textBaseline = "top";
+    c.fillStyle = "#8a929c";
+    c.font = '11px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif';
+    c.fillText((state.paused ? "已暂停" : "滚动中") + " · " + state.count + " 点" +
+      (state.multi ? " · 双序列" : "") + (state.axis ? "" : " · 无坐标轴"), CW - PAD_R, PAD_T + 4);
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = CW * dpr;
+    canvas.height = CH * dpr;
+    canvas.style.width = CW + "px";
+    canvas.style.height = CH + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function loop(now){
+    if(!state.paused && now - lastStep >= state.interval){
+      lastStep = now;
+      stepData();
+    }
+    draw(ctx);
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 等价 C 代码 ---------- */
+  function realVal(v){
+    return Math.round(state.min + v * (state.max - state.min));
+  }
+
+  function renderCode(){
+    var hex = function(c){ return "0x" + c.replace("#", ""); };
+    var typeName = state.type === "bar" ? "LV_CHART_TYPE_BAR"
+                 : state.type === "scatter" ? "LV_CHART_TYPE_SCATTER"
+                 : "LV_CHART_TYPE_LINE";
+    var tail = s1.slice(-3);
+    var L = [];
+
+    L.push('<span class="cm">/* 由页面参数实时生成 */</span>');
+    L.push('lv_obj_t * chart = <span class="fn">lv_chart_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_obj_set_size</span>(chart, <span class="num">' + CW + '</span>, <span class="num">' + CH + '</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(chart);');
+    L.push('<span class="fn">lv_chart_set_type</span>(chart, ' + typeName + ');');
+    L.push('<span class="fn">lv_chart_set_point_count</span>(chart, <span class="num">' + state.count + '</span>);');
+    L.push('<span class="fn">lv_chart_set_range</span>(chart, LV_CHART_AXIS_PRIMARY_Y, <span class="num">' + state.min + '</span>, <span class="num">' + state.max + '</span>);');
+    L.push('<span class="fn">lv_chart_set_div_line_count</span>(chart, <span class="num">' + state.div + '</span>, <span class="num">' + V_DIV + '</span>);');
+    if(!state.axis){
+      L.push('<span class="cm">/* 隐藏坐标轴刻度与标签（UIChart 默认即无坐标轴） */</span>');
+      L.push('<span class="fn">lv_chart_set_div_line_count</span>(chart, <span class="num">0</span>, <span class="num">0</span>);');
+    }
+    L.push('');
+    L.push('lv_chart_series_t * ser1 = <span class="fn">lv_chart_add_series</span>(chart,');
+    L.push('    <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.color) + '</span>), LV_CHART_AXIS_PRIMARY_Y);');
+    if(state.multi){
+      L.push('lv_chart_series_t * ser2 = <span class="fn">lv_chart_add_series</span>(chart,');
+      L.push('    <span class="fn">lv_color_hex</span>(<span class="num">' + hex(SERIES_2) + '</span>), LV_CHART_AXIS_PRIMARY_Y);');
+    }
+    L.push('');
+    for(var i = 0; i < tail.length; i++){
+      L.push('<span class="fn">lv_chart_set_next_value</span>(chart, ser1, <span class="num">' + realVal(tail[i]) + '</span>);');
+      if(state.multi){
+        L.push('<span class="fn">lv_chart_set_next_value</span>(chart, ser2, <span class="num">' + realVal(s2[s2.length - tail.length + i]) + '</span>);');
+      }
+    }
+
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  function bindRange(id, key, outId, fmt){
+    var el = document.getElementById(id);
+    var out = document.getElementById(outId);
+    el.addEventListener("input", function(){
+      state[key] = Number(el.value);
+
+      if(key === "min" || key === "max"){
+        state.min = clamp(state.min, 0, 200);
+        state.max = clamp(state.max, 0, 200);
+        if(state.min >= state.max){
+          if(key === "min") state.min = state.max - 1;
+          else state.max = state.min + 1;
+        }
+        document.getElementById("min").value = state.min;
+        document.getElementById("max").value = state.max;
+        document.getElementById("o-min").textContent = state.min;
+        document.getElementById("o-max").textContent = state.max;
+      }else{
+        out.textContent = fmt(Number(el.value));
+      }
+
+      if(key === "count") resize(state.count);
+      if(key === "interval") lastStep = performance.now();
+      renderCode();
+    });
+  }
+
+  bindRange("count",    "count",    "o-count",    function(v){ return v; });
+  bindRange("interval", "interval", "o-interval", function(v){ return v + " ms"; });
+  bindRange("div",      "div",      "o-div",      function(v){ return v; });
+  bindRange("min",      "min",      "o-min",      function(v){ return v; });
+  bindRange("max",      "max",      "o-max",      function(v){ return v; });
+
+  document.getElementById("color").addEventListener("input", function(e){
+    state.color = e.target.value; renderCode();
+  });
+  document.getElementById("multi").addEventListener("change", function(e){
+    state.multi = e.target.checked; renderCode();
+  });
+  document.getElementById("axis").addEventListener("change", function(e){
+    state.axis = e.target.checked; renderCode();
+  });
+  document.getElementById("pause").addEventListener("change", function(e){
+    state.paused = e.target.checked;
+    if(!state.paused) lastStep = performance.now();
+  });
+
+  document.getElementById("ctype").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.type = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    renderCode();
+  });
+
+  /* ---------- 下载 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ---------- GIF 导出 ---------- */
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网），可改用 WebM")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    loadGif().then(function(GIF){
+      var fps = 20;
+      var delay = Math.round(1000 / fps);
+      var every = Math.max(1, Math.round(state.interval / delay));   /* 每几帧走一次数据 */
+      var frames = 40;
+      var gif = new GIF({ workers: 2, quality: 10, width: CW, height: CH, workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = CW; off.height = CH;
+      var octx = off.getContext("2d");
+      var snap1 = s1.slice(), snap2 = s2.slice();
+      var i = 0;
+      var prevPaused = state.paused;
+      state.paused = true;
+
+      function step(){
+        if(i < frames){
+          if(i % every === 0) stepData();
+          draw(octx);
+          gif.addFrame(off, { delay: delay, copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          function fail(msg){
+            s1 = snap1; s2 = snap2;
+            state.paused = prevPaused;
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("finished", function(blob){
+            s1 = snap1; s2 = snap2;
+            state.paused = prevPaused;
+            download(blob, "chart.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  /* ---------- WebM 录制（原生，离线可用） ---------- */
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    if(!canvas.captureStream || typeof MediaRecorder === "undefined"){
+      setStatus("当前浏览器不支持 MediaRecorder，请用 Chrome/Edge");
+      return;
+    }
+    btn.disabled = true;
+    var prevPaused = state.paused;
+    state.paused = false;
+    var dur = 4000;
+
+    var stream = canvas.captureStream(30);
+    var rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    var chunks = [];
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      state.paused = prevPaused;
+      document.getElementById("pause").checked = prevPaused;
+      download(new Blob(chunks, { type: "video/webm" }), "chart.webm");
+      setStatus("WebM 已保存（" + Math.round(dur / 1000) + " 秒）", true);
+      btn.disabled = false;
+    };
+    setStatus("录制中，约 " + Math.round(dur / 1000) + " 秒…");
+    rec.start();
+    setTimeout(function(){ rec.stop(); }, dur);
+  });
+
+  seed(state.count);
+  resize(state.count);
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIChart 操作绑定 + 实时代码
+   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.chart）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var u = { series: 0 };
+
+  function $(id){ return document.getElementById(id); }
+  function api(){ return window.LV2 && window.LV2.api; }
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 frameworks/components/ui_chart.cpp） */</span>');
+    L.push('UIChart * chart = <span class="fn">new</span> UIChart();');
+    L.push('chart-&gt;<span class="fn">SetPosition</span>(<span class="num">40</span>, <span class="num">40</span>, <span class="num">230</span>, <span class="num">120</span>);');
+    L.push('chart-&gt;<span class="fn">SetMaxDataCount</span>(<span class="num">11</span>);');
+    L.push('chart-&gt;<span class="fn">SetLineColor</span>(<span class="num">' + u.series + '</span>, <span class="num">0x007dff</span>);');
+    L.push('chart-&gt;<span class="fn">SetFillColor</span>(<span class="num">' + u.series + '</span>, <span class="num">0x007dff</span>, <span class="num">0x00</span>);');
+    L.push('<span class="cm">/* 当前显示：序列 ' + (u.series === 0 ? "A" : "B") + ' */</span>');
+    L.push('chart-&gt;<span class="fn">AddPoints</span>(<span class="num">' + u.series + '</span>, points);');
+    L.push('<span class="cm">/* 无坐标轴 / 刻度 / 图例；无多序列叠加样式；无更新动画 */</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  $("useries").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    u.series = Number(btn.getAttribute("data-v"));
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    var a = api();
+    if(a && a.setSeries) a.setSeries(u.series);
+    renderCode();
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

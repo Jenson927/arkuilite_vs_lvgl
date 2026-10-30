@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Line：lv_line vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 22L10 8l6 12 5-8 8 6' fill='none' stroke='%232b7de9' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Line：lv_line vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（任意点集折线、虚线、连接样式、点集增删），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，仅展示能力缺口与最接近的替代思路。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_line</code>
+        <span class="cmp-tag lv">任意点集 · 虚线/圆角连接</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">四种预设几何按点数采样；虚线、连接样式实时切换；「+ 点 / − 点」进入点集编辑模式后可任意增删顶点——这些右列全部没有。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>预设几何<output id="o-count">8 点</output><span class="api">lv_line_set_points（点集任意，对象自动撑开尺寸）</span></label>
+            <div class="seg" id="preset">
+              <button type="button" data-val="wave" class="active">波浪</button>
+              <button type="button" data-val="heart">心形</button>
+              <button type="button" data-val="polyline">折线</button>
+              <button type="button" data-val="arrow">箭头</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>点数 set_points<output id="o-points">8</output><span class="api">lv_line_set_points(line, points, n)</span></label>
+            <input type="range" id="points" min="4" max="12" step="1" value="8">
+          </div>
+          <div class="field">
+            <label>线宽 line_width<output id="o-width">3 px</output><span class="api">lv_obj_set_style_line_width</span></label>
+            <input type="range" id="width" min="1" max="8" step="1" value="3">
+          </div>
+
+          <div class="field">
+            <label>线条颜色 line_color<output id="o-color">#2b7de9</output><span class="api">lv_obj_set_style_line_color</span></label>
+            <input type="color" id="color" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>相位 phase<output id="o-phase">0°</output><span class="api">点集更新后重新 lv_line_set_points</span></label>
+            <input type="range" id="phase" min="0" max="360" step="1" value="0">
+          </div>
+
+          <div class="field">
+            <label>虚线 dash<span class="api">lv_obj_set_style_line_dash_width / lv_obj_set_style_line_dash_gap（ArkUI lite 无）</span></label>
+            <div class="check"><input type="checkbox" id="dash"><span>启用虚线样式</span></div>
+          </div>
+          <div class="field">
+            <label>Y 反转 set_y_invert<span class="api">lv_line_set_y_invert</span></label>
+            <div class="check"><input type="checkbox" id="yinvert"><span>y = 0 移到对象底部</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>连接样式 line join<span class="api">lv_obj_set_style_line_rounded（LVGL 仅圆角开 / 关；bevel / miter 需自绘，见左上角标注）</span></label>
+            <div class="seg" id="join">
+              <button type="button" data-val="round" class="active">round 圆角</button>
+              <button type="button" data-val="bevel">bevel 平切</button>
+              <button type="button" data-val="miter">miter 尖角</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>显示节点<span class="api">仅预览，LVGL line 本身不画节点</span></label>
+            <div class="check"><input type="checkbox" id="nodes"><span>在每个顶点画圆点</span></div>
+          </div>
+          <div class="field">
+            <label>相位动画<span class="api">约 90°/s 自动推进（编辑点集时停用）</span></label>
+            <div class="check"><input type="checkbox" id="anim" checked><span>自动推进相位</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-add">+ 点（最长段中点插入）</button>
+          <button type="button" class="btn" id="btn-del">− 点（删除末点）</button>
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（相位动画）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有折线组件：只能在 UIView::OnDraw 里用 DrawLine 逐段自绘，虚线要手动拆段，圆角连接要自己在拐点补圆。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列「无对应组件」卡片、右上角红标与差异表格由 cmp2.js 自动渲染。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_line 复刻（迁移自旧页，新增虚线 / 连接样式 / 点集增删）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+  var PRESET_NAME = { wave: "波浪", heart: "心形", polyline: "折线", arrow: "箭头", custom: "自定义" };
+
+  var state = {
+    preset: "wave",
+    n: 8,
+    width: 3,
+    color: "#2b7de9",
+    dash: false,
+    join: "round",
+    yinvert: false,
+    nodes: false,
+    phase: 0,
+    anim: true,
+    custom: null            // 点集编辑模式的归一化点集
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var t0 = performance.now();
+
+  function shapePoints(preset, n, phaseDeg){
+    var pts = [], i, u, a;
+    if(preset === "wave"){
+      for(i = 0; i < n; i++){
+        u = i / (n - 1);
+        pts.push({ x: u * 2 - 1, y: Math.sin(K.rad(phaseDeg) + u * Math.PI * 2.5) * 0.82 });
+      }
+    }else if(preset === "heart"){
+      a = K.rad(phaseDeg);
+      for(i = 0; i < n; i++){
+        var t = i / (n - 1) * Math.PI * 2;
+        var hx = 16 * Math.pow(Math.sin(t), 3);
+        var hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+        pts.push({
+          x: (hx * Math.cos(a) - hy * Math.sin(a)) / 17,
+          y: (hx * Math.sin(a) + hy * Math.cos(a)) / 17
+        });
+      }
+    }else if(preset === "polyline"){
+      for(i = 0; i < n; i++){
+        u = i / (n - 1);
+        pts.push({
+          x: u * 2 - 1,
+          y: (i % 2 === 0 ? -0.72 : 0.72) * (0.78 + 0.22 * Math.sin(i * 1.9)) +
+             0.1 * Math.sin(K.rad(phaseDeg) + u * Math.PI * 3)
+        });
+      }
+    }else{
+      var base = [
+        { x: -1, y: 0.55 }, { x: 0.1, y: 0.55 }, { x: 0.1, y: 0.95 },
+        { x: 1, y: 0 }, { x: 0.1, y: -0.95 }, { x: 0.1, y: -0.55 }, { x: -1, y: -0.55 }
+      ];
+      if(n <= base.length){
+        var keep = [0, 3, 6, 1, 2, 4, 5].slice(0, n).sort(function(x, y){ return x - y; });
+        for(i = 0; i < keep.length; i++) pts.push({ x: base[keep[i]].x, y: base[keep[i]].y });
+      }else{
+        pts = base.slice();
+        while(pts.length < n){
+          var idx = 0, best = -1;
+          for(i = 0; i < pts.length - 1; i++){
+            var ddx = pts[i + 1].x - pts[i].x;
+            var ddy = pts[i + 1].y - pts[i].y;
+            var dd = ddx * ddx + ddy * ddy;
+            if(dd > best){ best = dd; idx = i; }
+          }
+          pts.splice(idx + 1, 0, {
+            x: (pts[idx].x + pts[idx + 1].x) / 2,
+            y: (pts[idx].y + pts[idx + 1].y) / 2
+          });
+        }
+      }
+      for(i = 0; i < pts.length; i++){
+        u = i / (pts.length - 1);
+        pts[i].y += 0.08 * Math.sin(K.rad(phaseDeg) + u * Math.PI * 2);
+      }
+    }
+    return pts;
+  }
+
+  function layoutPoints(norm){
+    var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    var arr = [], i;
+    for(i = 0; i < norm.length; i++){
+      var p = { x: norm[i].x, y: state.yinvert ? -norm[i].y : norm[i].y };
+      arr.push(p);
+      if(p.x < minX) minX = p.x;
+      if(p.x > maxX) maxX = p.x;
+      if(p.y < minY) minY = p.y;
+      if(p.y > maxY) maxY = p.y;
+    }
+    var bw = Math.max(maxX - minX, 0.001);
+    var bh = Math.max(maxY - minY, 0.001);
+    var s = Math.min(290 / bw, 172 / bh);
+    var cx = W / 2 - (minX + maxX) / 2 * s;
+    var cy = H / 2 - (minY + maxY) / 2 * s;
+    var out = [];
+    for(i = 0; i < arr.length; i++){
+      out.push({ x: cx + arr[i].x * s, y: cy + arr[i].y * s });
+    }
+    return out;
+  }
+
+  function currentNorm(){
+    return state.custom ? state.custom.slice() : shapePoints(state.preset, state.n, state.phase);
+  }
+
+  function buildPts(t, forceAnim){
+    if(state.custom) return layoutPoints(state.custom);
+    var ph = state.phase;
+    if(forceAnim || state.anim) ph += t * 0.09;
+    ph = ((ph % 360) + 360) % 360;
+    return layoutPoints(shapePoints(state.preset, state.n, ph));
+  }
+
+  function drawPath(c, pts){
+    c.beginPath();
+    c.moveTo(pts[0].x, pts[0].y);
+    for(var i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y);
+  }
+
+  function drawScene(c, t, forceAnim){
+    c.clearRect(0, 0, W, H);
+    var pts = buildPts(t, forceAnim);
+
+    c.save();
+    c.lineCap = state.join === "round" ? "round" : "butt";
+    c.lineJoin = state.join;
+    if(state.dash){
+      c.setLineDash([Math.max(4, state.width * 2.5), Math.max(3, state.width * 2)]);
+    }
+
+    c.strokeStyle = "rgba(28,33,40,0.08)";
+    c.lineWidth = state.width;
+    c.save();
+    c.translate(0, 1.5);
+    drawPath(c, pts);
+    c.stroke();
+    c.restore();
+
+    c.strokeStyle = state.color;
+    c.lineWidth = state.width;
+    drawPath(c, pts);
+    c.stroke();
+    c.setLineDash([]);
+
+    if(state.nodes){
+      var r = Math.max(3, state.width * 0.65 + 1.6);
+      for(var i = 0; i < pts.length; i++){
+        c.beginPath();
+        c.arc(pts[i].x, pts[i].y, r, 0, Math.PI * 2);
+        c.fillStyle = "#ffffff";
+        c.fill();
+        c.lineWidth = 1.5;
+        c.strokeStyle = state.color;
+        c.stroke();
+      }
+    }
+    c.restore();
+
+    K.text(c, PRESET_NAME[state.preset] + " · " + pts.length + " 点" + (state.dash ? " · 虚线" : ""),
+      12, 228, { size: 11, color: K.theme.textFaint });
+    K.text(c, (state.custom ? "点集编辑模式" : ((forceAnim || state.anim) ? "相位动画播放中" : "相位 " + Math.round(state.phase) + "°")),
+      W - 12, 228, { size: 11, color: K.theme.textFaint, align: "right" });
+  }
+
+  K.run(function(){
+    drawScene(view.ctx, performance.now() - t0, false);
+  });
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var pts = layoutPoints(currentNorm());
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 · 坐标以 line 对象左上角为原点 */"));
+    L.push("static lv_point_precise_t points[] = {");
+    for(var i = 0; i < pts.length; i++){
+      L.push("    {" + K.num(Math.round(pts[i].x)) + ", " + K.num(Math.round(pts[i].y)) + "},");
+    }
+    L.push("};");
+    L.push("");
+    L.push("lv_obj_t * line = " + K.fn("lv_line_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_line_set_points") + "(line, points, " + K.num(pts.length) + ");" +
+      K.cm("  /* 点集任意，尺寸自动撑开 */"));
+    L.push(K.fn("lv_line_set_y_invert") + "(line, " + (state.yinvert ? "true" : "false") + ");");
+    L.push(K.fn("lv_obj_center") + "(line);");
+    L.push("");
+    L.push(K.fn("lv_obj_set_style_line_width") + "(line, " + K.num(state.width) + ", LV_PART_MAIN);");
+    L.push(K.fn("lv_obj_set_style_line_color") + "(line, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.color)) + "), LV_PART_MAIN);");
+    L.push(K.fn("lv_obj_set_style_line_rounded") + "(line, " + (state.join === "round" ? "true" : "false") + ", LV_PART_MAIN);");
+    if(state.dash){
+      L.push(K.fn("lv_obj_set_style_line_dash_width") + "(line, " + K.num(Math.max(4, Math.round(state.width * 2.5))) + ", LV_PART_MAIN);");
+      L.push(K.fn("lv_obj_set_style_line_dash_gap") + "(line, " + K.num(Math.max(3, Math.round(state.width * 2))) + ", LV_PART_MAIN);");
+    }
+    if(state.join !== "round"){
+      L.push(K.cm("/* bevel / miter 连接 LVGL 不支持，需自绘（见左列灰标） */"));
+    }
+    if(state.anim && !state.custom){
+      L.push("");
+      L.push(K.cm("/* 相位动画：约每 30 ms 重算 points[] 并再次调用 lv_line_set_points() 即可 */"));
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  function syncSeg(id, val){
+    var btns = document.getElementById(id).querySelectorAll("button");
+    Array.prototype.forEach.call(btns, function(b){
+      b.classList.toggle("active", val != null && b.getAttribute("data-val") === val);
+    });
+  }
+
+  function syncCount(){
+    document.getElementById("o-count").textContent = currentNorm().length + " 点";
+  }
+
+  function enterCustom(pts){
+    state.custom = pts;
+    state.preset = "custom";
+    state.anim = false;
+    document.getElementById("anim").checked = false;
+    syncSeg("preset", null);
+    syncCount();
+    renderCode();
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  K.bindSeg("preset", function(v){
+    state.preset = v;
+    state.custom = null;
+    syncCount();
+    renderCode();
+  });
+  K.bindSeg("join", function(v){
+    state.join = v;
+    renderCode();
+  });
+  K.bindRange("points", function(v){ return v; }, function(v){
+    state.n = v;
+    state.custom = null;
+    syncSeg("preset", state.preset);
+    syncCount();
+    renderCode();
+  });
+  K.bindRange("width", function(v){ return v + " px"; }, function(v){ state.width = v; renderCode(); });
+  K.bindRange("phase", function(v){ return v + "°"; }, function(v){ state.phase = v; renderCode(); });
+  document.getElementById("color").addEventListener("input", function(e){
+    state.color = e.target.value;
+    document.getElementById("o-color").textContent = state.color;
+    renderCode();
+  });
+  K.bindCheck("dash", function(v){ state.dash = v; renderCode(); });
+  K.bindCheck("yinvert", function(v){ state.yinvert = v; renderCode(); });
+  K.bindCheck("nodes", function(v){ state.nodes = v; });
+  K.bindCheck("anim", function(v){ state.anim = v; });
+
+  /* ---------- 点集编辑 ---------- */
+  document.getElementById("btn-add").addEventListener("click", function(){
+    var pts = currentNorm();
+    var idx = 0, best = -1;
+    for(var i = 0; i < pts.length - 1; i++){
+      var dx = pts[i + 1].x - pts[i].x, dy = pts[i + 1].y - pts[i].y;
+      var dd = dx * dx + dy * dy;
+      if(dd > best){ best = dd; idx = i; }
+    }
+    pts.splice(idx + 1, 0, {
+      x: (pts[idx].x + pts[idx + 1].x) / 2,
+      y: (pts[idx].y + pts[idx + 1].y) / 2
+    });
+    enterCustom(pts);
+    K.status("已在最长段中点插入顶点（点集编辑模式）", true);
+  });
+
+  document.getElementById("btn-del").addEventListener("click", function(){
+    var pts = currentNorm();
+    if(pts.length <= 3){ K.status("至少需要保留 3 个点"); return; }
+    pts.pop();
+    enterCustom(pts);
+    K.status("已删除末点（点集编辑模式）", true);
+  });
+
+  /* ---------- 导出 ---------- */
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "line.png");
+  });
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "line.gif", w: W, h: H, fps: 20, duration: 4000,
+      frame: function(c, t){ drawScene(c, t, true); },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: view.canvas, name: "line.webm", duration: 4000,
+      before: function(){
+        var old = state.anim;
+        state.anim = true;
+        return old;
+      },
+      after: function(old){ state.anim = old; },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  syncCount();
+  renderCode();
+  K.status("「+ 点 / − 点」进入点集编辑模式");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js line.alt：UIView::OnDraw 自绘折线
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_line，以下为替代拼装骨架（静态示例） */"));
+  L.push(cm("/* 思路：自定义 UIView，在 OnDraw 里用 DrawLine 逐段画折线 */"));
+  L.push("");
+  L.push("class LineView : public UIView {");
+  L.push("public:");
+  L.push("    LineView() { " + fn("SetPosition") + "(" + num(0) + ", " + num(0) + "); " + fn("SetSize") + "(" + num(360) + ", " + num(240) + "); }");
+  L.push("    virtual ~LineView() {}");
+  L.push("");
+  L.push("    bool " + fn("OnDraw") + "(const Canvas &canvas, const Rect &dirty) override");
+  L.push("    {");
+  L.push("        static const Point pts[] = { {" + num(30) + ", " + num(160) + "}, {" + num(100) + ", " + num(60) + "},");
+  L.push("            {" + num(180) + ", " + num(130) + "}, {" + num(260) + ", " + num(40) + "}, {" + num(330) + ", " + num(110) + "} };");
+  L.push("        ColorType color = Color::" + fn("GetColorFromRGB") + "(" + num("0x2b") + ", " + num("0x7d") + ", " + num("0xe9") + ").full;");
+  L.push("        for (int i = " + num(0) + "; i &lt; " + num(4) + "; i++) {");
+  L.push("            canvas." + fn("DrawLine") + "(pts[i], pts[i + " + num(1) + "], color, " + num(3) + ");");
+  L.push("        }");
+  L.push(cm("        /* 虚线：DrawLine 无 dash 参数，须把每段手动切成短线段数组 */"));
+  L.push(cm("        /* 圆角连接：无 join 样式，只能在拐点处补画 FillCircle 近似 */"));
+  L.push("        return true;");
+  L.push("    }");
+  L.push("};");
+  L.push("");
+  L.push("LineView * line = " + fn("new") + " LineView();");
+  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(line);");
+  L.push(cm("/* 点集变化时调用 line-&gt;InvalidateRect(rect) 触发重绘，无自动尺寸 */"));
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = ["连接样式固定圆角（bevel/miter 需自绘）"];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

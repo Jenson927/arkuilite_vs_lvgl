@@ -1,0 +1,241 @@
+/* ============================================================
+   LVGL vs ArkUI lite 双栏对比模板 · 公共样式（button 定稿版）
+   页面顺序：双列演示+操作 → 差异对照 → 双列实时生成代码
+   ============================================================ */
+
+.wrap{max-width:1320px}
+.lead{color:var(--ink-2);font-size:14px;margin-top:6px;line-height:1.7}
+.lead b{color:var(--ink)}
+
+.cmp-grid{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:20px;margin-top:22px;align-items:start;
+}
+@media (max-width:1000px){.cmp-grid{grid-template-columns:1fr}}
+
+.cmp-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.cmp-col>.stage{margin-top:0}
+.cmp-col>.panel{margin-top:0}
+
+.cmp-colhead{display:flex;align-items:center;gap:8px;font-size:14px}
+.cmp-colhead b{font-weight:650}
+.cmp-colhead code{
+  font-family:var(--mono);font-size:12px;color:var(--ink);
+  background:#f2f4f7;border:1px solid var(--line-soft);border-radius:6px;padding:1px 8px;
+}
+.cmp-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.cmp-dot.lv{background:#2b7de9}
+.cmp-dot.ui{background:#1f9d66}
+.cmp-tag{
+  margin-left:auto;font-size:11.5px;border-radius:20px;padding:2px 10px;white-space:nowrap;
+}
+.cmp-tag.lv{background:#e8f1fd;color:#1c5cb8}
+.cmp-tag.ui{background:#e6f6ee;color:#1f7a4d}
+
+.stage-tip{font-size:12px;color:var(--ink-3);margin-top:-6px}
+
+/* 左列舞台：LVGL 不可演示的能力标注在左上角 */
+.stage--lv{position:relative}
+.lv-gaps{
+  position:absolute;top:10px;left:12px;display:flex;flex-direction:column;
+  align-items:flex-start;gap:4px;max-width:48%;pointer-events:none;z-index:2;
+}
+.lv-gaps-t{font-size:11px;font-weight:650;color:var(--ink-2)}
+.lv-gap{
+  font-size:11px;color:var(--ink-2);background:#eef1f5;border:1px solid var(--line);
+  border-radius:20px;padding:1px 9px;white-space:nowrap;
+}
+
+/* 状态叠加多选 */
+.stack{display:flex;flex-wrap:wrap;gap:2px 20px;min-height:38px;align-items:center}
+.stack .check{height:auto}
+
+/* 右列舞台：无法表达的能力随组件展示在右上角 */
+.stage--ui{position:relative}
+.ui-gaps{
+  position:absolute;top:10px;right:12px;display:flex;flex-direction:column;
+  align-items:flex-end;gap:4px;max-width:48%;pointer-events:none;z-index:2;
+}
+.ui-gaps-t{font-size:11px;font-weight:650;color:#b52a2a}
+.ui-gap{
+  font-size:11px;color:#b52a2a;background:#fdecec;border:1px solid #f3cccc;
+  border-radius:20px;padding:1px 9px;white-space:nowrap;
+}
+
+.field label{flex-wrap:wrap;row-gap:2px}
+.field label .api{
+  order:3;flex-basis:100%;font-family:var(--mono);font-size:11px;
+  color:var(--ink-3);line-height:1.5;
+}
+.field label output{margin-left:8px}
+
+.src-note{
+  margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);
+  font-size:12px;color:var(--ink-3);line-height:1.7;
+}
+.src-note code{
+  font-family:var(--mono);font-size:11px;background:#eef1f5;border-radius:3px;padding:0 4px;color:#334;
+}
+
+/* ================= 右列演示区（ud-* 组件示意） ================= */
+.cmp-demo{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:8px 6px;min-height:220px;width:100%;
+}
+.cmp-demo canvas{display:block;border-radius:6px}
+.ud-sub{font-size:11.5px;color:var(--ink-3)}
+
+.ud-btn{
+  min-width:140px;height:48px;line-height:48px;text-align:center;
+  background:#007dff;color:#fff;font-size:17px;font-weight:600;border-radius:24px;
+  position:relative;overflow:hidden;cursor:pointer;user-select:none;
+  transition:transform .15s ease;box-shadow:0 1px 3px rgba(0,0,0,.12);
+}
+.ud-btn.press{transform:scale(.8)}
+.ud-btn.press::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.098)}
+.ud-btn.inactive{background:#617e9d;color:#eaf0f7}
+
+.ud-imgbtn{
+  width:132px;height:66px;border-radius:10px;background:#eef3fb;border:1px solid #cfd9e6;
+  display:flex;align-items:center;justify-content:center;color:#6b7a8f;font-size:12px;
+  cursor:pointer;user-select:none;transition:transform .15s ease,background .15s;
+}
+.ud-imgbtn.press{transform:scale(.9);background:#dbe8fb}
+
+.ud-label{font-size:17px;color:#1c2128;line-height:1.5}
+.ud-rich{font-size:16px;color:#1c2128}
+.ud-rich .c{color:#007dff;font-size:20px;font-weight:700}
+.ud-rich .b{background:#ffe08a;border-radius:3px;padding:0 2px}
+
+.ud-check{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;font-size:14px;color:#1c2128}
+.ud-check .box{
+  width:24px;height:24px;border-radius:4px;border:2px solid #007dff;background:#fff;
+  display:flex;align-items:center;justify-content:center;transition:background .15s;
+}
+.ud-check .box svg{opacity:0;transition:opacity .15s}
+.ud-check.on .box{background:#007dff}
+.ud-check.on .box svg{opacity:1}
+
+.ud-toggle{
+  width:52px;height:28px;border-radius:14px;background:#cfd6df;position:relative;
+  cursor:pointer;transition:background .18s;user-select:none;
+}
+.ud-toggle .knob{
+  position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .18s;
+}
+.ud-toggle.on{background:#007dff}
+.ud-toggle.on .knob{left:27px}
+
+.ud-slider{width:220px;position:relative;padding:12px 0;cursor:pointer}
+.ud-slider .track{height:6px;border-radius:3px;background:#d9dee6;overflow:hidden}
+.ud-slider .fill{height:100%;width:62%;background:#007dff;border-radius:3px}
+.ud-slider .knob{
+  position:absolute;top:6px;left:calc(62% - 9px);width:18px;height:18px;border-radius:50%;
+  background:#007dff;box-shadow:0 1px 3px rgba(0,0,0,.25);
+}
+
+.ud-progress{width:220px;height:10px;border-radius:5px;background:#e3e6ea;overflow:hidden}
+.ud-progress>i{display:block;height:100%;width:62%;background:#007dff;border-radius:5px}
+
+.ud-image{
+  width:180px;height:110px;border-radius:8px;background:#eef3fb;border:1px solid #cfd9e6;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.ud-edit{
+  width:220px;height:38px;border:1px solid #cfd6df;border-radius:8px;background:#fff;
+  display:flex;align-items:center;padding:0 10px;font-size:13px;color:#1c2128;position:relative;
+}
+.ud-edit .ph{color:#9aa3ad}
+.ud-edit .caret{width:1px;height:16px;background:#007dff;margin-left:1px;animation:ud-blink 1s steps(1) infinite}
+@keyframes ud-blink{50%{opacity:0}}
+
+.ud-list{width:220px;border:1px solid #dfe3e9;border-radius:8px;overflow:hidden;background:#fff}
+.ud-list .row{
+  height:38px;display:flex;align-items:center;padding:0 12px;font-size:13px;color:#1c2128;
+  border-bottom:1px solid #eef0f3;background:#fff;
+}
+.ud-list .row:last-child{border-bottom:0}
+.ud-list .row.sel{background:#e8f2ff}
+
+.ud-picker{width:160px;height:126px;border:1px solid #dfe3e9;border-radius:8px;background:#fff;overflow:hidden;display:flex;flex-direction:column}
+.ud-picker .it{flex:1;display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a929c}
+.ud-picker .it.mid{background:#e8f2ff;color:#1c2128;font-weight:600;font-size:15px}
+
+.ud-dialog{
+  width:250px;background:#fff;border-radius:10px;box-shadow:0 6px 24px rgba(20,30,50,.18);
+  overflow:hidden;border:1px solid #e2e6ec;
+}
+.ud-dialog .t{padding:14px 16px 6px;font-size:14px;font-weight:650}
+.ud-dialog .c{padding:0 16px 14px;font-size:12.5px;color:#5b6470;line-height:1.6}
+.ud-dialog .b{display:flex;border-top:1px solid #eef0f3}
+.ud-dialog .b span{flex:1;text-align:center;padding:10px 0;font-size:13px;color:#007dff;cursor:pointer}
+.ud-dialog .b span+span{border-left:1px solid #eef0f3}
+
+.ud-view{
+  width:190px;height:120px;border:2px dashed #b9c4d2;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;color:#8a929c;font-size:12.5px;background:#fafbfd;
+}
+
+/* 无对应组件卡片 */
+.cmp-none{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%}
+.cmp-none-x{
+  width:64px;height:64px;border-radius:50%;background:#fdecec;color:#d64545;
+  font-size:34px;line-height:64px;font-weight:700;
+}
+.cmp-none-t{font-size:16px;font-weight:650;margin-top:12px;letter-spacing:.2px}
+.cmp-none-s{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+.cmp-none-alt{
+  margin-top:14px;font-size:12px;color:var(--ink-2);background:#f6f7f9;
+  border-radius:8px;padding:9px 11px;text-align:left;line-height:1.65;max-width:420px;
+}
+.cmp-none-alt b{color:var(--ink)}
+.cmp-ctrl-none{font-size:12.5px;color:var(--ink-3);line-height:1.7}
+
+/* ================= 差异对照 ================= */
+.cmp-diff{margin-top:20px}
+.cmp-diff>h2{font-size:15px;font-weight:650;color:var(--ink);letter-spacing:0;margin-bottom:4px}
+.cmp-diff-sub{font-size:12.5px;color:var(--ink-3);margin-bottom:14px}
+
+.cmp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.cmp-chip{font-size:12.5px;border-radius:8px;padding:6px 12px;border:1px solid;font-weight:600}
+.cmp-chip small{font-weight:400;margin-left:6px}
+.cmp-chip.ok{background:#eef9f3;border-color:#bfe7d3;color:#1f7a4d}
+.cmp-chip.part{background:#fff7ea;border-color:#f2dcb3;color:#a06600}
+.cmp-chip.none{background:#fdeeee;border-color:#f3c9c9;color:#b52a2a}
+
+.tbl-wrap{overflow-x:auto}
+table.cmp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+table.cmp-table th,table.cmp-table td{
+  text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line-soft);
+}
+table.cmp-table thead th{background:#f5f7fa;color:var(--ink-2);font-weight:600;font-size:12.5px;white-space:nowrap}
+table.cmp-table td:first-child{font-weight:600;white-space:nowrap}
+table.cmp-table .res{white-space:nowrap;font-weight:650;width:86px}
+tr.row-ok{background:#fdfffe}
+tr.row-part{background:#fffdf6}
+tr.row-none{background:#fffbfb}
+.res.ok{color:#1f9d66}
+.res.part{color:#b07800}
+.res.none{color:#c23b3b}
+
+.cmp-points{
+  margin-top:16px;background:#f6f8fb;border:1px solid var(--line-soft);
+  border-left:3px solid var(--accent);border-radius:10px;padding:14px 18px;
+}
+.cmp-points-t{font-size:12.5px;font-weight:650;color:var(--ink);margin-bottom:8px}
+.cmp-points ul{padding-left:18px;font-size:13px;color:var(--ink-2)}
+.cmp-points li{margin-bottom:6px;line-height:1.7}
+.cmp-points li:last-child{margin-bottom:0}
+.cmp-points b{color:var(--ink)}
+
+/* 实时生成代码：双列 */
+.code-grid{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:20px;margin-top:20px;align-items:start;
+}
+@media (max-width:1000px){.code-grid{grid-template-columns:1fr}}
+.code-col h2{font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:.4px;margin-bottom:8px}
+.code-col pre.code{margin-top:0}
+
+footer{max-width:1320px}

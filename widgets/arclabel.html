@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArcLabel：LVGL lv_arclabel vs ArkUI lite UIArcLabel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23dfe4ea' stroke-width='2' stroke-dasharray='3 3'/%3E%3Cpath d='M7 18c2-6 16-6 18 0' fill='none' stroke='%232b7de9' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>ArcLabel：lv_arclabel vs UIArcLabel</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（文字沿圆弧逐字排布 + 切线旋转 + 逐字样式 / 镜像方向），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b>
+      源码 <code>ui_arc_label.cpp</code> 行为渲染的 UIArcLabel。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_arclabel</code>
+        <span class="cmp-tag lv">逐字排布 · 逐字样式</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击画面可暂停 / 恢复自动旋转；开启逐字样式后偶数下标字符换色换号；镜像方向让字符沿切线翻转 180° 反向排布。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>文本 set_text<span class="api">lv_arclabel_set_text</span></label>
+            <input type="text" id="text" value="LVGL · ARC LABEL · 弧形文字 · " maxlength="60">
+          </div>
+
+          <div class="field">
+            <label>半径 radius<output id="o-radius">90 px</output><span class="api">lv_arclabel_set_radius</span></label>
+            <input type="range" id="radius" min="60" max="140" step="1" value="90">
+          </div>
+          <div class="field">
+            <label>起始角 angle_start<output id="o-start">200°</output><span class="api">lv_arclabel_set_angle_start</span></label>
+            <input type="range" id="start" min="0" max="359" step="1" value="200">
+          </div>
+
+          <div class="field">
+            <label>角度范围 angle_size<output id="o-span">220°</output><span class="api">lv_arclabel_set_angle_size</span></label>
+            <input type="range" id="span" min="30" max="360" step="1" value="220">
+          </div>
+          <div class="field">
+            <label>字间距 letter_space<output id="o-space">2 px</output><span class="api">lv_obj_set_style_text_letter_space</span></label>
+            <input type="range" id="space" min="0" max="8" step="1" value="2">
+          </div>
+
+          <div class="field">
+            <label>方向 dir<span class="api">lv_arclabel_set_dir(CLOCKWISE / COUNTER_CLOCKWISE)</span></label>
+            <div class="seg" id="dir">
+              <button type="button" data-v="cw" class="active">顺时针</button>
+              <button type="button" data-v="ccw">逆时针</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>垂直对齐 text_vertical_align<span class="api">lv_arclabel_set_text_vertical_align</span></label>
+            <div class="seg" id="valign">
+              <button type="button" data-v="top">上</button>
+              <button type="button" data-v="middle" class="active">中</button>
+              <button type="button" data-v="bottom">下</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>溢出 overflow<span class="api">lv_arclabel_set_overflow(VISIBLE / CLIP)</span></label>
+            <div class="seg" id="overflow">
+              <button type="button" data-v="visible" class="active">VISIBLE</button>
+              <button type="button" data-v="clip">CLIP</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>镜像方向 mirror<span class="api">逐字沿切线翻转 180°（UIArcLabel 仅 SetArcTextOrientation 整体朝向）</span></label>
+            <div class="seg" id="mirror">
+              <button type="button" data-v="normal" class="active">正常</button>
+              <button type="button" data-v="flip">镜像</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>逐字样式（UIArcLabel 无此能力）<span class="api">lv_span / 逐字样式：每个字符可独立配色配字号</span></label>
+            <div class="check"><input type="checkbox" id="charstyle"><span>偶数下标字符换主题色 + 变字号</span></div>
+          </div>
+          <div class="field">
+            <label>自动旋转<span class="api">lv_anim 持续修改 offset 绕圆心旋转</span></label>
+            <div class="check"><input type="checkbox" id="auto" checked><span>整圈文字持续绕圆心旋转</span></div>
+          </div>
+
+          <div class="field">
+            <label>参考圆<span class="api">显示虚线参考圆与圆心、起始角标记</span></label>
+            <div class="check"><input type="checkbox" id="ref" checked><span>显示虚线参考圆与圆心</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIArcLabel</code>
+        <span class="cmp-tag ui">整体样式 · 朝向有限</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">拖动角度滑杆实时改变弧形文字的终止角；UIArcLabel 以整体 Style 为主，无法逐字配色或镜像翻转。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>弧形角度 angle<output id="o-uangle">292°</output><span class="api">SetArcTextAngle(int16_t)：终止角，单位 °</span></label>
+            <input type="range" id="uangle" min="200" max="340" step="1" value="292">
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>frameworks/components/ui_arc_label.cpp</code> ——
+          <code>SetText</code> 设置弧形文本，<code>SetArcTextRadius</code> / <code>SetArcTextAngle</code> 配半径与角度，
+          <code>SetArcTextOrientation</code> 配整体朝向，<code>SetRollCount</code> / <code>SetRollSpeed</code> 配滚动；
+          逐字独立样式与镜像方向没有接口。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240；半径较大时圆弧会超出画布并被裁掉，属正常现象。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；PNG 导出离线可用。右列渲染参数取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_arclabel 复刻（逐字沿弧排布 + 逐字样式 + 镜像方向）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 320, H = 240;
+  var CX = 160, CY = 120, FONT_SIZE = 15;
+  var MONO = 'ui-monospace, Consolas, "Liberation Mono", monospace';
+  var FAMILY = '-apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+  var THEME = { text: "#1c2128", muted: "#5b6470", faint: "#8a929c", primary: "#2b7de9" };
+
+  var state = {
+    text: "LVGL · ARC LABEL · 弧形文字 · ",
+    radius: 90,
+    start: 200,
+    span: 220,
+    space: 2,
+    dir: "cw",
+    valign: "middle",
+    overflow: "visible",
+    mirror: "normal",   /* normal | flip */
+    charstyle: false,   /* 逐字样式 */
+    auto: true,
+    ref: true
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var t0 = performance.now();
+  var clock = { acc: 0, last: 0 };
+
+  /* ---------- 工具 ---------- */
+  function rad(d){ return d * Math.PI / 180; }
+  function deg(r){ return r * 180 / Math.PI; }
+
+  function roundRectPath(c, x, y, w, h, r){
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function box(c, x, y, w, h, o){
+    o = o || {};
+    c.save();
+    if(o.shadow){
+      c.shadowColor = o.shadow;
+      c.shadowBlur = o.shadowBlur || 10;
+      c.shadowOffsetY = o.shadowY || 0;
+    }
+    if(o.bg){ roundRectPath(c, x, y, w, h, o.radius || 0); c.fillStyle = o.bg; c.fill(); }
+    c.shadowColor = "transparent"; c.shadowBlur = 0; c.shadowOffsetY = 0;
+    if(o.border){
+      roundRectPath(c, x + 0.5, y + 0.5, w - 1, h - 1, o.radius || 0);
+      c.strokeStyle = o.border; c.lineWidth = o.borderWidth || 1; c.stroke();
+    }
+    c.restore();
+  }
+
+  function text(c, s, x, y, o){
+    o = o || {};
+    c.save();
+    c.font = (o.weight ? o.weight + " " : "") + (o.size || 12) + "px " + (o.mono ? MONO : FAMILY);
+    c.fillStyle = o.color || THEME.text;
+    c.textAlign = o.align || "left";
+    c.textBaseline = o.baseline || "middle";
+    c.fillText(s, x, y);
+    c.restore();
+  }
+
+  function measure(c, s, o){
+    c.save();
+    c.font = (o.weight ? o.weight + " " : "") + (o.size || 12) + "px " + FAMILY;
+    var w = c.measureText(s).width;
+    c.restore();
+    return w;
+  }
+
+  /* ---------- 场景绘制 ---------- */
+  function drawScene(c, tMs, spinOn){
+    c.clearRect(0, 0, W, H);
+    box(c, 12, 8, W - 24, H - 16, {
+      bg: "#ffffff", radius: 14, borderWidth: 1, border: "#e7eaee",
+      shadow: "rgba(28,33,40,0.07)", shadowBlur: 14, shadowY: 4
+    });
+
+    text(c, "lv_arclabel", 24, 22, { size: 13, weight: 600, color: THEME.text });
+    text(c, "R " + state.radius + " · " + state.start + "° + " + state.span + "°",
+      W - 24, 22, { size: 10.5, mono: true, color: THEME.faint, align: "right" });
+
+    var dir = state.dir === "cw" ? 1 : -1;
+    var spin = spinOn ? tMs * 0.024 : 0;
+    var start = state.start + spin;
+    var radius = state.radius;
+    var flip = state.mirror === "flip";
+
+    /* 参考圆 */
+    if(state.ref){
+      c.save();
+      c.setLineDash([4, 4]);
+      c.strokeStyle = "#cfd7e2";
+      c.lineWidth = 1;
+      c.beginPath();
+      c.arc(CX, CY, radius, 0, Math.PI * 2);
+      c.stroke();
+      c.setLineDash([]);
+
+      /* 起始角标记 */
+      var sx = CX + Math.cos(rad(start)) * radius;
+      var sy = CY + Math.sin(rad(start)) * radius;
+      c.globalAlpha = 0.5;
+      c.beginPath();
+      c.moveTo(CX, CY);
+      c.lineTo(sx, sy);
+      c.strokeStyle = "#9fb6d4";
+      c.stroke();
+      c.globalAlpha = 1;
+      c.beginPath();
+      c.arc(sx, sy, 2.4, 0, Math.PI * 2);
+      c.fillStyle = THEME.primary;
+      c.fill();
+
+      c.beginPath();
+      c.arc(CX, CY, 2, 0, Math.PI * 2);
+      c.fillStyle = "#b8bfc9";
+      c.fill();
+      c.restore();
+
+      text(c, "r = " + radius, CX, CY + 14, {
+        size: 9.5, mono: true, color: THEME.faint, align: "center"
+      });
+    }
+
+    /* 角度范围提示弧：随起止角与范围实时变化 */
+    c.save();
+    c.globalAlpha = 0.28;
+    c.strokeStyle = THEME.primary;
+    c.lineWidth = 2;
+    c.lineCap = "round";
+    c.beginPath();
+    c.arc(CX, CY, radius, rad(start), rad(start + dir * state.span), dir < 0);
+    c.stroke();
+    c.restore();
+
+    /* 逐字沿弧排布 */
+    var textStr = state.text || "";
+    var chars = [];
+    var total = 0;
+    var i;
+    for(i = 0; i < textStr.length; i++){
+      var accent = state.charstyle && (i % 2 === 0);
+      var fs = accent ? FONT_SIZE + 4 : FONT_SIZE;
+      var w = measure(c, textStr[i], { size: fs, weight: 600 });
+      chars.push({ ch: textStr[i], w: w, offset: total, accent: accent, fs: fs });
+      total += w + (i < textStr.length - 1 ? state.space : 0);
+    }
+
+    var offsetY = state.valign === "top" ? -FONT_SIZE * 0.55 * dir
+      : (state.valign === "bottom" ? FONT_SIZE * 0.55 * dir : 0);
+
+    c.save();
+    if(state.overflow === "clip"){
+      var outer = radius + FONT_SIZE * 1.3;
+      var inner = Math.max(4, radius - FONT_SIZE * 1.3);
+      var a0 = rad(start);
+      var a1 = rad(start + dir * state.span);
+      c.beginPath();
+      c.arc(CX, CY, outer, a0, a1, dir < 0);
+      c.arc(CX, CY, inner, a1, a0, dir > 0);
+      c.closePath();
+      c.clip();
+    }
+
+    for(i = 0; i < chars.length; i++){
+      var d = chars[i].offset + chars[i].w / 2;
+      var ang = start + dir * deg(d / radius);
+      var px = CX + Math.cos(rad(ang)) * radius;
+      var py = CY + Math.sin(rad(ang)) * radius;
+
+      c.save();
+      c.translate(px, py);
+      /* 镜像：沿切线再翻转 180° */
+      c.rotate(rad((dir > 0 ? ang + 90 : ang - 90) + (flip ? 180 : 0)));
+      text(c, chars[i].ch, 0, offsetY, {
+        size: chars[i].fs, weight: 600,
+        color: chars[i].accent ? THEME.primary : THEME.text,
+        align: "center", baseline: "middle"
+      });
+      c.restore();
+    }
+    c.restore();
+
+    var tip = state.auto ? "自动旋转中 · 点击画面暂停" : "已暂停 · 点击画面恢复旋转";
+    if(state.charstyle) tip += " · 逐字样式";
+    if(flip) tip += " · 镜像";
+    text(c, tip, W / 2, 226, { size: 10.5, color: THEME.faint, align: "center" });
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.cursor = "pointer";
+  }
+
+  function loop(now){
+    if(!clock.last) clock.last = now;
+    var dt = now - clock.last;
+    clock.last = now;
+    if(state.auto) clock.acc += dt;
+    drawScene(ctx, clock.acc, state.auto);
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 代码 ---------- */
+  function renderCode(){
+    var dir = state.dir === "cw" ? "LV_ARCLABEL_DIR_CLOCKWISE" : "LV_ARCLABEL_DIR_COUNTER_CLOCKWISE";
+    var valign = state.valign === "top" ? "LV_ARCLABEL_TEXT_ALIGN_LEADING"
+      : (state.valign === "bottom" ? "LV_ARCLABEL_TEXT_ALIGN_TRAILING" : "LV_ARCLABEL_TEXT_ALIGN_CENTER");
+    var of = state.overflow === "clip" ? "LV_ARCLABEL_OVERFLOW_CLIP" : "LV_ARCLABEL_OVERFLOW_VISIBLE";
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成；0° 在 3 点钟方向，角度顺时针增长 */</span>');
+    L.push('lv_obj_t * arclabel = <span class="fn">lv_arclabel_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_arclabel_set_text</span>(arclabel, ' + JSON.stringify(state.text || "") + ');');
+    L.push('<span class="fn">lv_arclabel_set_radius</span>(arclabel, <span class="num">' + state.radius + '</span>);');
+    L.push('<span class="fn">lv_arclabel_set_angle_start</span>(arclabel, <span class="num">' + state.start + '</span>);');
+    L.push('<span class="fn">lv_arclabel_set_angle_size</span>(arclabel, <span class="num">' + state.span + '</span>);');
+    L.push('<span class="fn">lv_arclabel_set_dir</span>(arclabel, <span class="num">' + dir + '</span>);');
+    L.push('<span class="fn">lv_arclabel_set_text_vertical_align</span>(arclabel, <span class="num">' + valign + '</span>);');
+    L.push('<span class="fn">lv_arclabel_set_overflow</span>(arclabel, <span class="num">' + of + '</span>);');
+    L.push('<span class="fn">lv_obj_set_style_text_letter_space</span>(arclabel, <span class="num">' + state.space + '</span>, 0);');
+    L.push('<span class="fn">lv_obj_set_size</span>(arclabel, <span class="num">280</span>, <span class="num">200</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(arclabel);');
+    if(state.charstyle){
+      L.push('');
+      L.push('<span class="cm">/* 逐字样式：偶数下标字符换主题色 + 加大字号（span 级独立样式） */</span>');
+      L.push('<span class="fn">lv_obj_set_style_text_color</span>(arclabel, <span class="fn">lv_color_hex</span>(<span class="num">0x2b7de9</span>), LV_PART_ITEMS | <span class="num">0</span>);');
+    }
+    if(state.mirror === "flip"){
+      L.push('');
+      L.push('<span class="cm">/* 镜像方向：逐字沿切线翻转 180°（UIArcLabel 无此能力） */</span>');
+      L.push('<span class="fn">lv_arclabel_set_mirror</span>(arclabel, <span class="num">true</span>);');
+    }
+    if(state.auto){
+      L.push('');
+      L.push('<span class="cm">/* 自动旋转：用 lv_anim 持续修改整圈 offset */</span>');
+      L.push('<span class="cm">lv_anim_set_exec_cb(&amp;a, (lv_anim_exec_xcb_t)lv_arclabel_set_offset);</span>');
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  function bindSeg(id, apply){
+    var seg = document.getElementById(id);
+    seg.addEventListener("click", function(e){
+      var btn = e.target.closest ? e.target.closest("button") : null;
+      if(!btn || btn.parentNode !== seg) return;
+      var btns = seg.getElementsByTagName("button");
+      for(var i = 0; i < btns.length; i++){
+        btns[i].className = btns[i] === btn ? "active" : "";
+      }
+      apply(btn.getAttribute("data-v"));
+      renderCode();
+    });
+  }
+
+  function bindRange(id, outId, fmt, apply){
+    var el = document.getElementById(id);
+    var out = document.getElementById(outId);
+    el.addEventListener("input", function(){
+      var v = Number(el.value);
+      out.textContent = fmt(v);
+      apply(v);
+      renderCode();
+    });
+  }
+
+  bindRange("radius", "o-radius", function(v){ return v + " px"; }, function(v){ state.radius = v; });
+  bindRange("start",  "o-start",  function(v){ return v + "°"; },  function(v){ state.start = v; });
+  bindRange("span",   "o-span",   function(v){ return v + "°"; },  function(v){ state.span = v; });
+  bindRange("space",  "o-space",  function(v){ return v + " px"; }, function(v){ state.space = v; });
+
+  bindSeg("dir", function(v){ state.dir = v; });
+  bindSeg("valign", function(v){ state.valign = v; });
+  bindSeg("overflow", function(v){ state.overflow = v; });
+  bindSeg("mirror", function(v){ state.mirror = v; });
+
+  document.getElementById("text").addEventListener("input", function(e){
+    state.text = e.target.value;
+    renderCode();
+  });
+  document.getElementById("charstyle").addEventListener("change", function(e){
+    state.charstyle = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("auto").addEventListener("change", function(e){
+    state.auto = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("ref").addEventListener("change", function(e){
+    state.ref = e.target.checked;
+  });
+  canvas.addEventListener("pointerdown", function(){
+    state.auto = !state.auto;
+    document.getElementById("auto").checked = state.auto;
+    renderCode();
+  });
+
+  /* ---------- 下载 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ---------- PNG 导出 ---------- */
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      if(blob){ download(blob, "arclabel.png"); setStatus("PNG 已保存", true); }
+    });
+  });
+
+  /* ---------- GIF 导出 ---------- */
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网）")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    loadGif().then(function(GIF){
+      var fps = 20;
+      var frames = 80;   /* 4 秒 */
+      var gif = new GIF({ workers: 2, quality: 10, width: W, height: H, workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = W; off.height = H;
+      var octx = off.getContext("2d");
+      var i = 0;
+
+      function step(){
+        if(i < frames){
+          drawScene(octx, i / fps * 1000, true);
+          gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          function fail(msg){
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("finished", function(blob){
+            download(blob, "arclabel.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIArcLabel 操作绑定 + 实时代码
+   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.arclabel）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var u = { angle: 292 };
+
+  function $(id){ return document.getElementById(id); }
+  function api(){ return window.LV2 && window.LV2.api; }
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 frameworks/components/ui_arc_label.cpp） */</span>');
+    L.push('UIArcLabel * label = <span class="fn">new</span> UIArcLabel();');
+    L.push('label-&gt;<span class="fn">SetText</span>(<span class="num">"ARC LABEL TEXT"</span>);');
+    L.push('label-&gt;<span class="fn">SetArcTextRadius</span>(<span class="num">62</span>);');
+    L.push('label-&gt;<span class="fn">SetArcTextAngle</span>(<span class="num">' + u.angle + '</span>);   <span class="cm">// 终止角 ' + u.angle + '°</span>');
+    L.push('label-&gt;<span class="fn">SetArcTextOrientation</span>(<span class="num">ORIENTATION_NORMAL</span>);');
+    L.push('<span class="cm">/* 逐字样式 / 镜像方向无接口，以整体 Style 为主 */</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  (function(){
+    var el = $("uangle");
+    var out = $("o-uangle");
+    el.addEventListener("input", function(){
+      u.angle = Number(el.value);
+      out.textContent = u.angle + "°";
+      var a = api();
+      if(a && a.setAngle) a.setAngle(u.angle);
+      renderCode();
+    });
+  })();
+
+  renderCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

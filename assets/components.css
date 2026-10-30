@@ -1,0 +1,338 @@
+/* ============================================================
+   LVGL 组件样式库（纯 CSS 复刻默认主题外观）
+   命名对应 LVGL 控件名与 part：
+   .lv-btn / .lv-bar__indic / .lv-slider__knob ...
+   ============================================================ */
+
+/* ---------------- Button ---------------- */
+/* 默认：bg=GREY, radius=12, shadow(0 3 3 rgba), pad 12/20, text=TEXT */
+.lv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: var(--lv-pad-small) var(--lv-pad);
+  border: none;
+  border-radius: var(--lv-radius-btn);
+  background: var(--lv-grey);
+  color: var(--lv-text);
+  font: var(--lv-font);
+  box-shadow: 0 3px 3px var(--lv-shadow);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--lv-transition), color var(--lv-transition),
+    box-shadow var(--lv-transition), transform var(--lv-transition),
+    opacity var(--lv-transition);
+}
+
+.lv-btn:hover {
+  background: var(--lv-grey-deep);
+}
+
+/* LV_STATE_PRESSED = recolor 黑 35% */
+.lv-btn:active,
+.lv-btn.is-pressed {
+  background: color-mix(in srgb, var(--lv-grey) 65%, #000);
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* LV_STATE_CHECKED + bg_color_primary */
+.lv-btn.is-checked,
+.lv-btn--primary {
+  background: var(--lv-primary);
+  color: #fff;
+}
+
+.lv-btn.is-checked:hover,
+.lv-btn--primary:hover {
+  background: var(--lv-primary-dark);
+}
+
+.lv-btn.is-checked:active,
+.lv-btn--primary:active {
+  background: color-mix(in srgb, var(--lv-primary) 65%, #000);
+}
+
+/* LV_STATE_DISABLED = recolor 灰 50% */
+.lv-btn:disabled,
+.lv-btn.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.lv-btn--sm {
+  padding: var(--lv-pad-tiny) var(--lv-pad-small);
+  font-size: 12px;
+}
+
+/* ---------------- Label ---------------- */
+.lv-label {
+  display: block;
+  color: var(--lv-text);
+  font: var(--lv-font);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.lv-label--muted {
+  opacity: 0.6;
+}
+
+.lv-label--primary {
+  color: var(--lv-primary);
+}
+
+.lv-label--lg {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.lv-label--sm {
+  font-size: 11px;
+}
+
+/* ---------------- Bar ---------------- */
+.lv-bar {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  border-radius: 8px;
+  background: var(--lv-grey);
+  overflow: hidden;
+}
+
+.lv-bar__indic {
+  height: 100%;
+  width: 0;
+  border-radius: 8px;
+  background: var(--lv-primary);
+  transition: width 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.lv-bar--range .lv-bar__indic {
+  position: absolute;
+  left: 0;
+}
+
+/* ---------------- Slider ---------------- */
+.lv-slider {
+  position: relative;
+  width: 100%;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.lv-slider__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--lv-grey);
+}
+
+.lv-slider__indic {
+  position: absolute;
+  left: 0;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--lv-primary);
+}
+
+.lv-slider__knob {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  border-radius: 50%;
+  background: var(--lv-primary);
+  transform: translateY(-50%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  transition: box-shadow var(--lv-transition), transform var(--lv-transition);
+}
+
+.lv-slider:hover .lv-slider__knob {
+  box-shadow: 0 0 0 6px var(--lv-primary-muted), 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.lv-slider.is-dragging .lv-slider__knob {
+  transform: translateY(-50%) scale(1.12);
+}
+
+/* ---------------- Switch ---------------- */
+.lv-switch {
+  position: relative;
+  width: 56px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--lv-grey);
+  cursor: pointer;
+  transition: background var(--lv-transition);
+  flex: 0 0 auto;
+}
+
+.lv-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: left var(--lv-transition) cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.lv-switch.is-checked {
+  background: var(--lv-primary);
+}
+
+.lv-switch.is-checked::after {
+  left: 31px;
+}
+
+/* ---------------- LED ---------------- */
+.lv-led {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--lv-grey);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.06);
+  transition: background var(--lv-transition), box-shadow var(--lv-transition);
+}
+
+.lv-led.is-on {
+  background: var(--lv-primary);
+  box-shadow: 0 0 8px var(--lv-primary);
+}
+
+/* ---------------- Checkbox ---------------- */
+.lv-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lv-checkbox__box {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--lv-text);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background var(--lv-transition), border-color var(--lv-transition);
+}
+
+.lv-checkbox__box svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+  transition: opacity var(--lv-transition);
+}
+
+.lv-checkbox.is-checked .lv-checkbox__box {
+  background: var(--lv-primary);
+  border-color: var(--lv-primary);
+}
+
+.lv-checkbox.is-checked .lv-checkbox__box svg {
+  opacity: 1;
+}
+
+/* ---------------- Spinner ---------------- */
+/* LVGL spinner 是 60° 弧段绕圈，这里用 conic-gradient 精确还原 */
+.lv-spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--lv-primary) 0deg 60deg,
+    var(--lv-grey) 60deg 360deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  animation: lv-spin 1s linear infinite;
+}
+
+.lv-spinner--reverse {
+  animation-direction: reverse;
+}
+
+.lv-spinner--slow {
+  animation-duration: 2s;
+}
+
+@keyframes lv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------- Arc (SVG 容器) ---------------- */
+.lv-arc {
+  display: block;
+}
+
+.lv-arc__bg {
+  fill: none;
+  stroke: var(--lv-grey);
+  stroke-linecap: round;
+  stroke-width: 12;
+}
+
+.lv-arc__indic {
+  fill: none;
+  stroke: var(--lv-primary);
+  stroke-linecap: round;
+  stroke-width: 12;
+  transition: stroke-dasharray 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.lv-arc__knob {
+  fill: var(--lv-primary);
+  stroke: var(--lv-card);
+  stroke-width: 2;
+}
+
+/* ---------------- Chart ---------------- */
+.lv-chart {
+  display: block;
+  background: var(--lv-card);
+  border: var(--lv-border) solid var(--lv-grey);
+  border-radius: var(--lv-radius);
+}
+
+/* ---------------- 通用布局助手 ---------------- */
+.lv-row {
+  display: flex;
+  align-items: center;
+  gap: var(--lv-pad-small);
+}
+
+.lv-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lv-pad-small);
+}
+
+.lv-fill {
+  width: 100%;
+}
+
+.lv-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dropdown：lv_dropdown vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='7' width='24' height='9' rx='3' fill='none' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M22 10l2 2 2-2' fill='none' stroke='%232b7de9' stroke-width='1.8' stroke-linecap='round'/%3E%3Crect x='9' y='19' width='14' height='7' rx='2' fill='%23e8f1fd' stroke='%232b7de9'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Dropdown：lv_dropdown vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（展开/收起、四向展开、键盘方向键切换高亮），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_dropdown</code>
+        <span class="cmp-tag lv">展开/收起 · 键盘导航</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击输入框展开 / 收起，点击选项完成选择；开启键盘演示后，方向键（↑/↓）在选项间移动虚线高亮，Enter 确认选中——这些能力 ArkUI lite 都要自拼。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>选项<span class="api">lv_dropdown_set_options（逗号 / 换行分隔，最多 6 项）</span></label>
+            <input type="text" id="options" maxlength="120" value="北京, 上海, 广州, 深圳, 杭州, 成都">
+          </div>
+
+          <div class="field">
+            <label>选中索引 set_selected<output id="o-sel">北京 (0)</output><span class="api">lv_dropdown_set_selected</span></label>
+            <input type="range" id="sel" min="0" max="5" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>选中高亮<span class="api">lv_dropdown_set_selected_highlight</span></label>
+            <div class="check"><input type="checkbox" id="highlight" checked><span>选中项浅蓝底 + 主色文字</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>展开方向<span class="api">lv_dropdown_set_dir(LV_DIR_BOTTOM / TOP / LEFT / RIGHT)</span></label>
+            <div class="seg" id="dir">
+              <button type="button" data-val="bottom" class="active">向下</button>
+              <button type="button" data-val="top">向上</button>
+              <button type="button" data-val="left">向左</button>
+              <button type="button" data-val="right">向右</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>箭头符号<span class="api">lv_dropdown_set_symbol</span></label>
+            <div class="seg" id="symbol">
+              <button type="button" data-val="v" class="active">v</button>
+              <button type="button" data-val="^">^</button>
+              <button type="button" data-val="&gt;">&gt;</button>
+              <button type="button" data-val="&lt;">&lt;</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>初始展开<span class="api">lv_dropdown_open / lv_dropdown_close</span></label>
+            <div class="check"><input type="checkbox" id="open" checked><span>页面载入即展开列表</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>键盘操作演示（方向键切换高亮，Enter 确认）<span class="api">LV_EVENT_KEY + lv_dropdown_get_list + 组内方向键导航（ArkUI lite 无键盘操作）</span></label>
+            <div class="check"><input type="checkbox" id="kbd" checked><span>↑/↓ 移动虚线高亮，Enter 选中并收起</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-keydown">模拟 ↓ 键</button>
+          <button type="button" class="btn" id="btn-keyup">模拟 ↑ 键</button>
+          <button type="button" class="btn" id="btn-keyenter">模拟 Enter</button>
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">需 Button + List 自拼</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有下拉框：按钮负责展开、列表放在根节点或弹层里、选中后自己回填文字。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240。静态页提供 PNG 导出（GIF 需联网，WebM 离线可用，本页未启用）。右列代码为按 compare-data.js 最接近实现给出的替代拼装骨架。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_dropdown 复刻（迁移自旧页，新增键盘方向键高亮演示）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+  var BOX_H = 44, ROW_H = 28, LIST_PAD = 4, GAP = 4;
+
+  var state = {
+    options: ["北京", "上海", "广州", "深圳", "杭州", "成都"],
+    selected: 0,
+    dir: "bottom",
+    symbol: "v",
+    highlight: true,
+    open: true,
+    kbd: true,
+    kbIdx: 1
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  view.canvas.style.cursor = "pointer";
+
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function parseOptions(s){
+    var parts = s.split(/[\n,，、]/);
+    var out = [], i, v;
+    for(i = 0; i < parts.length; i++){
+      v = parts[i].replace(/^\s+|\s+$/g, "");
+      if(v) out.push(v);
+      if(out.length >= 6) break;
+    }
+    if(!out.length) out.push("选项一");
+    return out;
+  }
+
+  function layout(){
+    var n = state.options.length;
+    var listH = n * ROW_H + LIST_PAD * 2;
+    var horizontal = state.dir === "left" || state.dir === "right";
+    var boxW = horizontal ? 148 : 204;
+
+    if(!horizontal){
+      var totalH = state.open ? BOX_H + GAP + listH : BOX_H;
+      var groupY = (H - totalH) / 2;
+      var boxY, listY;
+      if(state.open && state.dir === "top"){
+        listY = groupY;
+        boxY = groupY + listH + GAP;
+      }else{
+        boxY = groupY;
+        listY = groupY + BOX_H + GAP;
+      }
+      var x = (W - boxW) / 2;
+      return {
+        open: state.open, n: n, boxW: boxW, boxH: BOX_H, boxX: x, boxY: boxY,
+        listW: boxW, listH: listH, listX: x, listY: listY
+      };
+    }
+
+    var totalW = state.open ? boxW + GAP + boxW : boxW;
+    var groupX = (W - totalW) / 2;
+    var bx, lx;
+    if(state.open && state.dir === "right"){
+      bx = groupX + boxW + GAP;
+      lx = groupX;
+    }else{
+      bx = groupX;
+      lx = groupX + boxW + GAP;
+    }
+    return {
+      open: state.open, n: n, boxW: boxW, boxH: BOX_H, boxX: bx, boxY: (H - BOX_H) / 2,
+      listW: boxW, listH: listH, listX: lx, listY: (H - listH) / 2
+    };
+  }
+
+  function fitText(c, s, maxW, size){
+    s = String(s);
+    if(K.measure(c, s, { size: size }) <= maxW) return s;
+    var out = s;
+    while(out.length && K.measure(c, out + "…", { size: size }) > maxW) out = out.slice(0, -1);
+    return out + "…";
+  }
+
+  function drawList(c, lt){
+    K.box(c, lt.listX, lt.listY, lt.listW, lt.listH, {
+      bg: "#ffffff", radius: 8, borderWidth: 1, border: "#d6d9df",
+      shadow: K.alpha("#1c2128", 0.18), shadowBlur: 16, shadowY: 6
+    });
+
+    var i, opt, rowY, sel;
+    for(i = 0; i < lt.n; i++){
+      opt = state.options[i];
+      rowY = lt.listY + LIST_PAD + i * ROW_H;
+      sel = (i === state.selected);
+      if(sel && state.highlight){
+        K.box(c, lt.listX + 4, rowY + 1, lt.listW - 8, ROW_H - 2, {
+          bg: "#e8f1fd", radius: 6
+        });
+      }
+      K.text(c, fitText(c, opt, lt.listW - 24, 14), lt.listX + 12, rowY + ROW_H / 2,
+        { size: 14, weight: sel ? 600 : 400, color: sel && state.highlight ? K.theme.primary : K.theme.text });
+
+      /* 键盘高亮：虚线框标记当前方向键位置 */
+      if(state.kbd && i === state.kbIdx){
+        c.save();
+        c.strokeStyle = K.theme.orange;
+        c.lineWidth = 1.4;
+        c.setLineDash([4, 3]);
+        K.roundRectPath(c, lt.listX + 3.5, rowY + 1.5, lt.listW - 7, ROW_H - 3, 5);
+        c.stroke();
+        c.restore();
+        K.text(c, "↵", lt.listX + lt.listW - 12, rowY + ROW_H / 2,
+          { size: 12, color: K.theme.orange, align: "center" });
+      }
+    }
+  }
+
+  function draw(c){
+    c.clearRect(0, 0, W, H);
+    var lt = layout();
+
+    K.box(c, lt.boxX, lt.boxY, lt.boxW, BOX_H, {
+      bg: "#ffffff", radius: 8,
+      borderWidth: state.open ? 1.5 : 1,
+      border: state.open ? K.theme.primary : "#d6d9df",
+      shadow: K.alpha(state.open ? "#2b7de9" : "#1c2128", state.open ? 0.14 : 0.05),
+      shadowBlur: 10, shadowY: 3
+    });
+
+    var cur = state.options[state.selected] || "";
+    K.text(c, fitText(c, cur, lt.boxW - 46, 14.5), lt.boxX + 14, lt.boxY + BOX_H / 2 + 1, {
+      size: 14.5, weight: 500, color: K.theme.text
+    });
+
+    K.text(c, state.symbol, lt.boxX + lt.boxW - 22, lt.boxY + BOX_H / 2 + 1, {
+      size: 14, weight: 600, align: "center",
+      color: state.open ? K.theme.primary : K.theme.textFaint
+    });
+
+    if(lt.open) drawList(c, lt);
+
+    if(state.kbd){
+      K.text(c, "键盘高亮：" + (state.options[state.kbIdx] || "") + "（↑/↓ 移动，Enter 确认）",
+        W / 2, H - 10, { size: 10.5, color: K.theme.textFaint, align: "center" });
+    }
+  }
+
+  K.run(function(){ draw(view.ctx); });
+
+  function syncSelectedUI(){
+    var name = state.options[state.selected] || "";
+    document.getElementById("o-sel").textContent = name + " (" + state.selected + ")";
+    var el = document.getElementById("sel");
+    el.max = Math.max(0, state.options.length - 1);
+    el.value = state.selected;
+  }
+
+  function setOpen(on){
+    state.open = on;
+    document.getElementById("open").checked = on;
+    if(on) state.kbIdx = state.selected;
+    renderCode();
+  }
+
+  function kbMove(d){
+    if(!state.open){ setOpen(true); return; }
+    state.kbIdx = clamp(state.kbIdx + d, 0, state.options.length - 1);
+    K.status("键盘高亮：" + state.options[state.kbIdx] + "（Enter 确认）");
+  }
+
+  function kbEnter(){
+    if(!state.open){ setOpen(true); return; }
+    state.selected = state.kbIdx;
+    syncSelectedUI();
+    setOpen(false);
+    renderCode();
+    K.status("已选择：" + state.options[state.selected] + " (" + state.selected + ")");
+  }
+
+  view.canvas.addEventListener("pointerdown", function(e){
+    var rect = view.canvas.getBoundingClientRect();
+    var px = (e.clientX - rect.left) * (W / rect.width);
+    var py = (e.clientY - rect.top) * (H / rect.height);
+    var lt = layout();
+
+    if(px >= lt.boxX && px <= lt.boxX + lt.boxW && py >= lt.boxY && py <= lt.boxY + lt.boxH){
+      setOpen(!state.open);
+      var dirLabel = { bottom: "向下", top: "向上", left: "向左", right: "向右" }[state.dir];
+      K.status(state.open ? "列表已展开（" + dirLabel + "）" : "列表已收起");
+      return;
+    }
+
+    if(!lt.open) return;
+    if(px < lt.listX || px > lt.listX + lt.listW || py < lt.listY || py > lt.listY + lt.listH) return;
+
+    var idx = Math.floor((py - lt.listY - LIST_PAD) / ROW_H);
+    if(idx < 0 || idx >= state.options.length) return;
+    state.selected = idx;
+    state.kbIdx = idx;
+    syncSelectedUI();
+    setOpen(false);
+    renderCode();
+    K.status("已选择：" + state.options[idx] + " (" + idx + ")");
+  });
+
+  /* 真实键盘：方向键移动高亮，Enter 确认 */
+  document.addEventListener("keydown", function(e){
+    if(!state.kbd) return;
+    if(e.key === "ArrowDown"){ kbMove(1); e.preventDefault(); }
+    else if(e.key === "ArrowUp"){ kbMove(-1); e.preventDefault(); }
+    else if(e.key === "Enter"){ kbEnter(); e.preventDefault(); }
+  });
+
+  document.getElementById("btn-keydown").addEventListener("click", function(){ kbMove(1); });
+  document.getElementById("btn-keyup").addEventListener("click", function(){ kbMove(-1); });
+  document.getElementById("btn-keyenter").addEventListener("click", function(){ kbEnter(); });
+
+  /* ---------- 参数 ---------- */
+  document.getElementById("options").addEventListener("input", function(e){
+    state.options = parseOptions(e.target.value);
+    if(state.selected > state.options.length - 1) state.selected = state.options.length - 1;
+    state.kbIdx = clamp(state.kbIdx, 0, state.options.length - 1);
+    syncSelectedUI();
+    renderCode();
+  });
+  document.getElementById("sel").addEventListener("input", function(e){
+    state.selected = Number(e.target.value);
+    state.kbIdx = state.selected;
+    syncSelectedUI();
+    renderCode();
+  });
+  K.bindCheck("highlight", function(on){ state.highlight = on; renderCode(); });
+  K.bindSeg("dir", function(v){ state.dir = v; renderCode(); });
+  K.bindSeg("symbol", function(v){ state.symbol = v; renderCode(); });
+  K.bindCheck("open", function(on){
+    state.open = on;
+    if(on) state.kbIdx = state.selected;
+    renderCode();
+  });
+  K.bindCheck("kbd", function(on){
+    state.kbd = on;
+    if(on) state.kbIdx = state.selected;
+    K.status(on ? "键盘演示已开启：↑/↓ 移动高亮，Enter 确认" : "键盘演示已关闭");
+  });
+
+  /* ---------- C 代码 ---------- */
+  function cstr(s){
+    return '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n") + '"';
+  }
+
+  function renderCode(){
+    var DIR = {
+      bottom: "LV_DIR_BOTTOM", top: "LV_DIR_TOP",
+      left: "LV_DIR_LEFT", right: "LV_DIR_RIGHT"
+    };
+    var SYM = {
+      v: "LV_SYMBOL_DOWN", "^": "LV_SYMBOL_UP",
+      ">": "LV_SYMBOL_RIGHT", "<": "LV_SYMBOL_LEFT"
+    };
+    var horizontal = state.dir === "left" || state.dir === "right";
+    var boxW = horizontal ? 148 : 204;
+    var L = [];
+
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * dd = " + K.fn("lv_dropdown_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(dd, " + K.num(boxW) + ", " + K.num(BOX_H) + ");");
+    L.push(K.fn("lv_obj_center") + "(dd);");
+    L.push(K.fn("lv_dropdown_set_options") + "(dd, " + cstr(state.options.join("\n")) + ");");
+    L.push(K.fn("lv_dropdown_set_selected") + "(dd, " + K.num(state.selected) + ");");
+    L.push(K.fn("lv_dropdown_set_dir") + "(dd, " + K.num(DIR[state.dir]) + ");");
+    L.push(K.fn("lv_dropdown_set_symbol") + "(dd, " + K.num(SYM[state.symbol]) + ");");
+    L.push(K.fn("lv_dropdown_set_selected_highlight") + "(dd, " + K.num(state.highlight ? "true" : "false") + ");");
+
+    if(state.open){
+      L.push(K.fn("lv_dropdown_open") + "(dd);");
+    }else{
+      L.push(K.fn("lv_dropdown_close") + "(dd);");
+    }
+
+    if(state.kbd){
+      L.push("");
+      L.push(K.cm("/* 键盘操作：把下拉框加入组，方向键在选项间移动，Enter 确认 */"));
+      L.push("lv_obj_t * list = " + K.fn("lv_dropdown_get_list") + "(dd);" + K.cm(" /* 获取列表对象 */"));
+      L.push(K.fn("lv_group_add_obj") + "(lv_group_get_default(), dd);");
+      L.push(K.fn("lv_obj_add_event_cb") + "(dd, dd_key_cb, LV_EVENT_KEY, NULL);");
+    }
+
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "dropdown.png");
+  });
+
+  syncSelectedUI();
+  renderCode();
+  K.status("点击输入框展开 / 收起，点击选项完成选择");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js dropdown.alt：UIButton + UIList 手动拼装
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_dropdown，以下为替代拼装骨架（静态示例） */"));
+  L.push(cm("/* 思路：UIButton 负责展开，UIList 放根节点，选中后回填文字 */"));
+  L.push("");
+  L.push("static const char * OPTIONS[] = { \"北京\", \"上海\", \"广州\", \"深圳\", \"杭州\", \"成都\" };");
+  L.push("");
+  L.push(cm("/* 1. 触发按钮：显示当前选中项 */"));
+  L.push("UIButton * trigger = " + fn("new") + " UIButton();");
+  L.push("trigger-&gt;" + fn("SetPosition") + "(" + num(78) + ", " + num(98) + ");");
+  L.push("trigger-&gt;" + fn("SetWidth") + "(" + num(204) + ");");
+  L.push("trigger-&gt;" + fn("SetHeight") + "(" + num(44) + ");");
+  L.push("UILabel * triggerText = " + fn("new") + " UILabel();");
+  L.push("triggerText-&gt;" + fn("SetText") + "(\"北京\");");
+  L.push("trigger-&gt;" + fn("Add") + "(triggerText);");
+  L.push("");
+  L.push(cm("/* 2. 选项列表：Adapter 返回每行 UILabel，挂到根视图（初始隐藏） */"));
+  L.push("UIList * list = " + fn("new") + " UIList();");
+  L.push("list-&gt;" + fn("SetPosition") + "(" + num(78) + ", " + num(146) + ");");
+  L.push("list-&gt;" + fn("SetWidth") + "(" + num(204) + ");");
+  L.push("list-&gt;" + fn("SetHeight") + "(" + num(168) + ");");
+  L.push("list-&gt;" + fn("SetAdapter") + "(" + num("&optionsAdapter") + ");");
+  L.push("list-&gt;" + fn("SetVisible") + "(false);   " + cm("/* 点击 trigger 时 SetVisible(true) 展开 */"));
+  L.push("");
+  L.push(cm("/* 3. 选中回调：回填按钮文字并收起（全部自己维护） */"));
+  L.push("trigger-&gt;" + fn("SetOnClickListener") + "(" + num("&toggleListener") + ");");
+  L.push("list-&gt;" + fn("SetItemClickListener") + "(" + num("&selectListener") + ");");
+  L.push("");
+  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(trigger);");
+  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(list);");
+  L.push("");
+  L.push(cm("/* selectListener::OnClick 内："));
+  L.push("   triggerText-&gt;SetText(OPTIONS[index]);");
+  L.push("   list-&gt;SetVisible(false);   // 手动收起，无内置展开动画与键盘导航 */");
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

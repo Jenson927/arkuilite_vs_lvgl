@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arc：lv_arc vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23e3e6ea' stroke-width='6'/%3E%3Cpath d='M16 5a11 11 0 0 1 9.5 16.5' fill='none' stroke='%232b7de9' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Arc：lv_arc vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（起止角、背景弧/指示弧分离配色、旋钮拖拽、对称模式与圆头线帽），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_arc</code>
+        <span class="cmp-tag lv">拖拽 · 对称模式</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">在圆环上按住拖动即可改值（默认开启）；切换对称模式后指示弧从中心角向两端生长。背景弧与指示弧颜色独立可调。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>起始角 start_angle<output id="o-start-angle">135°</output><span class="api">lv_arc_set_bg_angles</span></label>
+            <input type="range" id="start-angle" min="0" max="360" step="1" value="135">
+          </div>
+          <div class="field">
+            <label>结束角 end_angle<output id="o-end-angle">45°</output><span class="api">lv_arc_set_bg_angles</span></label>
+            <input type="range" id="end-angle" min="0" max="360" step="1" value="45">
+          </div>
+
+          <div class="field">
+            <label>当前值 value<output id="o-value">60</output><span class="api">lv_arc_set_value</span></label>
+            <input type="range" id="value" min="0" max="100" step="1" value="60">
+          </div>
+          <div class="field">
+            <label>线宽 arc_width<output id="o-width">18 px</output><span class="api">lv_obj_set_style_arc_width</span></label>
+            <input type="range" id="width" min="4" max="40" step="1" value="18">
+          </div>
+
+          <div class="field">
+            <label>最小值 min<output id="o-min">0</output><span class="api">lv_arc_set_range</span></label>
+            <input type="range" id="min" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>最大值 max<output id="o-max">100</output><span class="api">lv_arc_set_range</span></label>
+            <input type="range" id="max" min="0" max="200" step="1" value="100">
+          </div>
+
+          <div class="field">
+            <label>指示弧颜色 INDICATOR<span class="api">lv_obj_set_style_arc_color(LV_PART_INDICATOR)</span></label>
+            <input type="color" id="color" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>背景弧颜色 MAIN<span class="api">lv_obj_set_style_arc_color(LV_PART_MAIN)</span></label>
+            <input type="color" id="bg" value="#e3e6ea">
+          </div>
+
+          <div class="field wide">
+            <label>工作模式 mode<span class="api">lv_arc_set_mode(LV_ARC_MODE_NORMAL / SYMMETRICAL)</span></label>
+            <div class="seg" id="mode">
+              <button type="button" data-val="normal" class="active">NORMAL 单向</button>
+              <button type="button" data-val="symmetrical">SYMMETRICAL 对称</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>圆头线帽 LV_STYLE_LINE_CAP<span class="api">lv_obj_set_style_arc_rounded</span></label>
+            <div class="check"><input type="checkbox" id="cap" checked><span>弧线两端使用圆头</span></div>
+          </div>
+          <div class="field">
+            <label>显示旋钮 LV_PART_KNOB<span class="api">lv_obj_remove_style(LV_PART_KNOB)</span></label>
+            <div class="check"><input type="checkbox" id="knob" checked><span>在进度弧末端画端点旋钮</span></div>
+          </div>
+
+          <div class="field">
+            <label>自动往返演示<span class="api">数值在 min~max 之间来回</span></label>
+            <div class="check"><input type="checkbox" id="auto" checked><span>数值在 min~max 之间来回</span></div>
+          </div>
+          <div class="field">
+            <label>拖动模式<span class="api">LV_EVENT_PRESSING + 角度换算改值</span></label>
+            <div class="check"><input type="checkbox" id="drag" checked><span>在画布上按住拖动改值</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一个来回）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一个来回）</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 只有只读的 UICircleProgress 进度环；可交互弧形滑块要在 UIView::OnDraw 里自绘弧并处理拖动角度。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>角度约定与 LVGL 一致：0° 在 3 点钟方向，角度顺时针增长。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列代码为按 compare-data.js 最接近实现给出的替代拼装骨架。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_arc 复刻（迁移自旧页，拖动默认开启，新增对称模式）
+   ===================================================================== */
+(function () {
+  "use strict";
+  var K = LVKit, SIZE = 280;
+  var RADIUS = 100;         // 弧线中心线半径
+  var DURATION = 1600;      // 单程时长（自动演示）
+
+  var state = {
+    start: 135,
+    end: 45,
+    value: 60,
+    min: 0,
+    max: 100,
+    arcWidth: 18,
+    color: "#2b7de9",
+    bg: "#e3e6ea",
+    cap: true,
+    knob: true,
+    mode: "normal",
+    auto: true,
+    drag: true
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(SIZE, SIZE);
+  var t0 = performance.now();
+
+  /* ---------- 工具 ---------- */
+  function rad(d) { return d * Math.PI / 180; }
+  function normDeg(d) { return ((d % 360) + 360) % 360; }
+
+  /* 起始角到结束角之间的顺时针扫过角度 */
+  function sweep() {
+    var s = state.end - state.start;
+    while (s <= 0) s += 360;
+    return s;
+  }
+
+  function ratio(v) {
+    var span = state.max - state.min;
+    if (span <= 0) return 0;
+    return K.clamp((v - state.min) / span, 0, 1);
+  }
+
+  /* 自动演示时，t 时刻的数值 */
+  function valueAt(t) {
+    if (!state.auto) return state.value;
+    var cycle = DURATION * 2;
+    var p = (t % cycle) / cycle;
+    var k = p < 0.5 ? p * 2 : (1 - p) * 2;
+    return state.min + k * (state.max - state.min);
+  }
+
+  /* 当前值对应的指示器角度 */
+  function indAngle(v) {
+    return state.start + sweep() * ratio(v);
+  }
+
+  /* 对称模式：指示弧中心角与半扫过角 */
+  function symAngles(v) {
+    var mid = state.start + sweep() / 2;
+    var half = sweep() / 2 * ratio(v);
+    return { mid: mid, half: half };
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c, tMs) {
+    var cx = SIZE / 2, cy = SIZE / 2;
+
+    c.clearRect(0, 0, SIZE, SIZE);
+    c.lineCap = state.cap ? "round" : "butt";
+
+    /* 底环 MAIN */
+    c.beginPath();
+    c.arc(cx, cy, RADIUS, rad(state.start), rad(state.start + sweep()), false);
+    c.strokeStyle = state.bg;
+    c.lineWidth = state.arcWidth;
+    c.stroke();
+
+    /* 进度弧 INDICATOR */
+    var v = valueAt(tMs);
+    var p = ratio(v);
+    var ends = [];
+
+    if (state.mode === "symmetrical") {
+      var sa = symAngles(v);
+      if (p > 0.002) {
+        c.beginPath();
+        c.arc(cx, cy, RADIUS, rad(sa.mid - sa.half), rad(sa.mid + sa.half), false);
+        c.strokeStyle = state.color;
+        c.lineWidth = state.arcWidth;
+        c.stroke();
+      }
+      ends = [sa.mid - sa.half, sa.mid + sa.half];
+    } else {
+      var ai = indAngle(v);
+      if (p > 0.002) {
+        c.beginPath();
+        c.arc(cx, cy, RADIUS, rad(state.start), rad(ai), false);
+        c.strokeStyle = state.color;
+        c.lineWidth = state.arcWidth;
+        c.stroke();
+      }
+      ends = [ai];
+    }
+
+    /* 端点旋钮 KNOB */
+    if (state.knob) {
+      var kr = Math.max(7, state.arcWidth / 2 + 4);
+      for (var i = 0; i < ends.length; i++) {
+        var kx = cx + RADIUS * Math.cos(rad(ends[i]));
+        var ky = cy + RADIUS * Math.sin(rad(ends[i]));
+        c.beginPath();
+        c.arc(kx, ky, kr, 0, Math.PI * 2);
+        c.fillStyle = "#ffffff";
+        c.fill();
+        c.lineWidth = 2;
+        c.strokeStyle = state.color;
+        c.stroke();
+      }
+    }
+
+    /* 中心数值 */
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillStyle = "#1c2128";
+    c.font = '600 34px ui-monospace, Consolas, "Liberation Mono", monospace';
+    c.fillText(String(Math.round(v)), cx, cy - 2);
+    c.fillStyle = "#8a929c";
+    c.font = '12px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif';
+    c.fillText("min " + state.min + " / max " + state.max +
+      (state.mode === "symmetrical" ? " · 对称" : ""), cx, cy + 28);
+  }
+
+  K.run(function (now) {
+    draw(view.ctx, now - t0);
+    if (state.auto) syncValueUI(valueAt(now - t0));
+  });
+
+  /* ---------- UI 同步 ---------- */
+  function syncValueUI(v) {
+    var n = Math.round(v);
+    if (n !== state.value) {
+      state.value = n;
+      renderCode();
+    }
+    document.getElementById("o-value").textContent = n;
+    document.getElementById("value").value = n;
+  }
+
+  function syncRangeUI() {
+    document.getElementById("o-min").textContent = state.min;
+    document.getElementById("o-max").textContent = state.max;
+    document.getElementById("min").value = state.min;
+    document.getElementById("max").value = state.max;
+    var el = document.getElementById("value");
+    el.min = state.min;
+    el.max = state.max;
+    el.value = Math.round(state.value);
+    document.getElementById("o-value").textContent = Math.round(state.value);
+  }
+
+  function renderCode() {
+    var s = normDeg(Math.round(state.start));
+    var e = normDeg(Math.round(state.end));
+    var ai = normDeg(Math.round(indAngle(state.value)));
+    var L = [];
+
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * arc = " + K.fn("lv_arc_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(arc, " + K.num(SIZE) + ", " + K.num(SIZE) + ");");
+    L.push(K.fn("lv_obj_center") + "(arc);");
+    L.push(K.fn("lv_arc_set_bg_angles") + "(arc, " + K.num(s) + ", " + K.num(e) + ");");
+    L.push(K.fn("lv_arc_set_range") + "(arc, " + K.num(state.min) + ", " + K.num(state.max) + ");");
+    L.push(K.fn("lv_arc_set_value") + "(arc, " + K.num(Math.round(state.value)) + ");");
+    L.push(K.fn("lv_arc_set_mode") + "(arc, " +
+      K.num(state.mode === "symmetrical" ? "LV_ARC_MODE_SYMMETRICAL" : "LV_ARC_MODE_NORMAL") + ");");
+    L.push(K.cm("/* 可选：直接指定指示器角度（会覆盖 value） */"));
+    L.push(K.fn("lv_arc_set_angles") + "(arc, " + K.num(s) + ", " + K.num(ai) + ");");
+
+    if (!state.knob) {
+      L.push(K.fn("lv_obj_remove_style") + "(arc, NULL, LV_PART_KNOB);");
+    }
+
+    L.push(K.fn("lv_obj_set_style_arc_width") + "(arc, " + K.num(state.arcWidth) + ", LV_PART_MAIN);");
+    L.push(K.fn("lv_obj_set_style_arc_width") + "(arc, " + K.num(state.arcWidth) + ", LV_PART_INDICATOR);");
+    L.push(K.fn("lv_obj_set_style_arc_color") + "(arc, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.bg)) + "), LV_PART_MAIN);");
+    L.push(K.fn("lv_obj_set_style_arc_color") + "(arc, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.color)) + "), LV_PART_INDICATOR);");
+    L.push(K.fn("lv_obj_set_style_arc_rounded") + "(arc, " + K.num(state.cap ? "true" : "false") + ", LV_PART_INDICATOR);");
+
+    K.code(L);
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  K.bindRange("start-angle", function (v) { return v + "°"; }, function (v) {
+    state.start = v; renderCode();
+  });
+  K.bindRange("end-angle", function (v) { return v + "°"; }, function (v) {
+    state.end = v; renderCode();
+  });
+  K.bindRange("value", null, function (v) {
+    state.value = v;
+    state.auto = false;
+    document.getElementById("auto").checked = false;
+    syncValueUI(v);
+  });
+  K.bindRange("width", function (v) { return v + " px"; }, function (v) {
+    state.arcWidth = v; renderCode();
+  });
+  K.bindRange("min", null, function (v) {
+    state.min = K.clamp(v, 0, 200);
+    if (state.min >= state.max) {
+      state.min = state.max - 1;
+      document.getElementById("min").value = state.min;
+    }
+    state.value = K.clamp(state.value, state.min, state.max);
+    syncRangeUI();
+    renderCode();
+  });
+  K.bindRange("max", null, function (v) {
+    state.max = K.clamp(v, 0, 200);
+    if (state.max <= state.min) {
+      state.max = state.min + 1;
+      document.getElementById("max").value = state.max;
+    }
+    state.value = K.clamp(state.value, state.min, state.max);
+    syncRangeUI();
+    renderCode();
+  });
+
+  document.getElementById("color").addEventListener("input", function (e) {
+    state.color = e.target.value; renderCode();
+  });
+  document.getElementById("bg").addEventListener("input", function (e) {
+    state.bg = e.target.value; renderCode();
+  });
+  K.bindCheck("cap", function (on) { state.cap = on; renderCode(); });
+  K.bindCheck("knob", function (on) { state.knob = on; renderCode(); });
+  K.bindCheck("auto", function (on) {
+    state.auto = on;
+    if (!on) syncValueUI(state.value);
+  });
+  K.bindCheck("drag", function (on) {
+    state.drag = on;
+    view.canvas.style.cursor = on ? "crosshair" : "default";
+    K.status(on ? "拖动改值已开启：在圆环上按住拖动" : "拖动改值已关闭");
+  });
+
+  K.bindSeg("mode", function (v) {
+    state.mode = v;
+    renderCode();
+    K.status(v === "symmetrical" ? "对称模式：指示弧从中心角向两端生长" : "普通模式：指示弧从起始角单向生长");
+  });
+
+  /* ---------- 画布拖动改值 ---------- */
+  (function () {
+    var dragging = false;
+
+    function angleAt(e) {
+      var r = view.canvas.getBoundingClientRect();
+      var x = (e.clientX - r.left) * (SIZE / r.width) - SIZE / 2;
+      var y = (e.clientY - r.top) * (SIZE / r.height) - SIZE / 2;
+      return normDeg(Math.atan2(y, x) * 180 / Math.PI);
+    }
+
+    function apply(e) {
+      var a = angleAt(e);
+      var rel = normDeg(a - state.start);
+      if (rel > sweep()) return;               /* 落在缺口里，忽略 */
+      var pv = rel / sweep();
+      if (state.mode === "symmetrical") {
+        /* 距中心角的偏移换算为比例 */
+        var mid = sweep() / 2;
+        pv = Math.abs(rel - mid) / mid;
+      }
+      state.value = Math.round(state.min + pv * (state.max - state.min));
+      syncValueUI(state.value);
+      state.auto = false;
+      document.getElementById("auto").checked = false;
+      renderCode();
+    }
+
+    view.canvas.addEventListener("pointerdown", function (e) {
+      if (!state.drag) return;
+      dragging = true;
+      view.canvas.setPointerCapture(e.pointerId);
+      apply(e);
+    });
+    view.canvas.addEventListener("pointermove", function (e) {
+      if (dragging) apply(e);
+    });
+    view.canvas.addEventListener("pointerup", function () { dragging = false; });
+    view.canvas.addEventListener("pointercancel", function () { dragging = false; });
+  })();
+
+  /* ---------- 导出 ---------- */
+  document.getElementById("btn-gif").addEventListener("click", function () {
+    K.exportGif({
+      name: "arc.gif", w: SIZE, h: SIZE, fps: 20, duration: DURATION * 2,
+      frame: function (c, t) { draw(c, t); },
+      before: function () { var prev = state.auto; state.auto = true; return prev; },
+      after: function (prev) { state.auto = prev; }
+    });
+  });
+
+  document.getElementById("btn-webm").addEventListener("click", function () {
+    K.exportWebm({
+      canvas: view.canvas, name: "arc.webm", duration: DURATION * 2,
+      before: function () { var prev = state.auto; state.auto = true; return prev; },
+      after: function (prev) { state.auto = prev; }
+    });
+  });
+
+  view.canvas.style.cursor = "crosshair";
+  syncRangeUI();
+  renderCode();
+  K.status("在圆环上按住拖动改值，或用滑杆调整");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js arc.alt：UIView::OnDraw 自绘弧 + 拖动角度处理
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_arc，以下为替代自绘骨架（静态示例） */"));
+  L.push(cm("/* UICircleProgress 只读：SetStartAngle/SetEndAngle 仅展示进度，不能拖拽 */"));
+  L.push("");
+  L.push("class ArcView : " + fn("public") + " UIView {");
+  L.push("public:");
+  L.push("    void " + fn("OnDraw") + "(const Rect&amp; invalidatedArea) " + fn("override") + " {");
+  L.push("        " + cm("/* 背景弧：Canvas 画圆弧（线宽/颜色自定，无圆头线帽参数） */"));
+  L.push("        canvas_-&gt;" + fn("DrawArc") + "(" + num(140) + ", " + num(140) + ", " + num(100) + ", startAngle_, sweep_, " + num(18) + ", bgColor_);");
+  L.push("        " + cm("/* 指示弧：按 value 比例计算终止角后单独画 */"));
+  L.push("        canvas_-&gt;" + fn("DrawArc") + "(" + num(140) + ", " + num(140) + ", " + num(100) + ", startAngle_, indSweep_, " + num(18) + ", fgColor_);");
+  L.push("        " + cm("/* 旋钮：在指示弧末端画一个实心圆 */"));
+  L.push("        canvas_-&gt;" + fn("DrawCircle") + "(knobX_, knobY_, " + num(11) + ", fgColor_);");
+  L.push("    }");
+  L.push("");
+  L.push("    bool " + fn("OnTouchEvent") + "(const TouchEvent&amp; event) " + fn("override") + " {");
+  L.push("        " + cm("/* PRESS/MOVE：atan2 求触点角度，换算比例后 Invalidate() 重绘 */"));
+  L.push("        value_ = " + fn("AngleToValue") + "(" + fn("atan2") + "(y - cy, x - cx));");
+  L.push("        " + fn("Invalidate") + "();   " + cm("/* 无 VALUE_CHANGED 事件，需自己回调 */"));
+  L.push("        " + fn("return") + " " + num("true") + ";");
+  L.push("    }");
+  L.push("};");
+  L.push("");
+  L.push(cm("/* 对称模式：指示弧起止角改为 mid ± sweep/2 * ratio，同样自己算。 */"));
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spinner：lv_spinner vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='%23e3e6ea' stroke-width='4'/%3E%3Cpath d='M16 4 A12 12 0 0 1 27 20' fill='none' stroke='%232b7de9' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Spinner：lv_spinner vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（不定长旋转弧，弧长 / 速度 / 中心文字实时可调），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，仅展示能力缺口与最接近的替代思路。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_spinner</code>
+        <span class="cmp-tag lv">不定长旋转弧 · 内置动画</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">静态淡环 + 一段高亮弧匀速旋转：弧长、一圈时长（速度）、中心文字都可实时改——这些右列全都没有，要自绘 + 定时器手搓。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>弧长 angle<output id="o-angle">200°</output><span class="api">lv_spinner_set_anim_params(spinner, duration, angle)</span></label>
+            <input type="range" id="angle" min="30" max="360" step="5" value="200">
+          </div>
+          <div class="field">
+            <label>速度（一圈时长）<output id="o-duration">10000 ms</output><span class="api">lv_spinner_set_anim_params 第一参数（值越小越快）</span></label>
+            <input type="range" id="duration" min="800" max="20000" step="200" value="10000">
+          </div>
+
+          <div class="field">
+            <label>线宽 arc_width<output id="o-width">8 px</output><span class="api">lv_obj_set_style_arc_width</span></label>
+            <input type="range" id="width" min="2" max="20" step="1" value="8">
+          </div>
+          <div class="field">
+            <label>尺寸<output id="o-size">160 px</output><span class="api">lv_obj_set_size</span></label>
+            <input type="range" id="size" min="80" max="200" step="10" value="160">
+          </div>
+
+          <div class="field">
+            <label>指示弧颜色 arc_color<output id="o-indicator">#2b7de9</output><span class="api">lv_obj_set_style_arc_color(..., LV_PART_INDICATOR)</span></label>
+            <input type="color" id="indicator" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>静态环颜色 MAIN<output id="o-track">#e3e6ea</output><span class="api">lv_obj_set_style_arc_color(..., LV_PART_MAIN)</span></label>
+            <input type="color" id="track" value="#e3e6ea">
+          </div>
+
+          <div class="field wide">
+            <label>中心文字<output id="o-clen">5 字符</output><span class="api">lv_label_create(spinner) + lv_obj_center（ArkUI lite 无中心文字承载）</span></label>
+            <input type="text" id="ctext" value="Loading" maxlength="12">
+          </div>
+
+          <div class="field">
+            <label>旋转方向<span class="api">动画回调里反转角速度</span></label>
+            <div class="seg" id="dir">
+              <button type="button" data-val="1" class="active">顺时针</button>
+              <button type="button" data-val="-1">逆时针</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>舞台背景<span class="api">透明画布便于导出 GIF</span></label>
+            <div class="check"><input type="checkbox" id="transparent" checked><span>透明背景</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一圈）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一圈）</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有旋转加载控件：UICircleProgress 是定值进度环，不定长旋转动画要自己写定时器 + DrawArc，中心文字还得另挂 UILabel。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列「无对应组件」卡片、右上角红标与差异表格由 cmp2.js 自动渲染。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_spinner 复刻（迁移自旧页，新增中心文字输入，
+   舞台固定 360×240，弧长 / 速度 / 方向实时可调）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+
+  var state = {
+    angle: 200,
+    duration: 10000,
+    width: 8,
+    size: 160,
+    indicator: "#2b7de9",
+    track: "#e3e6ea",
+    ctext: "Loading",
+    dir: 1,
+    transparent: true
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+
+  /* ---------- 绘制：tMs 为相对起点的毫秒数 ---------- */
+  function draw(c, tMs){
+    c.clearRect(0, 0, W, H);
+    if(!state.transparent){
+      c.fillStyle = "#ffffff";
+      c.fillRect(0, 0, W, H);
+    }
+    var s = state.size;
+    var cx = W / 2, cy = H / 2;
+    var r = s / 2 - state.width / 2 - 2;
+
+    /* 静态环 MAIN */
+    c.beginPath();
+    c.arc(cx, cy, r, 0, Math.PI * 2);
+    c.strokeStyle = state.track;
+    c.lineWidth = state.width;
+    c.lineCap = "round";
+    c.stroke();
+
+    /* 旋转指示弧 INDICATOR */
+    var rot = (tMs / state.duration) * Math.PI * 2;
+    var start = -Math.PI / 2 + rot * state.dir;
+    var sweep = state.angle * Math.PI / 180 * state.dir;
+    c.beginPath();
+    c.arc(cx, cy, r, start, start + sweep, state.dir < 0);
+    c.strokeStyle = state.indicator;
+    c.lineWidth = state.width;
+    c.lineCap = "round";
+    c.stroke();
+
+    /* 中心文字（lv_label + lv_obj_center） */
+    if(state.ctext){
+      var fs = K.clamp(Math.round(s * 0.13), 10, 20);
+      K.text(c, state.ctext, cx, cy, {
+        size: fs, weight: 600, color: state.indicator, align: "center"
+      });
+    }
+  }
+
+  K.run(function(now){ draw(view.ctx, now); });
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * spinner = " + K.fn("lv_spinner_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(spinner, " + K.num(state.size) + ", " + K.num(state.size) + ");");
+    L.push(K.fn("lv_obj_center") + "(spinner);");
+    L.push(K.fn("lv_spinner_set_anim_params") + "(spinner, " + K.num(state.duration) + ", " + K.num(state.angle) + ");");
+    L.push(K.fn("lv_obj_set_style_arc_width") + "(spinner, " + K.num(state.width) + ", LV_PART_MAIN | LV_PART_INDICATOR);");
+    L.push(K.fn("lv_obj_set_style_arc_color") + "(spinner, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.track)) + "), LV_PART_MAIN);");
+    L.push(K.fn("lv_obj_set_style_arc_color") + "(spinner, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.indicator)) + "), LV_PART_INDICATOR);");
+    if(state.ctext){
+      L.push("");
+      L.push(K.cm("/* 中心文字：挂一个居中的 lv_label */"));
+      L.push("lv_obj_t * label = " + K.fn("lv_label_create") + "(spinner);");
+      L.push(K.fn("lv_label_set_text") + "(label, " + JSON.stringify(state.ctext) + ");");
+      L.push(K.fn("lv_obj_center") + "(label);");
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  K.bindRange("angle", function(v){ return v + "°"; }, function(v){ state.angle = v; renderCode(); });
+  K.bindRange("duration", function(v){ return v + " ms"; }, function(v){ state.duration = v; renderCode(); });
+  K.bindRange("width", function(v){ return v + " px"; }, function(v){ state.width = v; renderCode(); });
+  K.bindRange("size", function(v){ return v + " px"; }, function(v){ state.size = v; renderCode(); });
+
+  document.getElementById("indicator").addEventListener("input", function(e){
+    state.indicator = e.target.value;
+    document.getElementById("o-indicator").textContent = state.indicator;
+    renderCode();
+  });
+  document.getElementById("track").addEventListener("input", function(e){
+    state.track = e.target.value;
+    document.getElementById("o-track").textContent = state.track;
+    renderCode();
+  });
+  document.getElementById("ctext").addEventListener("input", function(e){
+    state.ctext = e.target.value;
+    document.getElementById("o-clen").textContent = state.ctext.length + " 字符";
+    renderCode();
+  });
+  K.bindSeg("dir", function(v){ state.dir = Number(v); });
+  K.bindCheck("transparent", function(on){ state.transparent = on; });
+
+  /* ---------- 导出 ---------- */
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "spinner.png");
+  });
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "spinner.gif", w: W, h: H, fps: 20, duration: state.duration,
+      frame: function(c, t){ draw(c, t); },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: view.canvas, name: "spinner.webm", duration: state.duration,
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js spinner.alt：UICircleProgress + 定时器自绘旋转弧
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_spinner，以下为替代拼装骨架（静态示例） */"));
+  L.push(cm("/* 思路：自定义 UIView + Animator 定时回调，每帧推进起始角并 DrawArc */"));
+  L.push("");
+  L.push("class SpinnerView : public UIView, public AnimatorCallback {");
+  L.push("public:");
+  L.push("    SpinnerView() { " + fn("SetPosition") + "(" + num(0) + ", " + num(0) + "); " + fn("SetSize") + "(" + num(160) + ", " + num(160) + "); }");
+  L.push("    virtual ~SpinnerView() {}");
+  L.push("");
+  L.push("    void " + fn("Callback") + "() override");
+  L.push("    {");
+  L.push("        startAngle_ = (startAngle_ + " + num(6) + ") % " + num(360) + ";");
+  L.push(cm("        /* 弧长 200° 固定写死，无法像 lv_spinner 一样设参数 */"));
+  L.push("        " + fn("InvalidateRect") + "(rect_);");
+  L.push("    }");
+  L.push("");
+  L.push("    bool " + fn("OnDraw") + "(const Canvas &canvas, const Rect &dirty) override");
+  L.push("    {");
+  L.push(cm("        /* 静态底环 */"));
+  L.push("        canvas." + fn("DrawArc") + "(center_, radius_, " + num(0) + ", " + num(360) + ", track_, " + num(8) + ", " + num(0) + ");");
+  L.push(cm("        /* 旋转指示弧 */"));
+  L.push("        canvas." + fn("DrawArc") + "(center_, radius_, startAngle_, " + num(200) + ", indicator_, " + num(8) + ", " + num(0) + ");");
+  L.push("        return true;");
+  L.push("    }");
+  L.push("private:");
+  L.push("    Point center_ = {" + num(80) + ", " + num(80) + "};");
+  L.push("    int16_t radius_ = " + num(70) + ";");
+  L.push("    int16_t startAngle_ = " + num(0) + ";");
+  L.push("    ColorType track_ = Color::" + fn("GetColorFromRGB") + "(" + num("0xe3") + ", " + num("0xe6") + ", " + num("0xea") + ").full;");
+  L.push("    ColorType indicator_ = Color::" + fn("GetColorFromRGB") + "(" + num("0x2b") + ", " + num("0x7d") + ", " + num("0xe9") + ").full;");
+  L.push("};");
+  L.push("");
+  L.push("SpinnerView * spinner = " + fn("new") + " SpinnerView();");
+  L.push("AnimatorManager::" + fn("GetInstance") + "().Start(spinner, " + num(0) + ", " + num(10000) + ");");
+  L.push(cm("/* 中心文字：另挂 UILabel 并手动居中，与旋转弧完全脱钩 */"));
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

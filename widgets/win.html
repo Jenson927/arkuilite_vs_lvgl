@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Win：lv_win vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='6' width='24' height='20' rx='5' fill='%232b7de9'/%3E%3Crect x='4' y='6' width='24' height='7' rx='4' fill='%231f6fd0'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Win：lv_win vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>：标题栏 + 动态增删的窗口按钮，支持拖动标题栏移动窗口；
+      右列 ArkUI lite <b>没有对应的窗口组件</b>，仅展示 LVGL 能力与替代思路（UIViewGroup 自绘标题栏）。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_win</code>
+        <span class="cmp-tag lv">标题栏 · 按钮可增删</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">按住标题栏可拖动窗口（可开关拖拽）；点击标题栏按钮分别触发最小化 / 最大化 / 关闭。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>标题文本 title<span class="api">lv_win_add_title(win, txt)</span></label>
+            <input type="text" id="title" value="系统设置" maxlength="16">
+          </div>
+
+          <div class="field">
+            <label>窗口宽度 width<output id="o-w">280 px</output><span class="api">lv_obj_set_width(win, w)</span></label>
+            <input type="range" id="w" min="220" max="310" step="2" value="280">
+          </div>
+          <div class="field">
+            <label>窗口高度 height<output id="o-h">190 px</output><span class="api">lv_obj_set_height(win, h)</span></label>
+            <input type="range" id="h" min="140" max="220" step="2" value="190">
+          </div>
+
+          <div class="field">
+            <label>内容条目数 rows<output id="o-rows">3</output><span class="api">lv_label_create(lv_win_get_content(win))</span></label>
+            <input type="range" id="rows" min="1" max="5" step="1" value="3">
+          </div>
+          <div class="field">
+            <label>拖动移动 drag<span class="api">在画布内按住标题栏拖动窗口位置</span></label>
+            <div class="check"><input type="checkbox" id="drag-on" checked><span>允许拖动标题栏移动窗口</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>标题栏按钮增删 add_button<span class="api">lv_win_add_button(win, LV_SYMBOL_xxx, width)；勾选即添加，取消即删除（lv_obj_del）</span></label>
+            <div class="stack">
+              <div class="check"><input type="checkbox" id="show-min" checked><span>最小化 LV_SYMBOL_MINUS</span></div>
+              <div class="check"><input type="checkbox" id="show-max" checked><span>最大化 LV_SYMBOL_PLUS</span></div>
+              <div class="check"><input type="checkbox" id="show-close" checked><span>关闭 LV_SYMBOL_CLOSE</span></div>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>自动演示<span class="api">约 1.8 s 在普通 / 最大化之间往返</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>自动切换窗口状态（导出动图用）</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一轮往返）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一轮往返）</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">最接近的替代：UIViewGroup 只能当容器，标题栏、窗口按钮、拖拽与层级都必须自己画、自己处理事件。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例（静态）</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列替代思路依据 foundation/arkui/ui_lite 的 UIViewGroup / UILabelButton 源码。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_win 复刻（迁移自旧版单页，标题栏按钮增删 + 拖拽开关保留）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 320, H = 240, HEADER = 34;
+  var ROW_NAMES = ["网络与互联网", "显示与亮度", "声音与振动", "电池", "存储"];
+  var ROW_VALS = ["已连接", "自动", "70%", "86%", "12 GB"];
+  var ROW_ICONS = ["wifi", "user", "volume", "battery", "folder"];
+
+  var state = {
+    title: "系统设置",
+    w: 280, h: 190, rows: 3,
+    dragOn: true,
+    auto: false,
+    showMin: true, showMax: true, showClose: true,
+    geom: null, goal: null,
+    closed: false, minimized: false, maximized: false,
+    drag: null, hoverBtn: null
+  };
+
+  function normalRect(w, h){
+    w = Math.min(w, W - 12);
+    h = Math.min(h, H - 12);
+    return { x: (W - w) / 2, y: (H - h) / 2, w: w, h: h };
+  }
+
+  state.geom = normalRect(state.w, state.h);
+  state.goal = normalRect(state.w, state.h);
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var canvas = view.canvas;
+  var autoT0 = performance.now();
+  var autoPhase = 0;
+  var AUTO_STEP = 1800;
+
+  function layoutButtons(){
+    var bw = 22, bh = 20, gap = 5;
+    var g = state.geom;
+    var y = g.y + (HEADER - bh) / 2;
+    var x = g.x + g.w - 8;
+    var out = [];
+    if(state.showClose){ x -= bw; out.push({ id: "close", x: x, y: y, w: bw, h: bh }); x -= gap; }
+    if(state.showMax){ x -= bw; out.push({ id: "max", x: x, y: y, w: bw, h: bh }); x -= gap; }
+    if(state.showMin){ x -= bw; out.push({ id: "min", x: x, y: y, w: bw, h: bh }); x -= gap; }
+    return out;
+  }
+
+  function hitButton(e){
+    var r = canvas.getBoundingClientRect();
+    var x = e.clientX - r.left, y = e.clientY - r.top;
+    var bs = layoutButtons(), i, b;
+    for(i = 0; i < bs.length; i++){
+      b = bs[i];
+      if(x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b.id;
+    }
+    return null;
+  }
+
+  function inHeader(e){
+    var r = canvas.getBoundingClientRect();
+    var x = e.clientX - r.left, y = e.clientY - r.top;
+    var g = state.geom;
+    return x >= g.x && x <= g.x + g.w && y >= g.y && y <= g.y + HEADER;
+  }
+
+  function setMax(on){
+    state.maximized = on;
+    if(on){
+      state.minimized = false;
+      state.goal = { x: 6, y: 6, w: W - 12, h: H - 12 };
+    }else{
+      state.goal = normalRect(state.w, state.h);
+    }
+    state.drag = null;
+    renderCode();
+  }
+
+  function drawMaxIcon(c, b, restore){
+    c.save();
+    c.strokeStyle = "#5b6470";
+    c.lineWidth = 1.4;
+    if(restore){
+      c.strokeRect(b.x + 6.5, b.y + 5, 8, 7);
+      c.strokeRect(b.x + 9, b.y + 8.5, 8, 7);
+    }else{
+      c.strokeRect(b.x + 7.5, b.y + 5.5, 9, 9);
+    }
+    c.restore();
+  }
+
+  function drawButtons(c){
+    var bs = layoutButtons(), i, b, hot, isClose;
+    for(i = 0; i < bs.length; i++){
+      b = bs[i];
+      hot = state.hoverBtn === b.id;
+      isClose = b.id === "close";
+      if(hot){
+        K.box(c, b.x, b.y, b.w, b.h, { bg: isClose ? "#fde8e8" : "#e4e9f0", radius: 5 });
+      }
+      var col = (isClose && hot) ? "#e04b4b" : "#5b6470";
+      if(b.id === "close"){
+        K.icon(c, "close", b.x + b.w / 2 - 3.6, b.y + b.h / 2 - 5, 10, col);
+      }else if(b.id === "min"){
+        K.icon(c, "minus", b.x + b.w / 2 - 3.6, b.y + b.h / 2 - 5, 10, col);
+      }else{
+        drawMaxIcon(c, b, state.maximized);
+      }
+    }
+  }
+
+  function drawContent(c, g){
+    var top = g.y + HEADER;
+    var hgt = g.h - HEADER;
+    if(hgt <= 2) return;
+    c.save();
+    c.beginPath();
+    c.rect(g.x + 1, top, g.w - 2, hgt - 1);
+    c.clip();
+    var i, rowY, rowH = 34;
+    for(i = 0; i < state.rows; i++){
+      rowY = top + 6 + i * rowH;
+      if(rowY > g.y + g.h) break;
+      K.box(c, g.x + 12, rowY + 4, 24, 24, { bg: K.alpha(K.theme.primary, 0.10), radius: 7 });
+      K.icon(c, ROW_ICONS[i], g.x + 19, rowY + 10, 11, K.theme.primary);
+      K.text(c, ROW_NAMES[i], g.x + 45, rowY + 16, { size: 12.5, color: K.theme.text });
+      K.text(c, ROW_VALS[i], g.x + g.w - 14, rowY + 16, { size: 11, color: K.theme.textFaint, align: "right" });
+      if(i < state.rows - 1){
+        c.save();
+        c.strokeStyle = "#edf0f4";
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(g.x + 45, rowY + rowH - 1);
+        c.lineTo(g.x + g.w - 14, rowY + rowH - 1);
+        c.stroke();
+        c.restore();
+      }
+    }
+    c.restore();
+  }
+
+  function drawClosed(c){
+    var w = 214, h = 88, x = (W - w) / 2, y = (H - h) / 2;
+    K.box(c, x, y, w, h, {
+      bg: "#ffffff", radius: 12, borderWidth: 1, border: "#dfe4eb",
+      shadow: K.alpha("#1c2128", 0.12), shadowBlur: 18, shadowY: 6
+    });
+    c.beginPath();
+    c.arc(x + w / 2, y + 26, 13, 0, Math.PI * 2);
+    c.fillStyle = "#fdeaea";
+    c.fill();
+    K.icon(c, "close", x + w / 2 - 4.3, y + 20, 12, "#e04b4b");
+    K.text(c, "窗口已关闭", x + w / 2, y + 55, { size: 14, weight: 600, color: K.theme.text, align: "center" });
+    K.text(c, "点击画布重新打开", x + w / 2, y + 73, { size: 11.5, color: K.theme.textFaint, align: "center" });
+  }
+
+  function drawScene(c){
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+    if(state.closed){ drawClosed(c); return; }
+    var g = state.geom;
+    var hh = state.minimized ? HEADER : g.h;
+
+    K.box(c, g.x, g.y, g.w, hh, {
+      bg: "#ffffff", radius: 10,
+      shadow: K.alpha("#1c2128", 0.16), shadowBlur: 18, shadowY: 7
+    });
+
+    c.save();
+    K.roundRectPath(c, g.x, g.y, g.w, hh, 10);
+    c.clip();
+    c.fillStyle = "#f2f5f9";
+    c.fillRect(g.x, g.y, g.w, HEADER);
+    c.fillStyle = "#e3e8ef";
+    c.fillRect(g.x, g.y + HEADER - 1, g.w, 1);
+    c.restore();
+
+    K.text(c, state.title || " ", g.x + 13, g.y + HEADER / 2 + 1, { size: 13, weight: 600, color: "#2a3038" });
+
+    drawButtons(c, g);
+    if(!state.minimized) drawContent(c, g);
+
+    K.box(c, g.x, g.y, g.w, hh, { radius: 10, borderWidth: 1, border: "#d6dce4" });
+  }
+
+  function renderCode(){
+    var L = [];
+    var i;
+    L.push(K.cm("/* v10 中 lv_win 已标记 deprecated，但接口仍可用 */"));
+    L.push("lv_obj_t * win = " + K.fn("lv_win_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(win, " + K.num(state.w) + ", " + K.num(state.h) + ");");
+    L.push(K.fn("lv_obj_center") + "(win);");
+    L.push(K.fn("lv_win_add_title") + "(win, " + JSON.stringify(state.title || "") + ");");
+    if(state.showMin) L.push("lv_obj_t * btn_min = " + K.fn("lv_win_add_button") + "(win, LV_SYMBOL_MINUS, " + K.num(24) + ");");
+    if(state.showMax) L.push("lv_obj_t * btn_max = " + K.fn("lv_win_add_button") + "(win, LV_SYMBOL_PLUS, " + K.num(24) + ");");
+    if(state.showClose) L.push("lv_obj_t * btn_close = " + K.fn("lv_win_add_button") + "(win, LV_SYMBOL_CLOSE, " + K.num(24) + ");");
+    L.push("lv_obj_t * header = " + K.fn("lv_win_get_header") + "(win);");
+    L.push("lv_obj_t * content = " + K.fn("lv_win_get_content") + "(win);");
+    L.push("");
+    L.push(K.cm("/* 内容区条目 */"));
+    for(i = 0; i < state.rows; i++){
+      L.push("lv_obj_t * row" + (i + 1) + " = " + K.fn("lv_label_create") + "(content);");
+      L.push(K.fn("lv_label_set_text") + "(row" + (i + 1) + ", \"" + ROW_NAMES[i] + "\");");
+      L.push(K.fn("lv_obj_align") + "(row" + (i + 1) + ", LV_ALIGN_TOP_LEFT, " + K.num(12) + ", " + K.num(8 + i * 34) + ");");
+    }
+    L.push("");
+    L.push(K.cm("/* 当前窗口状态 */"));
+    if(state.closed){
+      L.push(K.fn("lv_obj_add_flag") + "(win, LV_OBJ_FLAG_HIDDEN);");
+    }else if(state.minimized){
+      L.push(K.fn("lv_obj_set_height") + "(win, " + K.num(HEADER) + ");");
+    }else if(state.maximized){
+      L.push(K.fn("lv_obj_set_size") + "(win, " + K.num(W - 12) + ", " + K.num(H - 12) + ");");
+      L.push(K.fn("lv_obj_center") + "(win);");
+    }else{
+      L.push(K.cm("/* 普通尺寸，位于画布中心 */"));
+    }
+    K.code(L);
+  }
+
+  var lastT = performance.now();
+  K.run(function(now){
+    var dt = Math.min(60, now - lastT);
+    lastT = now;
+    if(state.auto && !state.closed){
+      var phase = Math.floor((now - autoT0) / AUTO_STEP) % 2;
+      if(phase !== autoPhase){
+        autoPhase = phase;
+        setMax(phase === 1);
+      }
+    }
+    var k = 1 - Math.exp(-dt / 70);
+    var g = state.geom, t = state.goal;
+    g.x += (t.x - g.x) * k;
+    g.y += (t.y - g.y) * k;
+    g.w += (t.w - g.w) * k;
+    g.h += (t.h - g.h) * k;
+    drawScene(view.ctx);
+  });
+
+  function reopen(){
+    state.closed = false;
+    state.minimized = false;
+    state.maximized = false;
+    state.geom = normalRect(state.w, state.h);
+    state.goal = normalRect(state.w, state.h);
+    state.drag = null;
+    renderCode();
+  }
+
+  canvas.addEventListener("pointerdown", function(e){
+    if(e.button && e.button !== 0) return;
+    if(state.closed){ reopen(); return; }
+    var id = hitButton(e);
+    if(id){
+      if(id === "close"){
+        state.closed = true;
+        state.auto = false;
+        document.getElementById("auto").checked = false;
+      }else if(id === "min"){
+        state.minimized = !state.minimized;
+      }else{
+        setMax(!state.maximized);
+        return;
+      }
+      renderCode();
+      return;
+    }
+    if(state.dragOn && inHeader(e) && !state.maximized){
+      var g = state.geom;
+      state.drag = { sx: e.clientX, sy: e.clientY, gx: g.x, gy: g.y };
+      state.goal.x = g.x;
+      state.goal.y = g.y;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = "grabbing";
+    }
+  });
+
+  canvas.addEventListener("pointermove", function(e){
+    if(state.drag){
+      var g = state.geom;
+      var dx = e.clientX - state.drag.sx;
+      var dy = e.clientY - state.drag.sy;
+      g.x = K.clamp(state.drag.gx + dx, 0, Math.max(0, W - g.w));
+      g.y = K.clamp(state.drag.gy + dy, 0, H - HEADER);
+      state.goal.x = g.x;
+      state.goal.y = g.y;
+      return;
+    }
+    state.hoverBtn = state.closed ? null : hitButton(e);
+    canvas.style.cursor = state.hoverBtn ? "pointer" : "default";
+  });
+
+  function endDrag(){
+    state.drag = null;
+    canvas.style.cursor = "default";
+  }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  document.getElementById("title").addEventListener("input", function(e){
+    state.title = e.target.value;
+    renderCode();
+  });
+
+  K.bindRange("w", function(v){ return v + " px"; }, function(v){
+    state.w = v;
+    if(!state.maximized && !state.closed) state.goal = normalRect(state.w, state.h);
+    renderCode();
+  });
+  K.bindRange("h", function(v){ return v + " px"; }, function(v){
+    state.h = v;
+    if(!state.maximized && !state.closed) state.goal = normalRect(state.w, state.h);
+    renderCode();
+  });
+  K.bindRange("rows", function(v){ return v; }, function(v){
+    state.rows = v;
+    renderCode();
+  });
+
+  document.getElementById("drag-on").addEventListener("change", function(e){
+    state.dragOn = e.target.checked;
+    state.drag = null;
+  });
+
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    autoT0 = performance.now();
+    autoPhase = 0;
+    if(on){ setMax(false); }
+  });
+
+  document.getElementById("show-min").addEventListener("change", function(e){ state.showMin = e.target.checked; renderCode(); });
+  document.getElementById("show-max").addEventListener("change", function(e){ state.showMax = e.target.checked; renderCode(); });
+  document.getElementById("show-close").addEventListener("change", function(e){ state.showClose = e.target.checked; renderCode(); });
+
+  /* ---------- 导出 ---------- */
+  var AUTO_CYCLE = AUTO_STEP * 2;
+
+  /* 确定性渲染某时刻：0~AUTO_STEP 普通→最大化，之后反向 */
+  function geomAt(t){
+    var a = normalRect(state.w, state.h);
+    var b = { x: 6, y: 6, w: W - 12, h: H - 12 };
+    var phase = t % AUTO_CYCLE;
+    var forward = phase < AUTO_STEP;
+    var local = forward ? phase : phase - AUTO_STEP;
+    /* 用与主循环一致的指数逼近模拟：按 60fps 步进 */
+    var g = forward ? { x: a.x, y: a.y, w: a.w, h: a.h } : { x: b.x, y: b.y, w: b.w, h: b.h };
+    var tgt = forward ? b : a;
+    var steps = Math.floor(local / 16.7);
+    for(var i = 0; i < steps; i++){
+      var k = 1 - Math.exp(-16.7 / 70);
+      g.x += (tgt.x - g.x) * k;
+      g.y += (tgt.y - g.y) * k;
+      g.w += (tgt.w - g.w) * k;
+      g.h += (tgt.h - g.h) * k;
+    }
+    return g;
+  }
+
+  function drawExportFrame(c, t){
+    var saved = { geom: state.geom, goal: state.goal, closed: state.closed, maximized: state.maximized };
+    state.closed = false;
+    state.geom = geomAt(t);
+    state.goal = state.geom;
+    state.maximized = t % AUTO_CYCLE >= AUTO_STEP * 0.5;
+    drawScene(c);
+    state.geom = saved.geom;
+    state.goal = saved.goal;
+    state.closed = saved.closed;
+    state.maximized = saved.maximized;
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(canvas, "win.png");
+  });
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "win.gif", w: W, h: H, fps: 20, duration: AUTO_CYCLE,
+      frame: function(c, t){ drawExportFrame(c, t); },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: canvas, name: "win.webm", duration: AUTO_CYCLE,
+      before: function(){
+        var old = { auto: state.auto, closed: state.closed };
+        state.auto = true;
+        state.closed = false;
+        autoT0 = performance.now();
+        autoPhase = 0;
+        setMax(false);
+        document.getElementById("auto").checked = true;
+        return old;
+      },
+      after: function(old){
+        state.auto = old.auto;
+        document.getElementById("auto").checked = old.auto;
+        if(old.closed){ state.closed = true; renderCode(); }
+        else setMax(false);
+      },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite 替代思路静态示例代码（UIViewGroup 自绘标题栏窗口）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var L = [];
+  L.push('<span class="cm">/* ArkUI lite 没有 lv_win：标题栏、窗口按钮、拖拽与层级都要自绘。</span>');
+  L.push('<span class="cm">   UIViewGroup 只能当容器；下面自拼一个"窗口"。 */</span>');
+  L.push('');
+  L.push('UIViewGroup * <span class="fn">CreateWindow</span>(UIViewGroup * root, int16_t w, int16_t h)');
+  L.push('{');
+  L.push('    UIViewGroup * win = new UIViewGroup();');
+  L.push('    win-&gt;<span class="fn">SetPosition</span>((SCREEN_W - w) / <span class="num">2</span>, (SCREEN_H - h) / <span class="num">2</span>, w, h);');
+  L.push('    win-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_COLOR, <span class="num">0xffffff</span>);');
+  L.push('');
+  L.push('    <span class="cm">// 标题栏：一条 UIView + 标题 UILabel</span>');
+  L.push('    UIView * titleBar = new UIView();');
+  L.push('    titleBar-&gt;<span class="fn">SetPosition</span>(<span class="num">0</span>, <span class="num">0</span>, w, <span class="num">34</span>);');
+  L.push('    titleBar-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_COLOR, <span class="num">0xf2f5f9</span>);');
+  L.push('    UILabel * title = new UILabel();');
+  L.push('    title-&gt;<span class="fn">SetText</span>(<span class="str">"系统设置"</span>);');
+  L.push('    title-&gt;<span class="fn">SetPosition</span>(<span class="num">13</span>, <span class="num">8</span>, w - <span class="num">100</span>, <span class="num">18</span>);');
+  L.push('    titleBar-&gt;<span class="fn">Add</span>(title);');
+  L.push('    win-&gt;<span class="fn">Add</span>(titleBar);');
+  L.push('');
+  L.push('    <span class="cm">// 窗口按钮：UILabelButton 手工摆放，点击回调自己实现关闭/最小化</span>');
+  L.push('    UILabelButton * btnClose = new UILabelButton();');
+  L.push('    btnClose-&gt;<span class="fn">SetPosition</span>(w - <span class="num">30</span>, <span class="num">7</span>, <span class="num">22</span>, <span class="num">20</span>);');
+  L.push('    btnClose-&gt;<span class="fn">SetText</span>(<span class="str">"×"</span>);');
+  L.push('    btnClose-&gt;<span class="fn">SetOnClickListener</span>(&amp;closeListener);');
+  L.push('    win-&gt;<span class="fn">Add</span>(btnClose);');
+  L.push('');
+  L.push('    <span class="cm">// 内容区 + 拖拽：无窗口层级概念，拖动需在 titleBar 的</span>');
+  L.push('    <span class="cm">// OnPressMove 里重算 SetPosition，且要自己管理遮罩/置顶</span>');
+  L.push('    root-&gt;<span class="fn">Add</span>(win);');
+  L.push('    return win;');
+  L.push('}');
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

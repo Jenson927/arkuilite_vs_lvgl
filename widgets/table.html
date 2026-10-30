@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Table：lv_table vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='7' width='22' height='18' rx='3' fill='none' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M5 13h22M5 19h22M14 7v18M22 7v18' stroke='%232b7de9' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Table：lv_table vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（表头/数据行、点击选中、单元格合并、列宽模式、双向滚动与单元格样式），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_table</code>
+        <span class="cmp-tag lv">合并 · 双向滚动</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击单元格选中；内容超出画布时按住拖动可双向滚动（把列宽切到 80px 或加大行/列数即可触发）。合并与单元格样式实时生效。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>选中单元格文本<output id="o-sel">第 2 行 / 第 2 列</output><span class="api">lv_table_set_cell_value / lv_table_set_selected_cell</span></label>
+            <input type="text" id="cell-text" maxlength="18" value="12">
+          </div>
+
+          <div class="field">
+            <label>行数 row_count<output id="o-rows">5 行</output><span class="api">lv_table_set_row_count</span></label>
+            <input type="range" id="rows" min="2" max="8" step="1" value="5">
+          </div>
+          <div class="field">
+            <label>列数 column_count<output id="o-cols">4 列</output><span class="api">lv_table_set_column_count</span></label>
+            <input type="range" id="cols" min="2" max="6" step="1" value="4">
+          </div>
+
+          <div class="field wide">
+            <label>列宽模式 set_column_width<span class="api">lv_table_set_column_width（固定列宽超出容器即触发滚动）</span></label>
+            <div class="seg" id="wmode">
+              <button type="button" data-val="auto" class="active">auto 自适应</button>
+              <button type="button" data-val="40">40 px</button>
+              <button type="button" data-val="60">60 px</button>
+              <button type="button" data-val="80">80 px</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>表头高亮<span class="api">第 0 行浅灰底 + 加粗（自绘）</span></label>
+            <div class="check"><input type="checkbox" id="header" checked><span>第 0 行浅灰底 + 加粗</span></div>
+          </div>
+          <div class="field">
+            <label>合并单元格 MERGE_RIGHT<span class="api">lv_table_set_cell_ctrl(MERGE_RIGHT)</span></label>
+            <div class="check"><input type="checkbox" id="merge"><span>表头最后两列合并</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>单元格样式<span class="api">lv_obj_set_style_*（LV_PART_ITEMS）· 行/列级样式复用</span></label>
+            <div class="seg" id="cellstyle">
+              <button type="button" data-val="plain" class="active">默认</button>
+              <button type="button" data-val="zebra">斑马纹行</button>
+              <button type="button" data-val="colhi">选中列高亮</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>双向滚动演示<span class="api">内容超出容器时 LVGL 自动支持双向滚动（lv_obj_set_scrollbar_mode）</span></label>
+            <div class="check"><span style="font-size:12px">画布上按住拖动即可横向 / 纵向滚动；列宽 60/80px 或加大行列数可强制溢出。</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-apply">应用文本</button>
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有表格：UIViewGroup + UILabel 手工排布，合并单元格与双向滚动全部自己实现（UIList 只能单方向滚）。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240。静态页提供 PNG 导出（GIF 需联网，WebM 离线可用，本页未启用）。右列代码为按 compare-data.js 最接近实现给出的替代拼装骨架。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_table 复刻（迁移自旧页，新增双向滚动与单元格样式演示）
+   ===================================================================== */
+(function () {
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+  var M = 12, ROW_H = 28, PAD = 6;
+  var VX = M, VY = M, VW = W - 2 * M, VH = H - 2 * M;
+
+  var HEADERS = ["名称", "数量", "单价", "状态", "备注", "标签"];
+  var DATA = [
+    HEADERS,
+    ["键盘", "12", "199", "在售", "USB-C", "热销"],
+    ["鼠标", "34", "89", "在售", "无线", "新品"],
+    ["显示器", "7", "1299", "缺货", "27 寸", ""],
+    ["耳机", "21", "349", "在售", "降噪", "热销"],
+    ["音箱", "9", "499", "在售", "蓝牙", ""],
+    ["摄像头", "15", "259", "缺货", "1080P", ""],
+    ["支架", "40", "59", "在售", "铝合金", ""]
+  ];
+
+  var state = {
+    rows: 5, cols: 4,
+    widthMode: "auto",
+    header: true, merge: false,
+    cellStyle: "plain",
+    selRow: 1, selCol: 1,
+    scrollX: 0, scrollY: 0,
+    cells: {}
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  view.canvas.style.cursor = "pointer";
+
+  function defaultText(r, c) {
+    if (r === 0) return HEADERS[c] || "";
+    var row = DATA[r];
+    return row ? (row[c] || "") : "";
+  }
+
+  function cellText(r, c) {
+    var key = r + "," + c;
+    if (Object.prototype.hasOwnProperty.call(state.cells, key)) return state.cells[key];
+    return defaultText(r, c);
+  }
+
+  function mergeEnabled() { return state.merge && state.cols >= 3; }
+  function isHidden(r, c) { return mergeEnabled() && r === 0 && c === state.cols - 1; }
+  function spanOf(r, c) { return (mergeEnabled() && r === 0 && c === state.cols - 2) ? 2 : 1; }
+
+  function layoutTable() {
+    var ws = [], total = 0, i;
+    if (state.widthMode === "auto") {
+      var base = Math.floor(VW / state.cols);
+      for (i = 0; i < state.cols; i++) ws.push(base);
+      ws[state.cols - 1] += VW - base * state.cols;
+    } else {
+      var fw = Number(state.widthMode);
+      for (i = 0; i < state.cols; i++) ws.push(fw);
+    }
+    for (i = 0; i < ws.length; i++) total += ws[i];
+    return { ws: ws, total: total, totalH: state.rows * ROW_H };
+  }
+
+  function maxScroll() {
+    var lt = layoutTable();
+    return {
+      x: Math.max(0, lt.total - VW),
+      y: Math.max(0, lt.totalH - VH)
+    };
+  }
+
+  function clampScroll() {
+    var ms = maxScroll();
+    state.scrollX = K.clamp(state.scrollX, 0, ms.x);
+    state.scrollY = K.clamp(state.scrollY, 0, ms.y);
+  }
+
+  function cellRect(lt, r, c) {
+    var x = 0, i;
+    for (i = 0; i < c; i++) x += lt.ws[i] || 0;
+    var w = 0;
+    for (i = 0; i < spanOf(r, c); i++) w += lt.ws[c + i] || 0;
+    return { x: x, y: r * ROW_H, w: w, h: ROW_H };
+  }
+
+  function fitText(c, s, maxW, o) {
+    s = String(s);
+    if (K.measure(c, s, o) <= maxW) return s;
+    var out = s;
+    while (out.length && K.measure(c, out + "…", o) > maxW) out = out.slice(0, -1);
+    return out + "…";
+  }
+
+  function draw(c) {
+    c.clearRect(0, 0, W, H);
+    clampScroll();
+
+    var lt = layoutTable();
+    var ox = state.scrollX, oy = state.scrollY;
+
+    K.box(c, VX, VY, VW, VH, {
+      bg: "#ffffff", radius: 4,
+      shadow: K.alpha("#1c2128", 0.10), shadowBlur: 10, shadowY: 3
+    });
+
+    c.save();
+    K.roundRectPath(c, VX, VY, VW, VH, 4);
+    c.clip();
+
+    var r, col, x, y;
+    for (r = 0; r < state.rows; r++) {
+      for (col = 0; col < state.cols; col++) {
+        if (isHidden(r, col)) continue;
+        var rect = cellRect(lt, r, col);
+        var rx = VX + rect.x - ox, ry = VY + rect.y - oy;
+        if (rx + rect.w < VX || rx > VX + VW || ry + rect.h < VY || ry > VY + VH) continue;
+
+        var isHeader = (r === 0 && state.header);
+        var isSel = (r === state.selRow && col === state.selCol);
+
+        if (state.cellStyle === "zebra" && r > 0 && r % 2 === 0) {
+          c.fillStyle = "#f7f8fa";
+          c.fillRect(rx, ry, rect.w, rect.h);
+        }
+        if (state.cellStyle === "colhi" && col === state.selCol) {
+          c.fillStyle = "#f0f6ff";
+          c.fillRect(rx, ry, rect.w, rect.h);
+        }
+        if (isHeader) {
+          c.fillStyle = "#f2f4f7";
+          c.fillRect(rx, ry, rect.w, rect.h);
+        }
+        if (isSel) {
+          c.fillStyle = "#eef5ff";
+          c.fillRect(rx, ry, rect.w, rect.h);
+        }
+
+        var label = fitText(c, cellText(r, col), rect.w - PAD * 2, { size: 12.5 });
+        K.text(c, label, rx + PAD, ry + rect.h / 2 + 1, {
+          size: 12.5,
+          weight: isHeader && state.header ? 600 : 400,
+          color: isHeader && state.header ? "#3a4350" : K.theme.text
+        });
+      }
+    }
+
+    c.strokeStyle = "#d6d9df";
+    c.lineWidth = 1;
+    x = -ox;
+    for (col = 0; col <= state.cols; col++) {
+      c.beginPath();
+      c.moveTo(Math.round(VX + x) + 0.5, VY);
+      c.lineTo(Math.round(VX + x) + 0.5, VY + VH);
+      c.stroke();
+      x += lt.ws[col] || 0;
+    }
+    y = -oy;
+    for (r = 0; r <= state.rows; r++) {
+      c.beginPath();
+      c.moveTo(VX, Math.round(VY + y) + 0.5);
+      c.lineTo(VX + VW, Math.round(VY + y) + 0.5);
+      c.stroke();
+      y += ROW_H;
+    }
+
+    var srect = cellRect(lt, state.selRow, state.selCol);
+    var sx = VX + srect.x - ox, sy = VY + srect.y - oy;
+    if (sx < VX + VW && sy < VY + VH) {
+      c.save();
+      c.strokeStyle = K.theme.primary;
+      c.lineWidth = 2;
+      c.strokeRect(sx + 1, sy + 1, Math.min(srect.w, VX + VW - sx) - 2, srect.h - 2);
+      c.restore();
+    }
+
+    c.restore();
+
+    K.box(c, VX, VY, VW, VH, { radius: 4, borderWidth: 1, border: "#c9ced6" });
+
+    /* 滚动条指示 */
+    var ms = maxScroll();
+    if (ms.x > 0) {
+      var bw = Math.max(24, VW * VW / lt.total);
+      var bx = VX + (state.scrollX / lt.total) * VW;
+      K.box(c, bx, VY + VH - 5, bw, 3, { bg: K.alpha("#1c2128", 0.25), radius: 2 });
+    }
+    if (ms.y > 0) {
+      var bh = Math.max(24, VH * VH / lt.totalH);
+      var by = VY + (state.scrollY / lt.totalH) * VH;
+      K.box(c, VX + VW - 5, by, 3, bh, { bg: K.alpha("#1c2128", 0.25), radius: 2 });
+    }
+
+    if (ms.x > 0 || ms.y > 0) {
+      var msg = "内容超出 · 可拖动双向滚动";
+      var tw = K.measure(c, msg, { size: 11 });
+      K.box(c, VX + VW - tw - 24, VY + 6, tw + 14, 20, {
+        bg: K.alpha("#ffffff", 0.95), radius: 10, borderWidth: 1, border: "#e6a23c"
+      });
+      K.text(c, msg, VX + VW - 17, VY + 16.5, { size: 11, color: "#c98a20", align: "right" });
+    }
+  }
+
+  K.run(function () { draw(view.ctx); });
+
+  function clampSelection() {
+    state.selRow = K.clamp(state.selRow, 0, state.rows - 1);
+    state.selCol = K.clamp(state.selCol, 0, state.cols - 1);
+    if (isHidden(state.selRow, state.selCol)) state.selCol = state.cols - 2;
+  }
+
+  function syncSelectionUI() {
+    document.getElementById("o-sel").textContent = "第 " + (state.selRow + 1) + " 行 / 第 " + (state.selCol + 1) + " 列";
+    document.getElementById("cell-text").value = cellText(state.selRow, state.selCol);
+  }
+
+  function updateStatus(msg) {
+    if (msg) { K.status(msg); return; }
+    var ms = maxScroll();
+    if (ms.x > 0 || ms.y > 0) {
+      K.status("内容超出画布 · 滚动偏移 (" + Math.round(state.scrollX) + ", " + Math.round(state.scrollY) + ") · 拖动可双向滚动");
+    } else {
+      K.status("选中 第 " + (state.selRow + 1) + " 行 / 第 " + (state.selCol + 1) + " 列 · “" + cellText(state.selRow, state.selCol) + "”");
+    }
+  }
+
+  function hitTest(px, py) {
+    if (px < VX || px > VX + VW || py < VY || py > VY + VH) return null;
+    var cx = px - VX + state.scrollX;
+    var cy = py - VY + state.scrollY;
+    var r = Math.floor(cy / ROW_H);
+    if (r < 0 || r >= state.rows) return null;
+    var lt = layoutTable();
+    var x = 0, col;
+    for (col = 0; col < state.cols; col++) {
+      var w = lt.ws[col] || 0;
+      if (cx >= x && cx < x + w) {
+        if (isHidden(r, col)) col = state.cols - 2;
+        return { row: r, col: col };
+      }
+      x += w;
+    }
+    return null;
+  }
+
+  /* ---------- 拖动双向滚动 / 点击选中 ---------- */
+  (function () {
+    var down = false, moved = false;
+    var px0 = 0, py0 = 0, sx0 = 0, sy0 = 0;
+
+    function posOf(e) {
+      var r = view.canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - r.left) * (W / r.width),
+        y: (e.clientY - r.top) * (H / r.height)
+      };
+    }
+
+    view.canvas.addEventListener("pointerdown", function (e) {
+      var p = posOf(e);
+      down = true; moved = false;
+      px0 = p.x; py0 = p.y; sx0 = state.scrollX; sy0 = state.scrollY;
+      view.canvas.setPointerCapture(e.pointerId);
+    });
+
+    view.canvas.addEventListener("pointermove", function (e) {
+      if (!down) return;
+      var p = posOf(e);
+      var dx = p.x - px0, dy = p.y - py0;
+      if (!moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+      moved = true;
+      state.scrollX = sx0 - dx;
+      state.scrollY = sy0 - dy;
+      clampScroll();
+      updateStatus();
+    });
+
+    function up(e) {
+      if (!down) return;
+      down = false;
+      if (moved) return;
+      var p = posOf(e);
+      var hit = hitTest(p.x, p.y);
+      if (!hit) return;
+      state.selRow = hit.row;
+      state.selCol = hit.col;
+      syncSelectionUI();
+      renderCode();
+      updateStatus();
+    }
+    view.canvas.addEventListener("pointerup", up);
+    view.canvas.addEventListener("pointercancel", function () { down = false; });
+  })();
+
+  document.getElementById("btn-apply").addEventListener("click", function () {
+    var val = document.getElementById("cell-text").value;
+    state.cells[state.selRow + "," + state.selCol] = val;
+    renderCode();
+    updateStatus("已写入单元格 (" + state.selRow + ", " + state.selCol + ")：" + val);
+  });
+
+  K.bindRange("rows", function (v) { return v + " 行"; }, function (v) {
+    state.rows = v;
+    clampSelection();
+    clampScroll();
+    syncSelectionUI();
+    renderCode();
+    updateStatus();
+  });
+  K.bindRange("cols", function (v) { return v + " 列"; }, function (v) {
+    state.cols = v;
+    clampSelection();
+    clampScroll();
+    syncSelectionUI();
+    renderCode();
+    updateStatus();
+  });
+
+  K.bindSeg("wmode", function (v) {
+    state.widthMode = v;
+    clampScroll();
+    renderCode();
+    updateStatus();
+  });
+  K.bindCheck("header", function (on) {
+    state.header = on;
+    renderCode();
+  });
+  K.bindCheck("merge", function (on) {
+    state.merge = on;
+    clampSelection();
+    syncSelectionUI();
+    renderCode();
+    updateStatus();
+  });
+  K.bindSeg("cellstyle", function (v) {
+    state.cellStyle = v;
+    renderCode();
+    K.status("单元格样式：" + (v === "plain" ? "默认" : v === "zebra" ? "斑马纹行" : "选中列高亮"));
+  });
+
+  function cstr(s) {
+    return '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n") + '"';
+  }
+
+  function renderCode() {
+    var lt = layoutTable();
+    var ms = maxScroll();
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * table = " + K.fn("lv_table_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(table, " + K.num(VW) + ", " + K.num(VH) + ");");
+    L.push(K.fn("lv_table_set_row_count") + "(table, " + K.num(state.rows) + ");");
+    L.push(K.fn("lv_table_set_column_count") + "(table, " + K.num(state.cols) + ");");
+
+    if (state.widthMode === "auto") {
+      L.push(K.cm("/* 列宽 auto：不调用 set_column_width，由内容自适应 */"));
+    } else {
+      L.push(K.fn("lv_table_set_column_width") + "(table, " + K.num(0) + ", " + K.num(Number(state.widthMode)) + ");");
+      L.push(K.cm("/* 其余列同理：lv_table_set_column_width(table, col, " + state.widthMode + "); */"));
+    }
+
+    if (ms.x > 0 || ms.y > 0) {
+      L.push(K.cm("/* 内容 " + lt.total + "×" + lt.totalH + " 超出容器，LVGL 自动双向滚动 */"));
+      L.push(K.fn("lv_obj_set_scrollbar_mode") + "(table, " + K.num("LV_SCROLLBAR_MODE_AUTO") + ");");
+    }
+
+    var r, col;
+    for (r = 0; r < state.rows; r++) {
+      for (col = 0; col < state.cols; col++) {
+        if (isHidden(r, col)) continue;
+        L.push(K.fn("lv_table_set_cell_value") + "(table, " + K.num(r) + ", " + K.num(col) + ", " + cstr(cellText(r, col)) + ");");
+      }
+    }
+
+    if (mergeEnabled()) {
+      L.push(K.fn("lv_table_set_cell_ctrl") + "(table, " + K.num(0) + ", " + K.num(state.cols - 2) + ", " + K.num("LV_TABLE_CELL_CTRL_MERGE_RIGHT") + ");");
+    }
+
+    L.push(K.fn("lv_table_set_selected_cell") + "(table, " + K.num(state.selRow) + ", " + K.num(state.selCol) + ");");
+
+    if (state.cellStyle === "zebra") {
+      L.push(K.cm("/* 斑马纹：在 LV_EVENT_DRAW_TASK_ADDED 中按行号交替绘制行背景 */"));
+    } else if (state.cellStyle === "colhi") {
+      L.push(K.cm("/* 选中列高亮：对第 " + state.selCol + " 列逐单元格加 LV_STATE_CHECKED 样式 */"));
+    }
+    L.push(K.cm("/* 表头浅灰底：可在 LV_EVENT_DRAW_TASK_ADDED 中单独绘制第 0 行 */"));
+    L.push(K.fn("lv_obj_set_style_bg_color") + "(table, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.header ? "#f2f4f7" : "#ffffff")) + "), LV_PART_ITEMS);");
+    L.push(K.fn("lv_obj_set_style_border_width") + "(table, " + K.num(1) + ", LV_PART_ITEMS);");
+    L.push(K.fn("lv_obj_set_style_border_color") + "(table, " + K.fn("lv_color_hex") + "(" + K.num("0xd6d9df") + "), LV_PART_ITEMS);");
+    L.push(K.fn("lv_obj_set_style_bg_color") + "(table, " + K.fn("lv_color_hex") + "(" + K.num("0x2b7de9") + "), LV_PART_ITEMS | LV_STATE_PRESSED);");
+    L.push(K.fn("lv_obj_center") + "(table);");
+
+    K.code(L);
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function () {
+    K.exportPng(view.canvas, "table.png");
+  });
+
+  syncSelectionUI();
+  renderCode();
+  updateStatus();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js table.alt：UIViewGroup + UILabel 手工排布
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_table，以下为替代拼装骨架（静态示例） */"));
+  L.push(cm("/* 思路：UIViewGroup 当容器，每格一个 UILabel 手动排布 */"));
+  L.push("");
+  L.push("static const int16_t COLS = " + num(4) + ", ROWS = " + num(5) + ", CW = " + num(74) + ", RH = " + num(28) + ";");
+  L.push("UIViewGroup * grid = " + fn("new") + " UIViewGroup();");
+  L.push("grid-&gt;" + fn("SetPosition") + "(" + num(12) + ", " + num(12) + ");");
+  L.push("grid-&gt;" + fn("Resize") + "(" + num(296) + ", " + num(140) + ");   " + cm("/* 可视区 */"));
+  L.push("");
+  L.push(cm("/* 逐格创建 UILabel 并手动定位（无行列自动排布） */"));
+  L.push("for (int16_t r = " + num(0) + "; r &lt; ROWS; r++) {");
+  L.push("    for (int16_t c = " + num(0) + "; c &lt; COLS; c++) {");
+  L.push("        UILabel * cell = " + fn("new") + " UILabel();");
+  L.push("        cell-&gt;" + fn("SetPosition") + "(c * CW, r * RH);");
+  L.push("        cell-&gt;" + fn("Resize") + "(CW, RH);");
+  L.push("        cell-&gt;" + fn("SetText") + "(CellText(r, c));");
+  L.push("        grid-&gt;" + fn("Add") + "(cell);");
+  L.push("    }");
+  L.push("}");
+  L.push("");
+  L.push(cm("/* 合并单元格：没有 MERGE_RIGHT，只能让某个 label 跨列 Resize 并跳过被合并格 */"));
+  L.push(cm("/* 双向滚动：UIList 只支持单方向；双向需自管偏移："));
+  L.push("   grid-&gt;SetPosition(baseX - offsetX, baseY - offsetY);   // 拖动时手动改容器位置");
+  L.push("   并自行裁剪越界子控件。 */");
+  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(grid);");
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

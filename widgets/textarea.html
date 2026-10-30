@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Textarea：LVGL lv_textarea vs ArkUI lite UIEditText</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='8' width='22' height='16' rx='3' fill='none' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M10 14h9M10 18h6' stroke='%232b7de9' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Textarea：lv_textarea vs UIEditText</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（多行编辑 + 滚动条 + 拖动选区反色），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b>
+      源码 <code>ui_edit_text.cpp</code> 能力渲染的 UIEditText（以单行输入为主）。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_textarea</code>
+        <span class="cmp-tag lv">多行滚动 · 选区反色</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas>
+          <input type="text" id="kbd" autocomplete="off" spellcheck="false" aria-label="键盘输入"
+                 style="position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none">
+        </div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击画布聚焦后直接键入（支持回车换行）；按住拖动选中文字（反色高亮），滚轮滚动多行内容。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>占位文本 placeholder<span class="api">lv_textarea_set_placeholder_text</span></label>
+            <input type="text" id="placeholder" value="请输入内容…" maxlength="24">
+          </div>
+          <div class="field wide">
+            <label>文本内容 text（多行）<span class="api">lv_textarea_set_text / lv_textarea_add_text</span></label>
+            <textarea id="text" rows="3">Hello LVGL
+这是多行文本框演示：
+拖动可选中文字，滚轮滚动内容。</textarea>
+          </div>
+
+          <div class="field">
+            <label>最大长度 max_length<output id="o-max">64</output><span class="api">lv_textarea_set_max_length（0 = 不限）</span></label>
+            <input type="range" id="max" min="0" max="96" step="1" value="64">
+          </div>
+          <div class="field">
+            <label>文字对齐 text_align<span class="api">lv_obj_set_style_text_align(ta, LV_TEXT_ALIGN_*, LV_PART_MAIN)</span></label>
+            <div class="seg" id="align">
+              <button type="button" data-v="left" class="active">左</button>
+              <button type="button" data-v="center">中</button>
+              <button type="button" data-v="right">右</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>密码模式 password_mode<span class="api">lv_textarea_set_password_mode</span></label>
+            <div class="check"><input type="checkbox" id="password"><span>以圆点显示</span></div>
+          </div>
+          <div class="field">
+            <label>单行模式 one_line<span class="api">lv_textarea_set_one_line(true)：不换行、水平滚动</span></label>
+            <div class="check"><input type="checkbox" id="oneline"><span>单行显示</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>状态<span class="api">lv_textarea_set_cursor_pos / lv_textarea_get_selected_text</span></label>
+            <div class="check"><span style="font-size:12px" id="o-info"></span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-clear">清空</button>
+          <button type="button" class="btn" id="btn-insert">插入示例文字</button>
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIEditText</code>
+        <span class="cmp-tag ui">单行输入 · 占位符光标</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UIEditText 以单行输入为主：占位符、光标、长度限制可用；多行滚动与选中/剪贴板能力弱。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>文本内容 text<span class="api">SetText(const char*)：清空时自动回退到占位符显示</span></label>
+            <input type="text" id="utext" value="UIEditText">
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_edit_text.cpp</code> / <code>ui_edit_text.h</code> ——
+          默认单行输入；<code>SetPlaceholder</code> 占位文本、<code>SetMaxLength</code> 长度限制、
+          <code>SetInputType</code> 输入类型、<code>SetOnChangeListener</code> 变更回调；
+          选区、复制粘贴与多行滚动未完整实现（见右上角红色标注）。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列为 LVGL 语义复刻（多行布局 / 滚动 / 选区），PNG 导出离线可用。右列能力描述取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_textarea 复刻（迁移自旧页 + 多行滚动 / 选区反色增强）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 360, H = 220;
+  var TA = { x: 14, y: 14, w: 332, h: 158 };
+  var PADX = 12, PADY = 9, LH = 22, FS = 13;
+  var ACCENT = "#2b7de9";
+  var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+
+  var state = {
+    placeholder: "请输入内容…",
+    text: "",
+    maxLen: 64,
+    password: false,
+    oneLine: false,
+    align: "left",
+    cursor: 0,
+    anchor: -1,          // >=0 且 != cursor 时存在选区
+    focused: false,
+    scrollY: 0
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var kbd = document.getElementById("kbd");
+  var textEl = document.getElementById("text");
+
+  state.text = textEl.value;
+  state.cursor = state.text.length;
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+  function setFont(c){ c.font = FS + "px " + FAMILY; }
+  function measure(c, s){ setFont(c); return c.measureText(s).width; }
+  function setStatus(msg, ok){ statusEl.textContent = msg; statusEl.className = "status" + (ok ? " ok" : ""); }
+
+  function roundRect(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function fitText(c, s, maxW){
+    if(measure(c, s) <= maxW) return s;
+    while(s.length && measure(c, s + "…", { }) > maxW) s = s.slice(0, -1);
+    return s + "…";
+  }
+
+  function sanitize(t){
+    var out = "", i, ch;
+    for(i = 0; i < t.length; i++){
+      ch = t.charAt(i);
+      if(ch === "\r") continue;
+      if(ch === "\n" && state.oneLine) continue;
+      out += ch;
+    }
+    return out;
+  }
+
+  function bullets(n){ var s = "", i; for(i = 0; i < n; i++) s += "•"; return s; }
+
+  /* ---------- 多行布局 ---------- */
+  function buildLayout(c){
+    var disp = state.password ? bullets(state.text.length) : state.text;
+    var maxW = TA.w - PADX * 2 - 14;   // 右侧留滚动条位置
+    var lines = [];
+    if(state.oneLine){
+      lines.push({ start: 0, end: disp.length });
+    }else{
+      var start = 0, cur = "", i, ch;
+      for(i = 0; i < disp.length; i++){
+        ch = disp.charAt(i);
+        if(ch === "\n"){ lines.push({ start: start, end: i }); start = i + 1; cur = ""; continue; }
+        if(cur && measure(c, cur + ch) > maxW){ lines.push({ start: start, end: i }); start = i; cur = ch; }
+        else cur += ch;
+      }
+      lines.push({ start: start, end: disp.length });
+    }
+    return { disp: disp, lines: lines, maxW: maxW };
+  }
+
+  function lineIndexOf(lay, idx){
+    for(var i = 0; i < lay.lines.length; i++){ if(idx <= lay.lines[i].end) return i; }
+    return lay.lines.length - 1;
+  }
+  function innerH(){ return TA.h - PADY * 2; }
+  function maxScrollY(lay){ return Math.max(0, lay.lines.length * LH - innerH()); }
+
+  function baseXOf(c, lay, line){
+    var txt = lay.disp.slice(line.start, line.end);
+    var wLine = measure(c, txt);
+    if(state.align === "center") return TA.x + PADX + (lay.maxW - wLine) / 2;
+    if(state.align === "right") return TA.x + PADX + (lay.maxW - wLine);
+    return TA.x + PADX;
+  }
+
+  function selActive(){ return state.anchor >= 0 && state.anchor !== state.cursor; }
+  function selRange(){
+    return [Math.min(state.anchor, state.cursor), Math.max(state.anchor, state.cursor)];
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c, now){
+    c.clearRect(0, 0, W, H);
+    var lay = buildLayout(c);
+    var ms = maxScrollY(lay);
+    state.scrollY = clamp(state.scrollY, 0, ms);
+
+    /* 外框 */
+    c.save();
+    if(state.focused){ c.shadowColor = "rgba(43,125,233,0.20)"; c.shadowBlur = 12; }
+    else{ c.shadowColor = "rgba(28,33,40,0.08)"; c.shadowBlur = 8; c.shadowOffsetY = 3; }
+    roundRect(c, TA.x, TA.y, TA.w, TA.h, 8);
+    c.fillStyle = "#ffffff";
+    c.fill();
+    c.restore();
+    roundRect(c, TA.x, TA.y, TA.w, TA.h, 8);
+    c.strokeStyle = state.focused ? ACCENT : "#d6d9df";
+    c.lineWidth = state.focused ? 2 : 1;
+    c.stroke();
+
+    c.save();
+    roundRect(c, TA.x + 1, TA.y + 1, TA.w - 2, TA.h - 2, 7);
+    c.clip();
+
+    if(state.text.length === 0){
+      setFont(c);
+      c.fillStyle = "#9aa3ad";
+      c.textBaseline = "middle";
+      c.textAlign = "left";
+      c.fillText(fitText(c, state.placeholder, lay.maxW), TA.x + PADX, TA.y + PADY + LH / 2);
+    }else{
+      var act = selActive(), sr = act ? selRange() : null;
+      setFont(c);
+      c.textBaseline = "middle";
+      c.textAlign = "left";
+      for(var k = 0; k < lay.lines.length; k++){
+        var ln = lay.lines[k];
+        var top = TA.y + PADY + k * LH - state.scrollY;
+        if(top + LH < TA.y || top > TA.y + TA.h) continue;
+        var txt = lay.disp.slice(ln.start, ln.end);
+        var bx = baseXOf(c, lay, ln);
+        c.fillStyle = "#1c2128";
+        c.fillText(txt, bx, top + LH / 2);
+        /* 选区：底色 + 反色文字 */
+        if(act){
+          var os = Math.max(sr[0], ln.start), oe = Math.min(sr[1], ln.end);
+          if(oe > os){
+            var x1 = bx + measure(c, lay.disp.slice(ln.start, os));
+            var x2 = bx + measure(c, lay.disp.slice(ln.start, oe));
+            c.fillStyle = ACCENT;
+            c.fillRect(x1, top + 1, x2 - x1, LH - 2);
+            c.fillStyle = "#ffffff";
+            c.fillText(lay.disp.slice(os, oe), x1, top + LH / 2);
+          }
+        }
+      }
+      /* 闪烁光标 */
+      if(state.focused && (now % 1000) < 620){
+        var li = lineIndexOf(lay, state.cursor);
+        var line = lay.lines[li];
+        var bx2 = baseXOf(c, lay, line);
+        var cx = bx2 + measure(c, lay.disp.slice(line.start, Math.min(state.cursor, line.end)));
+        var cy = TA.y + PADY + li * LH - state.scrollY;
+        c.fillStyle = ACCENT;
+        c.fillRect(cx, cy + 3, 2, LH - 6);
+      }
+    }
+    c.restore();
+
+    /* 垂直滚动条（多行内容超出时出现） */
+    if(ms > 0.5){
+      var trackX = TA.x + TA.w - 8, trackY = TA.y + 5, trackH = TA.h - 10;
+      var thumbH = Math.max(20, trackH * innerH() / (lay.lines.length * LH));
+      var thumbY = trackY + (trackH - thumbH) * (state.scrollY / ms);
+      roundRect(c, trackX, trackY, 4, trackH, 2); c.fillStyle = "#eef0f3"; c.fill();
+      roundRect(c, trackX, thumbY, 4, thumbH, 2); c.fillStyle = "#c2c8d1"; c.fill();
+    }
+
+    /* 信息行 */
+    c.font = "11px " + FAMILY;
+    c.textBaseline = "middle";
+    c.fillStyle = "#8a929c";
+    c.textAlign = "left";
+    var info = "字符 " + state.text.length + " / " + (state.maxLen > 0 ? state.maxLen : "不限") +
+               " · 行数 " + lay.lines.length + (state.oneLine ? " · 单行模式" : " · 多行+滚动");
+    if(act) info += " · 选中 " + (sr[1] - sr[0]) + " 字符";
+    c.fillText(info, TA.x, TA.y + TA.h + 14);
+    c.textAlign = "center";
+    c.fillStyle = "#a7aeb8";
+    c.fillText("点击聚焦直接键入 · 拖动选中文字（反色） · 滚轮滚动", W / 2, H - 8);
+  }
+
+  /* ---------- 指针 → 字符索引 ---------- */
+  function idxFromPointer(c, px, py){
+    var lay = buildLayout(c);
+    var relY = py - (TA.y + PADY) + state.scrollY;
+    var li = clamp(Math.floor(relY / LH), 0, lay.lines.length - 1);
+    var ln = lay.lines[li];
+    var txt = lay.disp.slice(ln.start, ln.end);
+    var bx = baseXOf(c, lay, ln);
+    var rel = px - bx, best = ln.start, acc = 0, i, w;
+    for(i = 0; i < txt.length; i++){
+      w = measure(c, txt.charAt(i));
+      if(rel >= acc + w / 2) best = ln.start + i + 1;
+      acc += w;
+    }
+    return clamp(best, 0, state.text.length);
+  }
+
+  /* ---------- 编辑 ---------- */
+  function updateInfo(){
+    var lay = buildLayout(ctx);
+    var info = "字符 " + state.text.length + " / " + (state.maxLen > 0 ? state.maxLen : "不限") +
+               " · 光标 " + state.cursor + " · 行数 " + lay.lines.length;
+    if(selActive()){ var sr = selRange(); info += " · 选中 " + (sr[1] - sr[0]); }
+    document.getElementById("o-info").textContent = info;
+  }
+
+  function afterEdit(){
+    state.cursor = clamp(state.cursor, 0, state.text.length);
+    if(state.anchor > state.text.length) state.anchor = state.text.length;
+    var lay = buildLayout(ctx);
+    var ms = maxScrollY(lay);
+    var li = lineIndexOf(lay, state.cursor);
+    if(li * LH < state.scrollY) state.scrollY = li * LH;
+    if((li + 1) * LH > state.scrollY + innerH()) state.scrollY = Math.min(ms, (li + 1) * LH - innerH());
+    updateInfo();
+    renderCode();
+  }
+
+  function deleteSelection(){
+    if(!selActive()) return false;
+    var sr = selRange();
+    state.text = state.text.slice(0, sr[0]) + state.text.slice(sr[1]);
+    state.cursor = sr[0];
+    state.anchor = -1;
+    return true;
+  }
+
+  function insertText(txt){
+    txt = sanitize(txt);
+    if(!txt) return;
+    deleteSelection();
+    if(state.maxLen > 0){
+      var room = state.maxLen - state.text.length;
+      if(room <= 0){ setStatus("已达到最大长度 " + state.maxLen); return; }
+      if(txt.length > room) txt = txt.slice(0, room);
+    }
+    state.text = state.text.slice(0, state.cursor) + txt + state.text.slice(state.cursor);
+    state.cursor += txt.length;
+    afterEdit();
+  }
+
+  function syncTextInput(){ textEl.value = state.text; }
+
+  /* ---------- 键盘 ---------- */
+  kbd.addEventListener("input", function(){
+    var val = kbd.value;
+    kbd.value = "";
+    if(val) insertText(val);
+  });
+
+  kbd.addEventListener("keydown", function(e){
+    var key = e.key;
+    if(key === "Backspace"){
+      e.preventDefault();
+      if(!deleteSelection() && state.cursor > 0){
+        state.text = state.text.slice(0, state.cursor - 1) + state.text.slice(state.cursor);
+        state.cursor--;
+      }
+      afterEdit();
+      return;
+    }
+    if(key === "Delete"){
+      e.preventDefault();
+      if(!deleteSelection() && state.cursor < state.text.length){
+        state.text = state.text.slice(0, state.cursor) + state.text.slice(state.cursor + 1);
+      }
+      afterEdit();
+      return;
+    }
+    if(key === "ArrowLeft"){ e.preventDefault(); state.anchor = -1; state.cursor = Math.max(0, state.cursor - 1); afterEdit(); return; }
+    if(key === "ArrowRight"){ e.preventDefault(); state.anchor = -1; state.cursor = Math.min(state.text.length, state.cursor + 1); afterEdit(); return; }
+    if(key === "ArrowUp" || key === "ArrowDown"){
+      e.preventDefault();
+      if(state.oneLine) return;
+      var lay = buildLayout(ctx);
+      var li = lineIndexOf(lay, state.cursor);
+      var line = lay.lines[li];
+      var col = state.cursor - line.start;
+      var ti = clamp(li + (key === "ArrowUp" ? -1 : 1), 0, lay.lines.length - 1);
+      var tl = lay.lines[ti];
+      state.anchor = -1;
+      state.cursor = tl.start + Math.min(col, tl.end - tl.start);
+      afterEdit();
+      return;
+    }
+    if(key === "Home" || key === "End"){
+      e.preventDefault();
+      var lay2 = buildLayout(ctx);
+      var li2 = lineIndexOf(lay2, state.cursor);
+      state.anchor = -1;
+      state.cursor = key === "Home" ? lay2.lines[li2].start : lay2.lines[li2].end;
+      afterEdit();
+      return;
+    }
+    if(key === "Enter"){ e.preventDefault(); if(!state.oneLine) insertText("\n"); return; }
+  });
+
+  kbd.addEventListener("blur", function(){ state.focused = false; });
+
+  /* ---------- 画布点击 / 拖动选区 ---------- */
+  var dragging = false, moved = false;
+
+  canvas.addEventListener("pointerdown", function(e){
+    var rect = canvas.getBoundingClientRect();
+    var px = e.clientX - rect.left, py = e.clientY - rect.top;
+    state.focused = true;
+    try{ kbd.focus({ preventScroll: true }); }catch(err){ kbd.focus(); }
+    kbd.value = "";
+    var idx = idxFromPointer(ctx, px, py);
+    state.cursor = idx;
+    state.anchor = idx;
+    dragging = true;
+    moved = false;
+    canvas.setPointerCapture(e.pointerId);
+    afterEdit();
+  });
+
+  canvas.addEventListener("pointermove", function(e){
+    if(!dragging) return;
+    var rect = canvas.getBoundingClientRect();
+    var idx = idxFromPointer(ctx, e.clientX - rect.left, e.clientY - rect.top);
+    if(idx !== state.cursor) moved = true;
+    state.cursor = idx;
+    afterEdit();
+  });
+
+  function endDrag(){
+    if(!dragging) return;
+    dragging = false;
+    if(!moved) state.anchor = -1;   // 单击：清空选区
+    afterEdit();
+  }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  canvas.addEventListener("wheel", function(e){
+    var lay = buildLayout(ctx);
+    state.scrollY = clamp(state.scrollY + e.deltaY, 0, maxScrollY(lay));
+    e.preventDefault();
+  }, { passive: false });
+
+  /* ---------- 控件绑定 ---------- */
+  document.getElementById("placeholder").addEventListener("input", function(e){
+    state.placeholder = e.target.value;
+    renderCode();
+  });
+
+  textEl.addEventListener("input", function(){
+    var s = sanitize(textEl.value);
+    if(state.maxLen > 0) s = s.slice(0, state.maxLen);
+    state.text = s;
+    state.cursor = s.length;
+    state.anchor = -1;
+    if(s !== textEl.value) textEl.value = s;
+    afterEdit();
+  });
+
+  document.getElementById("max").addEventListener("input", function(){
+    var v = Number(this.value);
+    state.maxLen = v;
+    document.getElementById("o-max").textContent = v === 0 ? "不限" : String(v);
+    if(v > 0 && state.text.length > v){
+      state.text = state.text.slice(0, v);
+      state.cursor = clamp(state.cursor, 0, v);
+      syncTextInput();
+    }
+    afterEdit();
+  });
+
+  document.getElementById("align").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.align = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
+    renderCode();
+  });
+
+  document.getElementById("password").addEventListener("change", function(e){
+    state.password = e.target.checked;
+    renderCode();
+  });
+
+  document.getElementById("oneline").addEventListener("change", function(e){
+    state.oneLine = e.target.checked;
+    if(state.oneLine) state.text = state.text.replace(/\n/g, "");
+    state.cursor = clamp(state.cursor, 0, state.text.length);
+    state.anchor = -1;
+    state.scrollY = 0;
+    syncTextInput();
+    afterEdit();
+  });
+
+  document.getElementById("btn-clear").addEventListener("click", function(){
+    state.text = "";
+    state.cursor = 0;
+    state.anchor = -1;
+    syncTextInput();
+    afterEdit();
+    setStatus("已清空", true);
+  });
+
+  document.getElementById("btn-insert").addEventListener("click", function(){
+    insertText(" LVGL 让嵌入式 GUI 更简单。");
+    setStatus("已在光标处插入示例文字", true);
+  });
+
+  /* ---------- 等价 C 代码 ---------- */
+  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function cstr(s){
+    return '"' + esc(String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")) + '"';
+  }
+
+  function renderCode(){
+    var ALIGN = { left: "LV_TEXT_ALIGN_LEFT", center: "LV_TEXT_ALIGN_CENTER", right: "LV_TEXT_ALIGN_RIGHT" };
+    var L = [];
+    L.push('<span class="cm">/* 由左列参数实时生成 */</span>');
+    L.push('lv_obj_t * ta = <span class="fn">lv_textarea_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_obj_set_size</span>(ta, <span class="num">' + TA.w + '</span>, <span class="num">' + TA.h + '</span>);');
+    L.push('<span class="fn">lv_obj_align</span>(ta, LV_ALIGN_TOP_MID, <span class="num">0</span>, <span class="num">' + TA.y + '</span>);');
+    L.push('<span class="fn">lv_textarea_set_placeholder_text</span>(ta, ' + cstr(state.placeholder) + ');');
+    L.push('<span class="fn">lv_textarea_set_password_mode</span>(ta, ' + (state.password ? "true" : "false") + ');');
+    L.push('<span class="fn">lv_textarea_set_one_line</span>(ta, ' + (state.oneLine ? "true" : "false") + ');');
+    if(state.maxLen > 0){
+      L.push('<span class="fn">lv_textarea_set_max_length</span>(ta, <span class="num">' + state.maxLen + '</span>);');
+    }else{
+      L.push('<span class="cm">/* max_length = 0：不限制长度 */</span>');
+    }
+    L.push('<span class="fn">lv_obj_set_style_text_align</span>(ta, ' + ALIGN[state.align] + ', LV_PART_MAIN);');
+    L.push('<span class="fn">lv_textarea_set_text</span>(ta, ' + cstr(state.text) + ');');
+    L.push('<span class="fn">lv_textarea_set_cursor_pos</span>(ta, <span class="num">' + state.cursor + '</span>);');
+    if(!state.oneLine){
+      L.push('<span class="cm">/* 多行 + 滚动：lv_obj_set_scrollbar_mode(ta, LV_SCROLLBAR_MODE_AUTO) */</span>');
+    }
+    if(selActive()){
+      var sr = selRange();
+      L.push('<span class="cm">/* 选区 ' + sr[0] + '–' + sr[1] + '：lv_textarea_get_selected_text(ta) 可取选中文字 */</span>');
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- PNG 导出 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      download(blob, "textarea.png");
+      setStatus("PNG 已保存", true);
+    }, "image/png");
+  });
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.cursor = "text";
+  }
+
+  function loop(now){ draw(ctx, now); requestAnimationFrame(loop); }
+
+  fitCanvas();
+  afterEdit();
+  setStatus("点击画布聚焦输入框，然后直接键入");
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIEditText 操作绑定 + 实时生成代码
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+
+  var u = { text: "UIEditText" };
+
+  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function cstr(s){
+    return '"' + esc(String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")) + '"';
+  }
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_edit_text.h） */</span>');
+    L.push('UIEditText * edit = <span class="fn">new</span> UIEditText();');
+    L.push('edit-&gt;<span class="fn">SetPosition</span>(<span class="num">70</span>, <span class="num">88</span>);');
+    L.push('edit-&gt;<span class="fn">SetWidth</span>(<span class="num">220</span>);');
+    L.push('edit-&gt;<span class="fn">SetHeight</span>(<span class="num">38</span>);');
+    L.push('edit-&gt;<span class="fn">SetText</span>(' + cstr(u.text) + ');');
+    L.push('edit-&gt;<span class="fn">SetPlaceholder</span>("请输入内容");');
+    L.push('edit-&gt;<span class="fn">SetMaxLength</span>(<span class="num">32</span>);');
+    L.push('edit-&gt;<span class="fn">SetInputType</span>(UIEditText::UI_TEXT_INPUT_TYPE_NORMAL);');
+    L.push('<span class="cm">// 单行为主：多行滚动、选区与复制粘贴未完整实现</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  function init(){
+    var api = (window.LV2 && window.LV2.api) || {};
+    if(api.setText) api.setText(u.text);
+    $("utext").addEventListener("input", function(){
+      u.text = this.value;
+      if(api.setText) api.setText(u.text);
+      renderCode();
+    });
+    renderCode();
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

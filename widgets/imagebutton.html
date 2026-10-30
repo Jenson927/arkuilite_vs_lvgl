@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ImageButton：LVGL lv_imagebutton vs ArkUI lite UIButton+SetImageSrc</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='9' width='26' height='14' rx='4' fill='%232b7de9'/%3E%3Cpath d='M14 12l7 4-7 4z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>ImageButton：lv_imagebutton vs UIButton + SetImageSrc</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（四态图源：默认 / 按下 / 禁用 / 勾选 全部可配），右列为按
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码渲染的 UIButton + SetImageSrc（仅默认 / 按下两态图）。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_imagebutton</code>
+        <span class="cmp-tag lv">四态图源 · 可勾选</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">按住画布按钮显示 pressed；松开后若可勾选则在 released / checked 间切换；禁用时完全不响应。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>状态图源预览（外观预览）<span class="api">lv_imagebutton_set_src(btn, LV_IMAGEBUTTON_STATE_*, src)：每种状态一张图</span></label>
+            <div class="seg" id="preview">
+              <button type="button" data-v="released" class="active">默认</button>
+              <button type="button" data-v="pressed">按下</button>
+              <button type="button" data-v="disabled">禁用</button>
+              <button type="button" data-v="checked">勾选</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>宽度 width<output id="o-w">180 px</output><span class="api">lv_obj_set_size</span></label>
+            <input type="range" id="w" min="140" max="260" step="2" value="180">
+          </div>
+          <div class="field">
+            <label>高度 height<output id="o-h">64 px</output><span class="api">lv_obj_set_size</span></label>
+            <input type="range" id="h" min="44" max="96" step="2" value="64">
+          </div>
+
+          <div class="field">
+            <label>主色 released / pressed<span class="api">图源底色（演示用程序化绘制）</span></label>
+            <input type="color" id="color" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>勾选色 checked<span class="api">CHECKED 态图源底色</span></label>
+            <input type="color" id="checkedcolor" value="#1f9d66">
+          </div>
+
+          <div class="field">
+            <label>可勾选<span class="api">lv_obj_add_flag(btn, LV_OBJ_FLAG_CHECKABLE)</span></label>
+            <div class="check"><input type="checkbox" id="checkable" checked><span>点击切换 checked</span></div>
+          </div>
+          <div class="field">
+            <label>禁用态图源生效条件<span class="api">lv_obj_add_state(btn, LV_STATE_DISABLED)</span></label>
+            <div class="check"><input type="checkbox" id="disabled"><span>禁用（显示禁用图）</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIButton + SetImageSrc</code>
+        <span class="cmp-tag ui">仅两态图 · 自带缩放</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">SetImageSrc 只能配默认图与按下图两张；按住右侧按钮可体验内置缩放动效。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>状态图源切换演示（默认图 / 按下图）<span class="api">SetImageSrc(默认图, 按下图)：仅两态；无禁用 / 勾选态图源</span></label>
+            <div class="seg" id="usrc">
+              <button type="button" data-v="released" class="active">默认图</button>
+              <button type="button" data-v="pressed">按下图</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_button.cpp</code> ——
+          <code>SetImageSrc(const char* normal, const char* pressed)</code> 仅两张图；
+          按下时叠加内置缩放 0.8（150ms）与白色蒙层 25/255；
+          禁用态只改样式色值，不能换图源；选中 / 勾选态图源无对应接口（见右上角红色标注）。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列四态图源均为程序化绘制（实际工程替换为图片资源），PNG 导出离线可用。右列能力描述取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_imagebutton 复刻（迁移自旧页：四态图源 + 状态机）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 360, H = 220;
+  var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+  var dpr = window.devicePixelRatio || 1;
+
+  var state = {
+    w: 180, h: 64,
+    color: "#2b7de9",
+    checkedColor: "#1f9d66",
+    checkable: true,
+    disabled: false,
+    preview: "released",
+    checked: false
+  };
+  var pressing = false;
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+
+  function setStatus(msg, ok){ statusEl.textContent = msg; statusEl.className = "status" + (ok ? " ok" : ""); }
+
+  /* ---------- 颜色工具 ---------- */
+  function hexToRgb(h){
+    h = String(h).replace("#", "");
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+  function toHex(n){ var s = Math.round(Math.max(0, Math.min(255, n))).toString(16); return s.length < 2 ? "0" + s : s; }
+  function mix(a, b, t){
+    var A = hexToRgb(a), B = hexToRgb(b);
+    return "#" + toHex(A[0] + (B[0] - A[0]) * t) + toHex(A[1] + (B[1] - A[1]) * t) + toHex(A[2] + (B[2] - A[2]) * t);
+  }
+  function shade(c, k){ return k >= 0 ? mix(c, "#ffffff", k) : mix(c, "#000000", -k); }
+
+  function roundRectPath(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  /* ---------- 四态图源（程序化绘制） ---------- */
+  var sources = {};
+  var LABEL = {
+    released: "released（默认图）",
+    pressed: "pressed（按下图）",
+    checked: "checked（勾选图）",
+    disabled: "disabled（禁用图）"
+  };
+
+  function buttonRadius(){ return Math.min(12, state.h / 3, state.w / 4); }
+
+  function makeSource(kind){
+    var cv = document.createElement("canvas");
+    cv.width = Math.round(state.w * dpr);
+    cv.height = Math.round(state.h * dpr);
+    var c = cv.getContext("2d");
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var base = kind === "checked" ? state.checkedColor : state.color;
+    if(kind === "pressed") base = shade(base, -0.2);
+    if(kind === "disabled") base = "#b8bfc9";
+    var dy = kind === "pressed" ? 2 : 0;
+    var r = buttonRadius();
+
+    c.save();
+    c.globalAlpha = kind === "disabled" ? 0.45 : 1;
+
+    var g = c.createLinearGradient(0, 0, 0, state.h);
+    g.addColorStop(0, shade(base, 0.1));
+    g.addColorStop(1, shade(base, -0.09));
+    c.fillStyle = g;
+    roundRectPath(c, 0, 0, state.w, state.h, r);
+    c.fill();
+
+    c.strokeStyle = "rgba(0,0,0,0.12)";
+    c.lineWidth = 1;
+    roundRectPath(c, 0.5, 0.5, state.w - 1, state.h - 1, Math.max(0, r - 0.5));
+    c.stroke();
+
+    var cx = state.w / 2;
+    var cy = state.h / 2 + dy;
+    var s = Math.min(state.w, state.h) * 0.34;
+    c.fillStyle = "#ffffff";
+
+    if(kind === "checked"){
+      /* 暂停图标：两条竖线 */
+      var bw = Math.max(4, s * 0.3);
+      var gap = Math.max(4, s * 0.26);
+      var bh = s;
+      roundRectPath(c, cx - gap / 2 - bw, cy - bh / 2, bw, bh, bw / 2);
+      c.fill();
+      roundRectPath(c, cx + gap / 2, cy - bh / 2, bw, bh, bw / 2);
+      c.fill();
+    }else{
+      /* 播放三角 */
+      c.beginPath();
+      c.moveTo(cx - s * 0.42, cy - s * 0.58);
+      c.lineTo(cx - s * 0.42, cy + s * 0.58);
+      c.lineTo(cx + s * 0.62, cy);
+      c.closePath();
+      c.fill();
+    }
+    c.restore();
+    return cv;
+  }
+
+  function buildSources(){
+    sources.released = makeSource("released");
+    sources.pressed = makeSource("pressed");
+    sources.checked = makeSource("checked");
+    sources.disabled = makeSource("disabled");
+  }
+
+  buildSources();
+
+  function screenRect(){
+    return { x: (W - state.w) / 2, y: (H - state.h) / 2, w: state.w, h: state.h };
+  }
+
+  function shownKind(){
+    if(state.disabled) return "disabled";
+    if(pressing) return state.checked ? "checked" : "pressed";
+    return state.preview;
+  }
+
+  /* ---------- 绘制 ---------- */
+  function drawScene(c){
+    c.clearRect(0, 0, W, H);
+    var box = screenRect();
+    var kind = shownKind();
+    var r = buttonRadius();
+
+    c.save();
+    c.shadowColor = "rgba(28,33,40,0.20)";
+    c.shadowBlur = 10;
+    c.shadowOffsetY = 4;
+    c.fillStyle = "#ffffff";
+    roundRectPath(c, box.x, box.y, box.w, box.h, r);
+    c.fill();
+    c.restore();
+
+    c.drawImage(sources[kind], box.x, box.y, box.w, box.h);
+
+    if(pressing && state.checked && !state.disabled){
+      c.save();
+      roundRectPath(c, box.x, box.y, box.w, box.h, r);
+      c.clip();
+      c.fillStyle = "rgba(0,0,0,0.15)";
+      c.fillRect(box.x, box.y + 2, box.w, box.h);
+      c.restore();
+    }
+
+    c.font = "12px " + FAMILY;
+    c.textBaseline = "middle";
+    c.textAlign = "center";
+    c.fillStyle = state.disabled ? "#8a929c" : "#5b6470";
+    c.fillText("当前图源：" + LABEL[kind], W / 2, 26);
+
+    var hint = state.disabled ? "已禁用：不响应按下与切换" : "按住显示 pressed · 松开恢复 / 切换 checked";
+    c.font = "10.5px " + FAMILY;
+    c.fillStyle = "#a7aeb8";
+    c.fillText(hint, W / 2, H - 10);
+    c.textAlign = "left";
+  }
+
+  function loop(){ drawScene(ctx); requestAnimationFrame(loop); }
+
+  /* ---------- 交互 ---------- */
+  function toLocal(e){
+    var rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+  function inButton(p){
+    var b = screenRect();
+    return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+  }
+
+  canvas.style.cursor = "pointer";
+  canvas.addEventListener("pointerdown", function(e){
+    if(state.disabled) return;
+    var p = toLocal(e);
+    if(!inButton(p)) return;
+    pressing = true;
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener("pointerup", function(e){
+    if(state.disabled) return;
+    var p = toLocal(e);
+    var wasPressed = pressing;
+    pressing = false;
+    if(!wasPressed || !inButton(p)) return;
+    if(state.checkable){
+      state.checked = !state.checked;
+      state.preview = state.checked ? "checked" : "released";
+      syncPreview();
+      renderCode();
+      setStatus("已切换到 " + (state.checked ? "checked" : "released"), true);
+    }
+  });
+  canvas.addEventListener("pointercancel", function(){ pressing = false; });
+
+  function syncPreview(){
+    var btns = document.getElementById("preview").getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i].getAttribute("data-v") === state.preview ? "active" : "";
+    }
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  document.getElementById("preview").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.preview = btn.getAttribute("data-v");
+    if(state.preview === "checked") state.checked = true;
+    if(state.preview === "released") state.checked = false;
+    syncPreview();
+    renderCode();
+  });
+
+  document.getElementById("w").addEventListener("input", function(){
+    state.w = Number(this.value);
+    document.getElementById("o-w").textContent = state.w + " px";
+    buildSources();
+    renderCode();
+  });
+  document.getElementById("h").addEventListener("input", function(){
+    state.h = Number(this.value);
+    document.getElementById("o-h").textContent = state.h + " px";
+    buildSources();
+    renderCode();
+  });
+  document.getElementById("color").addEventListener("input", function(e){
+    state.color = e.target.value;
+    buildSources();
+    renderCode();
+  });
+  document.getElementById("checkedcolor").addEventListener("input", function(e){
+    state.checkedColor = e.target.value;
+    buildSources();
+    renderCode();
+  });
+
+  document.getElementById("checkable").addEventListener("change", function(e){
+    state.checkable = e.target.checked;
+    if(!state.checkable){
+      state.checked = false;
+      if(state.preview === "checked") state.preview = "released";
+      syncPreview();
+    }
+    renderCode();
+  });
+
+  document.getElementById("disabled").addEventListener("change", function(e){
+    state.disabled = e.target.checked;
+    pressing = false;
+    renderCode();
+    setStatus(state.disabled ? "已禁用：点击不再响应" : "已启用：可正常点击", true);
+  });
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由左列参数实时生成 · 实际工程替换为图片资源 */</span>');
+    L.push('lv_obj_t * btn = <span class="fn">lv_imagebutton_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_obj_set_size</span>(btn, <span class="num">' + state.w + '</span>, <span class="num">' + state.h + '</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(btn);');
+    L.push('');
+    L.push('<span class="cm">/* 四态图源：每种状态一张图（右列只能配两张） */</span>');
+    L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_RELEASED, &src_released, NULL, NULL);');
+    L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_PRESSED, &src_pressed, NULL, NULL);');
+    L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_CHECKED_RELEASED, &src_checked, NULL, NULL);');
+    L.push('<span class="fn">lv_imagebutton_set_src</span>(btn, LV_IMAGEBUTTON_STATE_DISABLED, &src_disabled, NULL, NULL);');
+    L.push('');
+    if(state.checkable){
+      L.push('<span class="fn">lv_obj_add_flag</span>(btn, LV_OBJ_FLAG_CHECKABLE);');
+    }
+    if(state.disabled){
+      L.push('<span class="fn">lv_obj_add_state</span>(btn, LV_STATE_DISABLED);  <span class="cm">/* 显示禁用态图源 */</span>');
+    }
+    L.push('<span class="fn">lv_imagebutton_set_state</span>(btn, ' + (state.checked
+      ? "LV_IMAGEBUTTON_STATE_CHECKED_RELEASED"
+      : "LV_IMAGEBUTTON_STATE_RELEASED") + ');');
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- PNG 导出 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      download(blob, "imagebutton.png");
+      setStatus("PNG 已保存", true);
+    }, "image/png");
+  });
+
+  /* ---------- 高清适配 + 启动 ---------- */
+  function fitCanvas(){
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  fitCanvas();
+  renderCode();
+  syncPreview();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIButton + SetImageSrc 操作绑定 + 实时生成代码
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+
+  var u = { src: "released" };   // 默认图 / 按下图
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_button.h） */</span>');
+    L.push('UIButton * btn = <span class="fn">new</span> UIButton();');
+    L.push('btn-&gt;<span class="fn">SetPosition</span>(<span class="num">114</span>, <span class="num">74</span>);');
+    L.push('btn-&gt;<span class="fn">SetWidth</span>(<span class="num">132</span>);');
+    L.push('btn-&gt;<span class="fn">SetHeight</span>(<span class="num">66</span>);');
+    L.push('<span class="cm">// 仅两张图源：默认图 + 按下图</span>');
+    L.push('btn-&gt;<span class="fn">SetImageSrc</span>("img_normal.png", "img_pressed.png");');
+    if(u.src === "pressed"){
+      L.push('btn-&gt;<span class="fn">SetStateForStyle</span>(UIButton::PRESSED);  <span class="cm">// 显示按下图</span>');
+    }else{
+      L.push('btn-&gt;<span class="fn">SetStateForStyle</span>(UIButton::RELEASED);  <span class="cm">// 显示默认图</span>');
+    }
+    L.push('<span class="cm">// 禁用态只改样式色值，不能换图源；无选中/勾选态图</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  function init(){
+    var api = (window.LV2 && window.LV2.api) || {};
+    if(api.set) api.set(u.src);
+    $("usrc").addEventListener("click", function(e){
+      var btn = e.target.closest ? e.target.closest("button") : null;
+      if(!btn || btn.parentNode !== this) return;
+      u.src = btn.getAttribute("data-v");
+      var btns = this.getElementsByTagName("button");
+      for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
+      if(api.set) api.set(u.src);
+      renderCode();
+    });
+    renderCode();
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

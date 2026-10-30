@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roller：lv_roller vs UIPicker</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='9' y='4' width='14' height='24' rx='4' fill='none' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M13 11h6M13 16h6M13 21h6' stroke='%232b7de9' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Roller：lv_roller vs UIPicker</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（新增两列省市联动：第二列城市随第一列省份变化），右列为按
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 渲染的 UIPicker 单列滚轮。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_roller</code>
+        <span class="cmp-tag lv">多列联动 · 可见行数可配</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">在滚轮上按住上下拖动，松开吸附；开启两列联动后，第二列城市列表随第一列省份实时更换——这正是 UIPicker 缺失的多列能力。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>两列联动（城市跟随省份）<span class="api">两个 lv_roller + LV_EVENT_VALUE_CHANGED 回调联动（ArkUI lite 需自己组合多个 UIPicker）</span></label>
+            <div class="check"><input type="checkbox" id="cascade" checked><span>第二列选项随第一列选中项变化</span></div>
+          </div>
+
+          <div class="field">
+            <label>可见行数 set_visible_row_count<output id="o-rows">5</output><span class="api">lv_roller_set_visible_row_count</span></label>
+            <input type="range" id="rows" min="3" max="7" step="1" value="5">
+          </div>
+          <div class="field">
+            <label>选中索引 set_selected<output id="o-sel">上海 (1)</output><span class="api">lv_roller_set_selected(roller, idx, LV_ANIM_ON)</span></label>
+            <input type="range" id="sel" min="0" max="4" step="1" value="1">
+          </div>
+
+          <div class="field">
+            <label>动画时长 anim_duration<output id="o-anim">400 ms</output><span class="api">lv_obj_set_style_anim_duration</span></label>
+            <input type="range" id="anim" min="100" max="1000" step="50" value="400">
+          </div>
+          <div class="field">
+            <label>无限循环 mode<span class="api">LV_ROLLER_MODE_INFINITE / NORMAL</span></label>
+            <div class="check"><input type="checkbox" id="infinite" checked><span>第一列无限循环滚动</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>自动滚动演示<span class="api">按动画时长逐项滚动（导出 GIF / WebM 用）</span></label>
+            <div class="check"><input type="checkbox" id="auto" checked><span>自动循环滚动第一列</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIPicker</code>
+        <span class="cmp-tag ui">单列滚轮 · 循环可配</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UIPicker 只有单列：选中项用 SetSelectIndex 设置，循环滚动用 SetLoopState，多列级联要自己组合多个 UIPicker。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>选中项<span class="api">UIPicker::SetSelectIndex(uint16_t)：选项为 北京 / 上海 / 广州 / 深圳</span></label>
+            <div class="seg" id="usel">
+              <button type="button" data-v="0">北京</button>
+              <button type="button" data-v="1" class="active">上海</button>
+              <button type="button" data-v="2">广州</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          依据 <code>ui_picker.h</code>：UIPicker 为单列滚轮，提供
+          <code>SetSelectIndex()</code> / <code>SetLoopState()</code> / <code>SetTextColor()</code> /
+          <code>SetTextFormatter()</code>；没有可见行数与多列联动接口，年-月-日这类级联需自建多个 Picker 并手动同步。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列演示按 foundation/arkui/ui_lite 的 UIPicker 行为渲染。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_roller 复刻（迁移自旧页，新增两列省市联动 + 可见行数 range）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+  var D = 900; /* 自动滚动每项停留间隔 */
+
+  var PROVS = ["北京", "上海", "广东", "浙江", "江苏"];
+  var CITIES = {
+    "北京": ["东城", "西城", "朝阳", "海淀"],
+    "上海": ["黄浦", "徐汇", "浦东", "静安"],
+    "广东": ["广州", "深圳", "珠海", "佛山"],
+    "浙江": ["杭州", "宁波", "温州", "嘉兴"],
+    "江苏": ["南京", "苏州", "无锡", "常州"]
+  };
+
+  var state = {
+    cascade: true,
+    rows: 5,
+    sel1: 1, sel2: 0,
+    infinite: true,
+    anim: 400,
+    auto: true,
+    pos1: 1, pos2: 0,
+    lastPos1: 1,
+    tween1: null, tween2: null,
+    drag: null,
+    autoT0: 0
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  view.canvas.style.cursor = "grab";
+  state.autoT0 = performance.now() - state.sel1 * D;
+
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function wrapIdx(j, n){ return ((j % n) + n) % n; }
+
+  function metrics(){
+    var rowH = Math.min(38, (H - 60) / state.rows);
+    var cardH = rowH * state.rows;
+    var cardY = 34 + ((H - 64) - cardH) / 2;
+    if(state.cascade){
+      var cardW = 150, gap = 16;
+      var x1 = (W - (cardW * 2 + gap)) / 2;
+      return { rowH: rowH, cardH: cardH, cardY: cardY, cardW: cardW, x1: x1, x2: x1 + cardW + gap };
+    }
+    var w1 = 200;
+    return { rowH: rowH, cardH: cardH, cardY: cardY, cardW: w1, x1: (W - w1) / 2, x2: -1 };
+  }
+
+  function cityOpts(){ return CITIES[PROVS[state.sel1]] || CITIES["北京"]; }
+
+  function fitText(c, s, maxW, size){
+    s = String(s);
+    if(K.measure(c, s, { size: size }) <= maxW) return s;
+    var out = s;
+    while(out.length && K.measure(c, out + "…", { size: size }) > maxW) out = out.slice(0, -1);
+    return out + "…";
+  }
+
+  /* 自动演示：时刻 t 的连续滚动位置（第一列） */
+  function autoPos1(t){
+    var n = PROVS.length;
+    var A = Math.max(120, Math.min(state.anim, 800));
+    if(state.infinite){
+      var u = (t % (D * n)) / D;
+      var i = Math.floor(u);
+      var f = u - i;
+      return i + K.easeOut(clamp(f * D / A, 0, 1));
+    }
+    var span = 2 * (n - 1);
+    var u2 = (t % (D * span)) / D;
+    var v = u2 <= n - 1 ? u2 : span - u2;
+    var i2 = Math.floor(v);
+    var f2 = v - i2;
+    return i2 + K.easeOut(clamp(f2 * D / A, 0, 1));
+  }
+
+  function idxOf(pos, n, infinite){
+    var j = Math.round(pos);
+    return infinite ? wrapIdx(j, n) : clamp(j, 0, n - 1);
+  }
+
+  function runTween(tw, now){
+    if(!tw) return null;
+    var k = clamp((now - tw.start) / tw.dur, 0, 1);
+    var p = tw.from + (tw.to - tw.from) * K.easeOut(k);
+    return k >= 1 ? null : { tw: tw, pos: p };
+  }
+
+  function updatePositions(now){
+    if(state.auto){
+      state.pos1 = autoPos1(now - state.autoT0);
+      state.pos2 = 0;
+      state.lastPos1 = state.pos1;
+      return;
+    }
+    var r1 = runTween(state.tween1, now);
+    if(r1){ state.pos1 = r1.pos; } else if(state.tween1){ state.pos1 = state.tween1.to; state.tween1 = null; }
+    var r2 = runTween(state.tween2, now);
+    if(r2){ state.pos2 = r2.pos; } else if(state.tween2){ state.pos2 = state.tween2.to; state.tween2 = null; }
+    state.lastPos1 = state.pos1;
+  }
+
+  function drawRoller(c, opts, pos, x, m, infinite){
+    var n = opts.length;
+    var centerY = m.cardY + m.cardH / 2;
+
+    K.box(c, x, m.cardY, m.cardW, m.cardH, {
+      bg: "#ffffff", radius: 12,
+      shadow: K.alpha("#1c2128", 0.10), shadowBlur: 14, shadowY: 4
+    });
+    K.box(c, x + 10, centerY - m.rowH / 2 + 3, m.cardW - 20, m.rowH - 6, {
+      bg: "#eaf2fe", radius: 8
+    });
+
+    c.save();
+    K.roundRectPath(c, x, m.cardY, m.cardW, m.cardH, 12);
+    c.clip();
+
+    var base = Math.round(pos);
+    for(var j = base - state.rows - 1; j <= base + state.rows + 1; j++){
+      if(!infinite && (j < 0 || j >= n)) continue;
+      var off = j - pos;
+      if(Math.abs(off) > state.rows * 0.9) continue;
+      var y = centerY + off * m.rowH;
+      if(y < m.cardY - m.rowH * 0.5 || y > m.cardY + m.cardH + m.rowH * 0.5) continue;
+      var idx = infinite ? wrapIdx(j, n) : j;
+      var d = Math.abs(off);
+      var size = Math.max(11, 18 - 3 * Math.min(d, 3));
+      var alpha = clamp(1 - 0.24 * d, 0.2, 1);
+      var isSel = d < 0.45;
+      K.text(c, fitText(c, opts[idx], m.cardW - 28, size), x + m.cardW / 2, y, {
+        size: size, weight: isSel ? 600 : 500,
+        color: isSel ? K.theme.text : K.theme.textMuted,
+        alpha: alpha, align: "center"
+      });
+    }
+    c.restore();
+
+    K.box(c, x, m.cardY, m.cardW, m.cardH, { radius: 12, borderWidth: 1, border: "#dfe3e8" });
+  }
+
+  function drawScene(c, p1, p2){
+    var m = metrics();
+    c.clearRect(0, 0, W, H);
+
+    K.text(c, state.cascade ? "第一列 · 省份" : "单列滚轮 · 省份", m.x1 + m.cardW / 2, 18, {
+      size: 11.5, weight: 600, color: K.theme.textMuted, align: "center"
+    });
+    drawRoller(c, PROVS, p1, m.x1, m, state.infinite);
+
+    if(state.cascade){
+      K.text(c, "第二列 · 城市（联动）", m.x2 + m.cardW / 2, 18, {
+        size: 11.5, weight: 600, color: K.theme.textMuted, align: "center"
+      });
+      drawRoller(c, cityOpts(), p2, m.x2, m, false);
+    }
+  }
+
+  function syncSelUI(){
+    var name = PROVS[state.sel1] || "";
+    var extra = state.cascade ? " · " + (cityOpts()[state.sel2] || "") : "";
+    document.getElementById("o-sel").textContent = name + " (" + state.sel1 + ")" + extra;
+    var el = document.getElementById("sel");
+    el.max = PROVS.length - 1;
+    el.value = state.sel1;
+  }
+
+  function snapTo(col, target){
+    if(col === 1){
+      if(!state.infinite) target = clamp(target, 0, PROVS.length - 1);
+      state.tween1 = { from: state.pos1, to: target, start: performance.now(), dur: Math.max(100, state.anim) };
+    }else{
+      target = clamp(target, 0, cityOpts().length - 1);
+      state.tween2 = { from: state.pos2, to: target, start: performance.now(), dur: Math.max(100, state.anim) };
+    }
+  }
+
+  function stopAuto(){
+    if(state.auto){
+      state.auto = false;
+      document.getElementById("auto").checked = false;
+    }
+  }
+
+  K.run(function(now){
+    updatePositions(now);
+
+    var i1 = idxOf(state.pos1, PROVS.length, state.infinite);
+    if(i1 !== state.sel1){
+      state.sel1 = i1;
+      if(state.cascade){ state.sel2 = 0; state.pos2 = 0; state.tween2 = null; }
+      syncSelUI();
+      renderCode();
+    }
+    drawScene(view.ctx, state.pos1, state.pos2);
+  });
+
+  /* ---------- 拖动 / 点击 ---------- */
+  function pointerPos(e){
+    var rect = view.canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (W / rect.width),
+      y: (e.clientY - rect.top) * (H / rect.height)
+    };
+  }
+
+  function hitCol(p){
+    var m = metrics();
+    if(p.y < m.cardY || p.y > m.cardY + m.cardH) return 0;
+    if(p.x >= m.x1 && p.x <= m.x1 + m.cardW) return 1;
+    if(state.cascade && p.x >= m.x2 && p.x <= m.x2 + m.cardW) return 2;
+    return 0;
+  }
+
+  view.canvas.addEventListener("pointerdown", function(e){
+    var p = pointerPos(e);
+    var col = hitCol(p);
+    if(!col) return;
+    stopAuto();
+    var m = metrics();
+    state.drag = {
+      col: col, startY: p.y, moved: false,
+      startPos: col === 1 ? state.pos1 : state.pos2,
+      basePos: col === 1 ? state.pos1 : state.pos2
+    };
+    if(col === 1) state.tween1 = null; else state.tween2 = null;
+    view.canvas.style.cursor = "grabbing";
+    if(view.canvas.setPointerCapture){
+      try{ view.canvas.setPointerCapture(e.pointerId); }catch(err){}
+    }
+  });
+
+  view.canvas.addEventListener("pointermove", function(e){
+    if(!state.drag) return;
+    var p = pointerPos(e);
+    var m = metrics();
+    var dy = state.drag.startY - p.y;
+    if(Math.abs(dy) > 4) state.drag.moved = true;
+    var np = state.drag.startPos + dy / m.rowH;
+    if(state.drag.col === 1){
+      if(!state.infinite) np = clamp(np, 0, PROVS.length - 1);
+      state.pos1 = np;
+    }else{
+      state.pos2 = clamp(np, 0, cityOpts().length - 1);
+    }
+  });
+
+  function endDrag(e){
+    if(!state.drag) return;
+    var drag = state.drag;
+    state.drag = null;
+    view.canvas.style.cursor = "grab";
+    var m = metrics();
+    var p = e && e.clientY != null ? pointerPos(e) : null;
+    var pos = drag.col === 1 ? state.pos1 : state.pos2;
+    if(!drag.moved && p){
+      var centerY = m.cardY + m.cardH / 2;
+      var target = Math.round(pos + (p.y - centerY) / m.rowH);
+      snapTo(drag.col, target);
+    }else{
+      snapTo(drag.col, Math.round(pos));
+    }
+    K.status("已吸附：" + (drag.col === 1 ? PROVS[state.sel1] : cityOpts()[state.sel2]));
+  }
+  view.canvas.addEventListener("pointerup", endDrag);
+  view.canvas.addEventListener("pointercancel", endDrag);
+
+  /* ---------- 参数绑定 ---------- */
+  K.bindCheck("cascade", function(on){
+    state.cascade = on;
+    state.sel2 = 0;
+    state.pos2 = 0;
+    state.tween2 = null;
+    syncSelUI();
+    renderCode();
+  });
+  K.bindRange("rows", function(v){ return v; }, function(v){
+    state.rows = v;
+    renderCode();
+  });
+  document.getElementById("sel").addEventListener("input", function(e){
+    stopAuto();
+    state.tween1 = null;
+    state.sel1 = Number(e.target.value);
+    state.pos1 = state.sel1;
+    if(state.cascade){ state.sel2 = 0; state.pos2 = 0; state.tween2 = null; }
+    syncSelUI();
+    renderCode();
+  });
+  K.bindRange("anim", function(v){ return v + " ms"; }, function(v){
+    state.anim = v;
+    renderCode();
+  });
+  K.bindCheck("infinite", function(on){
+    state.infinite = on;
+    if(!on) state.pos1 = clamp(state.pos1, 0, PROVS.length - 1);
+    syncSelUI();
+    renderCode();
+  });
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    if(on){
+      state.autoT0 = performance.now() - idxOf(state.pos1, PROVS.length, state.infinite) * D;
+      state.tween1 = null;
+    }else{
+      snapTo(1, Math.round(state.lastPos1));
+    }
+  });
+
+  /* ---------- 等价 C 代码 ---------- */
+  function cstr(s){
+    return '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n") + '"';
+  }
+
+  function renderCode(){
+    var m = metrics();
+    var mode = state.infinite ? "LV_ROLLER_MODE_INFINITE" : "LV_ROLLER_MODE_NORMAL";
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+
+    if(state.cascade){
+      L.push('static const char * prov_opts = ' + cstr(PROVS.join("\n")) + ";");
+      L.push("static const char * city_map[" + K.num(PROVS.length) + "] = {");
+      for(var i = 0; i < PROVS.length; i++){
+        L.push("    " + cstr(CITIES[PROVS[i]].join("\n")) + (i < PROVS.length - 1 ? "," : ""));
+      }
+      L.push("};");
+      L.push("static lv_obj_t * roller_prov, * roller_city;");
+      L.push("");
+      L.push("roller_prov = " + K.fn("lv_roller_create") + "(lv_screen_active());");
+      L.push(K.fn("lv_roller_set_options") + "(roller_prov, prov_opts, " + K.num(mode) + ");");
+      L.push(K.fn("lv_roller_set_visible_row_count") + "(roller_prov, " + K.num(state.rows) + ");");
+      L.push(K.fn("lv_obj_set_size") + "(roller_prov, " + K.num(m.cardW) + ", " + K.num(Math.round(m.cardH)) + ");");
+      L.push(K.fn("lv_obj_align") + "(roller_prov, LV_ALIGN_CENTER, " + K.num(-83) + ", " + K.num(0) + ");");
+      L.push(K.fn("lv_obj_set_style_anim_duration") + "(roller_prov, " + K.num(state.anim) + ", 0);");
+      L.push("");
+      L.push("roller_city = " + K.fn("lv_roller_create") + "(lv_screen_active());");
+      L.push(K.fn("lv_roller_set_options") + "(roller_city, city_map[" + K.num(state.sel1) + "], LV_ROLLER_MODE_NORMAL);");
+      L.push(K.fn("lv_roller_set_visible_row_count") + "(roller_city, " + K.num(state.rows) + ");");
+      L.push(K.fn("lv_obj_set_size") + "(roller_city, " + K.num(m.cardW) + ", " + K.num(Math.round(m.cardH)) + ");");
+      L.push(K.fn("lv_obj_align") + "(roller_city, LV_ALIGN_CENTER, " + K.num(83) + ", " + K.num(0) + ");");
+      L.push("");
+      L.push(K.cm("/* 第一列变化时重建第二列选项（多列联动） */"));
+      L.push(K.fn("lv_obj_add_event_cb") + "(roller_prov, prov_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);");
+      L.push(K.fn("lv_roller_set_selected") + "(roller_prov, " + K.num(state.sel1) + ", LV_ANIM_ON);");
+      L.push("");
+      L.push("static void prov_changed_cb(lv_event_t * e)");
+      L.push("{");
+      L.push("    uint32_t i = " + K.fn("lv_roller_get_selected") + "(roller_prov);");
+      L.push("    " + K.fn("lv_roller_set_options") + "(roller_city, city_map[i], LV_ROLLER_MODE_NORMAL);");
+      L.push("    " + K.fn("lv_roller_set_selected") + "(roller_city, 0, LV_ANIM_ON);");
+      L.push("}");
+    }else{
+      L.push("lv_obj_t * roller = " + K.fn("lv_roller_create") + "(lv_screen_active());");
+      L.push(K.fn("lv_roller_set_options") + "(roller, " + cstr(PROVS.join("\n")) + ", " + K.num(mode) + ");");
+      L.push(K.fn("lv_roller_set_visible_row_count") + "(roller, " + K.num(state.rows) + ");");
+      L.push(K.fn("lv_obj_set_size") + "(roller, " + K.num(m.cardW) + ", " + K.num(Math.round(m.cardH)) + ");");
+      L.push(K.fn("lv_obj_center") + "(roller);");
+      L.push(K.fn("lv_obj_set_style_anim_duration") + "(roller, " + K.num(state.anim) + ", 0);");
+      L.push(K.fn("lv_roller_set_selected") + "(roller, " + K.num(state.sel1) + ", LV_ANIM_ON);");
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 导出 ---------- */
+  function cycleMs(){
+    var n = PROVS.length;
+    return D * (state.infinite ? n : 2 * (n - 1));
+  }
+
+  function drawAutoFrame(c, t){
+    var p1 = autoPos1(t);
+    var i1 = idxOf(p1, PROVS.length, state.infinite);
+    var savedSel1 = state.sel1;
+    state.sel1 = i1;
+    drawScene(c, p1, 0);
+    state.sel1 = savedSel1;
+  }
+
+  function withButtons(fn){
+    var ids = ["btn-gif", "btn-webm", "btn-png"];
+    ids.forEach(function(id){ document.getElementById(id).disabled = true; });
+    fn(function(){
+      ids.forEach(function(id){ document.getElementById(id).disabled = false; });
+    });
+  }
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    withButtons(function(done){
+      K.exportGif({
+        name: "roller.gif", w: W, h: H, fps: 16, duration: cycleMs(),
+        frame: function(c, t){ drawAutoFrame(c, t); },
+        onDone: done, onError: done
+      });
+    });
+  });
+
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    withButtons(function(done){
+      K.exportWebm({
+        canvas: view.canvas,
+        name: "roller.webm",
+        duration: Math.min(cycleMs(), 8000),
+        before: function(){
+          var old = { auto: state.auto, t0: state.autoT0 };
+          state.auto = true;
+          state.tween1 = null;
+          state.autoT0 = performance.now();
+          document.getElementById("auto").checked = true;
+          return old;
+        },
+        after: function(old){
+          state.auto = old.auto;
+          state.autoT0 = old.t0;
+          document.getElementById("auto").checked = old.auto;
+        },
+        onDone: done, onError: done
+      });
+    });
+  });
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "roller.png");
+  });
+
+  syncSelUI();
+  renderCode();
+  K.status("拖动滚轮或点击某一行，松开后自动吸附");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：UIPicker 操作绑定 + 等价 C++ 代码生成
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var OPTS = ["北京", "上海", "广州", "深圳"];
+  var sel = 1;   /* 与 cmp2.js 中 picker 演示的初始 setSel(1) 一致 */
+
+  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  function renderUCode(){
+    var L = [];
+    L.push(cm("/* 由右列参数实时生成（UIPicker 仅单列） */"));
+    L.push("UIPicker * picker = " + fn("new") + " UIPickerView();");
+    L.push("picker-&gt;" + fn("SetPosition") + "(" + num(100) + ", " + num(47) + ");");
+    L.push("picker-&gt;" + fn("SetSize") + "(" + num(160) + ", " + num(126) + ");");
+    L.push("");
+    L.push("static const char * OPTS[] = { " +
+      OPTS.map(function(t){ return '"' + esc(t) + '"'; }).join(", ") + " };");
+    L.push("for (int i = 0; i &lt; " + num(OPTS.length) + "; i++) {");
+    L.push("    UILabel * item = " + fn("new") + " UILabel();");
+    L.push("    item-&gt;" + fn("SetText") + "(OPTS[i]);");
+    L.push("    picker-&gt;" + fn("Add") + "(item);");
+    L.push("}");
+    L.push("");
+    L.push("picker-&gt;" + fn("SetSelectIndex") + "(" + num(sel) + ");   " + cm("/* 当前选中：" + OPTS[sel] + " */"));
+    L.push("picker-&gt;" + fn("SetLoopState") + "(true);");
+    L.push(cm("/* 多列联动：需再建一个 UIPickerView，并在第一列的选中回调里手动重建第二列选项 */"));
+    document.getElementById("ucode").innerHTML = L.join("\n");
+  }
+
+  document.getElementById("usel").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    sel = Number(btn.getAttribute("data-v"));
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    if(window.LV2 && LV2.api && LV2.api.setSel) LV2.api.setSel(sel);
+    renderUCode();
+  });
+
+  renderUCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

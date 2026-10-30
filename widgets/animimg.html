@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AnimImage：LVGL lv_animimg vs ArkUI lite UIImageAnimator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Ccircle cx='16' cy='17' r='4' fill='%23fff'/%3E%3Cpath d='M11 9h10' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>AnimImage：lv_animimg vs UIImageAnimator</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（程序化帧序列 + 播放期叠加缩放/旋转变换），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b>
+      源码 <code>ui_image_animator.cpp</code> 行为渲染的 UIImageAnimator。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_animimg</code>
+        <span class="cmp-tag lv">序列帧 + 播放期变换</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击画面可暂停 / 继续；开启缩放或旋转变换后，播放的同时叠加图像变换（UIImageAnimator 没有的能力）。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>帧数 序列长度<output id="o-frames">8 帧</output><span class="api">lv_animimg_set_src(animimg, frame_dsc, n)</span></label>
+            <input type="range" id="frames" min="4" max="10" step="1" value="8">
+          </div>
+          <div class="field">
+            <label>一轮时长 duration<output id="o-duration">1600 ms</output><span class="api">lv_animimg_set_duration</span></label>
+            <input type="range" id="duration" min="500" max="5000" step="100" value="1600">
+          </div>
+
+          <div class="field">
+            <label>重复次数 repeat_count<output id="o-repeat">无限</output><span class="api">lv_animimg_set_repeat_count（-1 = LV_ANIM_REPEAT_INFINITE）</span></label>
+            <input type="range" id="repeat" min="-1" max="5" step="1" value="-1">
+          </div>
+          <div class="field">
+            <label>自动播放<span class="api">lv_animimg_start</span></label>
+            <div class="check"><input type="checkbox" id="auto" checked><span>载入后立即开始播放</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>变换叠加（播放的同时进行 · ArkUI lite 无此能力）<span class="api">lv_image_set_scale / lv_image_set_rotation：animimg 继承 lv_image，变换与帧播放可叠加</span></label>
+            <div class="stack">
+              <div class="check"><input type="checkbox" id="scale-t"><span>缩放变换</span></div>
+              <div class="check"><input type="checkbox" id="rot-t"><span>旋转变换</span></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>缩放幅度 scale<output id="o-scaleamp">±25 %</output><span class="api">lv_image_set_scale（256 = 100%）</span></label>
+            <input type="range" id="scaleamp" min="5" max="45" step="1" value="25">
+          </div>
+          <div class="field">
+            <label>旋转速度 rotation<output id="o-rotspeed">90 °/s</output><span class="api">lv_image_set_rotation（0.1° 单位）</span></label>
+            <input type="range" id="rotspeed" min="15" max="360" step="15" value="90">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-play">暂停</button>
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIImageAnimator</code>
+        <span class="cmp-tag ui">预制帧序列 · 无变换</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">按 SetTimeOfUpdate 的间隔轮播预制帧；循环、反向、填充模式都有接口，但播放期间无法缩放 / 旋转。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>播放状态 playing<span class="api">继承 UIViewAnimator：Start() 播放 / Stop() 暂停</span></label>
+            <div class="seg" id="uplay">
+              <button type="button" data-v="on" class="active">播放</button>
+              <button type="button" data-v="off">暂停</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>frameworks/components/ui_image_animator.cpp</code> ——
+          <code>SetImageAnimatorSrc</code> 挂预制帧序列，<code>SetTimeOfUpdate</code> 控制帧间隔，
+          <code>SetRepeatTimes</code> / <code>SetReverse</code> / <code>SetFillMode</code> 控制循环方式，
+          <code>SetAnimatorStopListener</code> 监听停止；没有逐帧缩放 / 旋转变换接口。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240，帧图像由页面程序化绘制。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列渲染参数取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_animimg 复刻（序列帧 + 播放期变换叠加）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 320, H = 240;
+  var MONO = 'ui-monospace, Consolas, "Liberation Mono", monospace';
+  var FAMILY = '-apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+  var THEME = { text: "#1c2128", muted: "#5b6470", faint: "#8a929c", primary: "#2b7de9" };
+
+  var state = {
+    frames: 8,
+    duration: 1600,
+    repeat: -1,
+    playing: true,
+    scaleT: false,     /* lv_image_set_scale */
+    scaleAmp: 25,      /* ±% */
+    rotT: false,       /* lv_image_set_rotation */
+    rotSpeed: 90       /* °/s */
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var clock = { acc: 0, last: 0 };
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a, b, t){ return a + (b - a) * t; }
+
+  function roundRectPath(c, x, y, w, h, r){
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function box(c, x, y, w, h, o){
+    o = o || {};
+    c.save();
+    if(o.shadow){
+      c.shadowColor = o.shadow;
+      c.shadowBlur = o.shadowBlur || 10;
+      c.shadowOffsetY = o.shadowY || 0;
+    }
+    if(o.bg){ roundRectPath(c, x, y, w, h, o.radius || 0); c.fillStyle = o.bg; c.fill(); }
+    c.shadowColor = "transparent"; c.shadowBlur = 0; c.shadowOffsetY = 0;
+    if(o.border){
+      roundRectPath(c, x + 0.5, y + 0.5, w - 1, h - 1, o.radius || 0);
+      c.strokeStyle = o.border; c.lineWidth = o.borderWidth || 1; c.stroke();
+    }
+    c.restore();
+  }
+
+  function text(c, s, x, y, o){
+    o = o || {};
+    c.save();
+    c.font = (o.weight ? o.weight + " " : "") + (o.size || 12) + "px " + (o.mono ? MONO : FAMILY);
+    c.fillStyle = o.color || THEME.text;
+    c.textAlign = o.align || "left";
+    c.textBaseline = "middle";
+    c.fillText(s, x, y);
+    c.restore();
+  }
+
+  function ellipse(c, cx, cy, rx, ry){
+    c.beginPath();
+    c.ellipse(cx, cy, Math.max(0.1, rx), Math.max(0.1, ry), 0, 0, Math.PI * 2);
+  }
+
+  function hexCode(hex){ return "0x" + hex.replace("#", ""); }
+
+  /* ---------- 帧画面 ---------- */
+  function starPath(c, cx, cy, outer, inner, rot){
+    var i, a, r;
+    c.beginPath();
+    for(i = 0; i < 10; i++){
+      a = rot + i * Math.PI / 5 - Math.PI / 2;
+      r = (i % 2 === 0) ? outer : inner;
+      if(i === 0) c.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      else c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    c.closePath();
+  }
+
+  function frameArt(c, x, y, size, idx, count){
+    var u = size / 96;
+    var p = count > 1 ? idx / (count - 1) : 0;
+    var lift = Math.abs(Math.sin(Math.PI * p));
+
+    c.save();
+
+    var g = c.createRadialGradient(x + size / 2, y + size * 0.22, size * 0.04, x + size / 2, y + size / 2, size * 0.78);
+    g.addColorStop(0, "#ffffff");
+    g.addColorStop(1, "#eef3fb");
+    roundRectPath(c, x, y, size, size, 10 * u);
+    c.fillStyle = g;
+    c.fill();
+
+    c.strokeStyle = "#dbe2ec";
+    c.lineWidth = Math.max(0.6, 1 * u);
+    c.beginPath();
+    c.moveTo(x + 12 * u, y + size - 13 * u);
+    c.lineTo(x + size - 12 * u, y + size - 13 * u);
+    c.stroke();
+
+    var br = 11 * u;
+    var lowest = y + size - 14 * u - br;
+    var highest = y + 20 * u + br;
+    var cy = lerp(lowest, highest, lift);
+    var cx = x + size / 2;
+
+    /* 投影 */
+    var shrink = 1 - 0.38 * lift;
+    c.save();
+    c.globalAlpha = 0.22 * (1 - 0.45 * lift);
+    c.fillStyle = "#5b6470";
+    ellipse(c, cx, y + size - 13 * u, 17 * u * shrink, 3.4 * u * shrink);
+    c.fill();
+    c.restore();
+
+    /* 小球 */
+    var bg = c.createRadialGradient(cx - br * 0.35, cy - br * 0.4, br * 0.12, cx, cy, br);
+    bg.addColorStop(0, "#7fb4f5");
+    bg.addColorStop(0.45, "#2b7de9");
+    bg.addColorStop(1, "#1f6fd0");
+    c.beginPath();
+    c.arc(cx, cy, br, 0, Math.PI * 2);
+    c.fillStyle = bg;
+    c.fill();
+
+    c.save();
+    c.globalAlpha = 0.6;
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.arc(cx - br * 0.32, cy - br * 0.36, br * 0.25, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
+    /* 旋转星形 */
+    var rot = idx / count * Math.PI * 2;
+    starPath(c, x + size * 0.78, y + size * 0.24, 13 * u, 5.6 * u, rot);
+    c.fillStyle = "#e6a23c";
+    c.fill();
+    c.lineWidth = Math.max(0.5, 0.9 * u);
+    c.strokeStyle = "#ffffff";
+    c.stroke();
+
+    if(size >= 60){
+      c.fillStyle = "rgba(28,33,40,0.32)";
+      c.font = "600 " + (9 * u) + "px " + MONO;
+      c.textAlign = "left";
+      c.textBaseline = "alphabetic";
+      c.fillText((idx + 1) + "/" + count, x + 7 * u, y + size - 6 * u);
+    }
+
+    c.restore();
+  }
+
+  /* ---------- 时间 ---------- */
+  function totalMs(){
+    return state.repeat >= 0 ? state.duration * (state.repeat + 1) : Infinity;
+  }
+  function ended(t){ return t >= totalMs(); }
+
+  function frameIndexAt(t){
+    if(t >= totalMs()) return state.frames - 1;
+    var p = (t % state.duration) / state.duration;
+    return Math.min(state.frames - 1, Math.floor(p * state.frames));
+  }
+
+  function progressAt(t){
+    if(t >= totalMs()) return 1;
+    return (t % state.duration) / state.duration;
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c, tMs){
+    var t = Math.min(tMs, totalMs());
+    var idx = frameIndexAt(t);
+
+    c.clearRect(0, 0, W, H);
+    box(c, 12, 8, W - 24, H - 16, {
+      bg: "#ffffff", radius: 14, borderWidth: 1, border: "#e7eaee",
+      shadow: "rgba(28,33,40,0.07)", shadowBlur: 14, shadowY: 4
+    });
+
+    text(c, "lv_animimg", 26, 24, { size: 13, weight: 600, color: THEME.text });
+    text(c, "96 × 96 · " + state.frames + " 帧", W - 26, 24, { size: 11.5, color: THEME.faint, align: "right" });
+
+    /* 主帧：播放期可叠加缩放 / 旋转变换 */
+    var p = progressAt(t);
+    var sc = 1, rot = 0;
+    if(state.scaleT) sc = 1 + (state.scaleAmp / 100) * Math.sin(Math.PI * 2 * p);
+    if(state.rotT) rot = (t / 1000) * state.rotSpeed * Math.PI / 180;
+
+    c.save();
+    c.translate(160, 84);
+    c.rotate(rot);
+    c.scale(sc, sc);
+    c.translate(-160, -84);
+    box(c, 111, 35, 98, 98, {
+      bg: "#ffffff", radius: 12, borderWidth: 1, border: "#dfe4ea",
+      shadow: "rgba(28,33,40,0.10)", shadowBlur: 10, shadowY: 3
+    });
+    frameArt(c, 112, 36, 96, idx, state.frames);
+    c.restore();
+
+    /* 变换提示 */
+    if(state.scaleT || state.rotT){
+      var tt = [];
+      if(state.scaleT) tt.push("scale ±" + state.scaleAmp + "%");
+      if(state.rotT) tt.push("rotate " + state.rotSpeed + "°/s");
+      text(c, "transform: " + tt.join(" · "), 26, 40, { size: 10, mono: true, color: THEME.primary });
+    }
+
+    if(!state.playing){
+      c.save();
+      c.globalAlpha = 0.92;
+      c.fillStyle = "#ffffff";
+      c.beginPath();
+      c.arc(196, 120, 13, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = "#d6d9df";
+      c.lineWidth = 1;
+      c.stroke();
+      c.fillStyle = THEME.primary;
+      c.beginPath();
+      c.moveTo(192, 114);
+      c.lineTo(192, 126);
+      c.lineTo(203, 120);
+      c.closePath();
+      c.fill();
+      c.restore();
+    }
+
+    var repeatTxt = state.repeat < 0 ? "重复 ∞" : "重复 " + (state.repeat + 1) + " 次";
+    text(c, "一轮 " + state.duration + " ms · " + repeatTxt, W / 2, 146, {
+      size: 11.5, color: THEME.muted, align: "center"
+    });
+
+    /* 帧缩略图条 */
+    var n = state.frames, ts = 22, gap = 3;
+    var tw = n * ts + (n - 1) * gap;
+    var tx = (W - tw) / 2, ty = 157;
+    for(var i = 0; i < n; i++){
+      var x = tx + i * (ts + gap);
+      frameArt(c, x, ty, ts, i, n);
+      c.save();
+      c.lineWidth = i === idx ? 2 : 1;
+      c.strokeStyle = i === idx ? THEME.primary : "#dfe4ea";
+      roundRectPath(c, x - 0.5, ty - 0.5, ts + 1, ts + 1, 4);
+      c.stroke();
+      if(i === idx){
+        c.globalAlpha = 0.16;
+        c.fillStyle = THEME.primary;
+        roundRectPath(c, x, ty, ts, ts, 4);
+        c.fill();
+      }
+      c.restore();
+    }
+
+    text(c, "当前帧 " + (idx + 1) + " / " + n, W / 2, 194, {
+      size: 12, color: THEME.text, align: "center"
+    });
+
+    var pb = progressAt(t);
+    box(c, 90, 203, 140, 5, { bg: "#e3e6ea", radius: 3 });
+    if(pb > 0.002) box(c, 90, 203, Math.max(5, 140 * pb), 5, { bg: THEME.primary, radius: 3 });
+
+    text(c, state.playing ? "点击画面暂停" : "已暂停 · 点击画面继续", W / 2, 222, {
+      size: 11, color: THEME.faint, align: "center"
+    });
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.cursor = "pointer";
+  }
+
+  function loop(now){
+    if(!clock.last) clock.last = now;
+    var dt = now - clock.last;
+    clock.last = now;
+    if(state.playing){
+      clock.acc += dt;
+      if(ended(clock.acc)) clock.acc = totalMs();
+    }
+    draw(ctx, clock.acc);
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var n = state.frames;
+    var names = [];
+    for(var i = 0; i < n; i++) names.push("&frame_" + i);
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成；帧图像由页面程序化绘制 */</span>');
+    L.push('static const void * frame_dsc[' + n + '] = {' + names.join(", ") + '};');
+    L.push('');
+    L.push('lv_obj_t * animimg = <span class="fn">lv_animimg_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_obj_set_size</span>(animimg, <span class="num">96</span>, <span class="num">96</span>);');
+    L.push('<span class="fn">lv_animimg_set_src</span>(animimg, frame_dsc, <span class="num">' + n + '</span>);');
+    L.push('<span class="fn">lv_animimg_set_duration</span>(animimg, <span class="num">' + state.duration + '</span>);');
+    L.push('<span class="fn">lv_animimg_set_repeat_count</span>(animimg, <span class="num">' +
+      (state.repeat < 0 ? "LV_ANIM_REPEAT_INFINITE" : state.repeat) + '</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(animimg);');
+    L.push('<span class="fn">lv_animimg_start</span>(animimg);');
+
+    if(state.scaleT){
+      L.push('');
+      L.push('<span class="cm">/* 播放期变换：缩放（256 = 100%，按播放进度在 1±' + state.scaleAmp + '% 间振荡） */</span>');
+      L.push('<span class="fn">lv_image_set_scale</span>(animimg, <span class="num">' +
+        Math.round(256 * (1 + state.scaleAmp / 100)) + '</span>);');
+    }
+    if(state.rotT){
+      L.push('<span class="cm">/* 播放期变换：旋转（单位为 0.1°，' + state.rotSpeed + ' °/s） */</span>');
+      L.push('<span class="fn">lv_image_set_rotation</span>(animimg, <span class="num">' +
+        (state.rotSpeed * 10) + '</span>);');
+    }
+
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  function syncPlayBtn(){
+    document.getElementById("btn-play").textContent = state.playing ? "暂停" : "播放";
+  }
+
+  function setPlaying(on){
+    state.playing = on;
+    if(on && ended(clock.acc)) clock.acc = 0;
+    document.getElementById("auto").checked = on;
+    syncPlayBtn();
+  }
+
+  function bindRange(id, outId, fmt, apply){
+    var el = document.getElementById(id);
+    var out = document.getElementById(outId);
+    el.addEventListener("input", function(){
+      var v = Number(el.value);
+      out.textContent = fmt(v);
+      apply(v);
+      renderCode();
+    });
+  }
+
+  bindRange("frames", "o-frames", function(v){ return v + " 帧"; }, function(v){ state.frames = v; });
+  bindRange("duration", "o-duration", function(v){ return v + " ms"; }, function(v){ state.duration = v; });
+  bindRange("scaleamp", "o-scaleamp", function(v){ return "±" + v + " %"; }, function(v){ state.scaleAmp = v; });
+  bindRange("rotspeed", "o-rotspeed", function(v){ return v + " °/s"; }, function(v){ state.rotSpeed = v; });
+
+  (function(){
+    var el = document.getElementById("repeat");
+    var out = document.getElementById("o-repeat");
+    function apply(){
+      state.repeat = Number(el.value);
+      out.textContent = state.repeat < 0 ? "无限" : (state.repeat + 1) + " 次";
+      renderCode();
+    }
+    el.addEventListener("input", apply);
+    apply();
+  })();
+
+  document.getElementById("auto").addEventListener("change", function(e){
+    setPlaying(e.target.checked);
+  });
+  document.getElementById("scale-t").addEventListener("change", function(e){
+    state.scaleT = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("rot-t").addEventListener("change", function(e){
+    state.rotT = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("btn-play").addEventListener("click", function(){
+    setPlaying(!state.playing);
+  });
+  canvas.addEventListener("pointerdown", function(){
+    setPlaying(!state.playing);
+  });
+
+  /* ---------- 下载 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  function exportDuration(){
+    return Math.max(800, Math.min(totalMs(), 6000));
+  }
+
+  /* ---------- PNG 导出 ---------- */
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      if(blob){ download(blob, "animimg.png"); setStatus("PNG 已保存", true); }
+    });
+  });
+
+  /* ---------- GIF 导出 ---------- */
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网），可改用 WebM")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    loadGif().then(function(GIF){
+      var fps = 20;
+      var dur = exportDuration();
+      var frames = Math.max(2, Math.round(dur / 1000 * fps));
+      var gif = new GIF({ workers: 2, quality: 10, width: W, height: H, workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = W; off.height = H;
+      var octx = off.getContext("2d");
+      var i = 0;
+      var prevPlaying = state.playing;
+      state.playing = true;
+
+      function step(){
+        if(i < frames){
+          draw(octx, i / fps * 1000);
+          gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          function fail(msg){
+            state.playing = prevPlaying;
+            syncPlayBtn();
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("finished", function(blob){
+            state.playing = prevPlaying;
+            syncPlayBtn();
+            download(blob, "animimg.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  /* ---------- WebM 录制（原生，离线可用） ---------- */
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    if(!canvas.captureStream || typeof MediaRecorder === "undefined"){
+      setStatus("当前浏览器不支持 MediaRecorder，请用 Chrome/Edge");
+      return;
+    }
+    btn.disabled = true;
+    var dur = Math.min(exportDuration(), 4000);
+    var prevPlaying = state.playing;
+    state.playing = true;
+    clock.acc = 0;
+    clock.last = 0;
+    syncPlayBtn();
+
+    var stream = canvas.captureStream(30);
+    var rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    var chunks = [];
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      state.playing = prevPlaying;
+      document.getElementById("auto").checked = prevPlaying;
+      syncPlayBtn();
+      download(new Blob(chunks, { type: "video/webm" }), "animimg.webm");
+      setStatus("WebM 已保存（" + Math.round(dur / 1000) + " 秒）", true);
+      btn.disabled = false;
+    };
+    setStatus("录制中，约 " + Math.round(dur / 1000) + " 秒…");
+    rec.start();
+    setTimeout(function(){ rec.stop(); }, dur);
+  });
+
+  fitCanvas();
+  renderCode();
+  syncPlayBtn();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIImageAnimator 操作绑定 + 实时代码
+   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.imageanim）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var u = { playing: true };
+
+  function $(id){ return document.getElementById(id); }
+  function api(){ return window.LV2 && window.LV2.api; }
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_image_animator.cpp） */</span>');
+    L.push('UIImageAnimator * animator = <span class="fn">new</span> UIImageAnimator();');
+    L.push('<span class="cm">/* 预制帧序列：每帧间隔 420 ms */</span>');
+    L.push('animator-&gt;<span class="fn">SetImageAnimatorSrc</span>(&amp;frameInfo);');
+    L.push('animator-&gt;<span class="fn">SetTimeOfUpdate</span>(<span class="num">420</span>);');
+    L.push('animator-&gt;<span class="fn">SetRepeatTimes</span>(<span class="num">REPEAT_INFINITE</span>);');
+    L.push('<span class="cm">/* SetReverse(true) 反向 · SetFillMode 填充模式 */</span>');
+    if(u.playing){
+      L.push('animator-&gt;<span class="fn">Start</span>();   <span class="cm">// 播放</span>');
+    }else{
+      L.push('animator-&gt;<span class="fn">Stop</span>();    <span class="cm">// 已暂停（无缩放/旋转变换接口）</span>');
+    }
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  $("uplay").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    u.playing = btn.getAttribute("data-v") === "on";
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    var a = api();
+    if(a && a.setPlaying) a.setPlaying(u.playing);
+    renderCode();
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

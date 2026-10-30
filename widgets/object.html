@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Object：LVGL lv_obj vs ArkUI lite UIView</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='7' width='20' height='18' rx='4' fill='%232b7de9'/%3E%3Crect x='10' y='11' width='12' height='10' rx='2' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Object：lv_obj vs UIView</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（基类对象 + 百分比定位 / 尺寸 + flex 布局演示），右列为按
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码渲染的 UIView（基础容器）。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_obj</code>
+        <span class="cmp-tag lv">百分比定位 · flex 布局</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">百分比定位：X/Y 按父容器百分比放置；flex 布局：三个子对象按 row / column / wrap 自动排版。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>定位 X（百分比）<output id="o-xpct">50%</output><span class="api">lv_obj_set_x(obj, lv_pct(50))</span></label>
+            <input type="range" id="xpct" min="0" max="100" step="1" value="50">
+          </div>
+          <div class="field">
+            <label>定位 Y（百分比）<output id="o-ypct">50%</output><span class="api">lv_obj_set_y(obj, lv_pct(50))</span></label>
+            <input type="range" id="ypct" min="0" max="100" step="1" value="50">
+          </div>
+
+          <div class="field">
+            <label>宽度（百分比）<output id="o-wpct">62%</output><span class="api">lv_obj_set_width(obj, lv_pct(62))</span></label>
+            <input type="range" id="wpct" min="10" max="100" step="1" value="62">
+          </div>
+          <div class="field">
+            <label>高度（百分比）<output id="o-hpct">55%</output><span class="api">lv_obj_set_height(obj, lv_pct(55))</span></label>
+            <input type="range" id="hpct" min="10" max="100" step="1" value="55">
+          </div>
+
+          <div class="field wide">
+            <label>flex 布局<span class="api">lv_obj_set_layout(obj, LV_LAYOUT_FLEX) + LV_OBJ_SET_FLEX_FLOW</span></label>
+            <div class="seg" id="flexflow">
+              <button type="button" data-v="row" class="active">row</button>
+              <button type="button" data-v="column">column</button>
+              <button type="button" data-v="wrap">wrap</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>圆角 radius<output id="o-radius">14 px</output><span class="api">lv_obj_set_style_radius</span></label>
+            <input type="range" id="radius" min="0" max="60" step="1" value="14">
+          </div>
+          <div class="field">
+            <label>阴影宽度 shadow_width<output id="o-shadow">18 px</output><span class="api">lv_obj_set_style_shadow_width / shadow_color</span></label>
+            <input type="range" id="shadow" min="0" max="40" step="1" value="18">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-reset">恢复居中</button>
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIView</code>
+        <span class="cmp-tag ui">基础容器 · 对齐度高</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UIView 是所有控件的基类：SetPosition / SetSize / Add 与 lv_obj 基本对齐；差异集中在样式与布局。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>宽度 width<output id="o-uw">190 px</output><span class="api">SetWidth(int16_t)：另有 SetPositionPercent / SetWidthPercent 百分比接口</span></label>
+            <input type="range" id="uw" min="120" max="260" step="1" value="190">
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_view.cpp</code> / <code>ui_view_group.cpp</code> ——
+          <code>SetPosition / SetSize / Add / Remove</code> 与 lv_obj 一致；
+          布局需 <code>FlexLayout / GridLayout</code>（宏开启），样式为固定字段的 Style 集合，无状态选择器。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列为 LVGL 语义复刻（百分比定位 + flex 布局），PNG 导出离线可用。右列能力描述取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_obj 复刻（迁移自旧页拖拽/变换 + 百分比定位 / flex 布局演示）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 360, H = 220;
+  var ACCENT = "#2b7de9";
+  var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+
+  var state = {
+    xpct: 50, ypct: 50,
+    wpct: 62, hpct: 55,
+    radius: 14,
+    shadow: 18,
+    flow: "row"        // row | column | wrap
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+
+  function setStatus(msg, ok){ statusEl.textContent = msg; statusEl.className = "status" + (ok ? " ok" : ""); }
+  function roundRect(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  /* ---------- flex 布局：计算三个子对象位置 ---------- */
+  function flexLayout(ox, oy, ow, oh){
+    var pad = 12, gap = 8;
+    var iw = 64, ih = 44;
+    var children = [0, 1, 2].map(function(){ return { x: 0, y: 0, w: iw, h: ih }; });
+    var availW = ow - pad * 2, availH = oh - pad * 2;
+
+    if(state.flow === "row"){
+      var rowH = Math.min(ih, availH);
+      var totalW = 3 * iw + 2 * gap;
+      var sx = ox + pad + Math.max(0, (availW - totalW) / 2);
+      var sy = oy + pad + Math.max(0, (availH - rowH) / 2);
+      children.forEach(function(ch, i){
+        ch.x = sx + i * (iw + gap);
+        ch.y = sy;
+        ch.h = rowH;
+      });
+    }else if(state.flow === "column"){
+      var colW = Math.min(iw, availW);
+      var totalH = 3 * ih + 2 * gap;
+      var cx = ox + pad + Math.max(0, (availW - colW) / 2);
+      var cy0 = oy + pad + Math.max(0, (availH - totalH) / 2);
+      children.forEach(function(ch, i){
+        ch.x = cx;
+        ch.y = cy0 + i * (ih + gap);
+        ch.w = colW;
+      });
+    }else{ /* wrap：排不下就换行 */
+      var x = ox + pad, y = oy + pad, rowTop = ih;
+      children.forEach(function(ch){
+        if(x + ch.w > ox + ow - pad && x > ox + pad){
+          x = ox + pad;
+          y += rowTop + gap;
+          rowTop = ih;
+        }
+        ch.x = x;
+        ch.y = y;
+        rowTop = Math.max(rowTop, ch.h);
+        x += ch.w + gap;
+      });
+    }
+    return { pad: pad, children: children };
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c){
+    c.clearRect(0, 0, W, H);
+
+    /* 网格参考线 */
+    c.strokeStyle = "#eef0f3";
+    c.lineWidth = 1;
+    c.beginPath();
+    for(var gx = 0; gx <= 4; gx++){
+      c.moveTo(gx * W / 4, 0); c.lineTo(gx * W / 4, H);
+    }
+    for(var gy = 0; gy <= 4; gy++){
+      c.moveTo(0, gy * H / 4); c.lineTo(W, gy * H / 4);
+    }
+    c.stroke();
+
+    var ow = Math.round(state.wpct / 100 * W);
+    var oh = Math.round(state.hpct / 100 * H);
+    var ox = Math.round(state.xpct / 100 * (W - ow));
+    var oy = Math.round(state.ypct / 100 * (H - oh));
+
+    /* 阴影 + 主体 */
+    c.save();
+    if(state.shadow > 0){
+      c.shadowColor = "rgba(43,125,233,0.45)";
+      c.shadowBlur = state.shadow;
+      c.shadowOffsetY = Math.min(6, state.shadow / 3);
+    }
+    roundRect(c, ox, oy, ow, oh, state.radius);
+    c.fillStyle = ACCENT;
+    c.fill();
+    c.restore();
+
+    roundRect(c, ox, oy, ow, oh, state.radius);
+    c.strokeStyle = "#1f6fd0";
+    c.lineWidth = 2;
+    c.stroke();
+
+    /* flex 子对象 */
+    var lay = flexLayout(ox, oy, ow, oh);
+    lay.children.forEach(function(ch, i){
+      var cw = Math.min(ch.w, ox + ow - lay.pad - ch.x);
+      var chh = Math.min(ch.h, oy + oh - lay.pad - ch.y);
+      if(cw < 8 || chh < 8) return;
+      roundRect(c, ch.x, ch.y, cw, chh, 8);
+      c.fillStyle = "#ffffff";
+      c.fill();
+      roundRect(c, ch.x + 0.5, ch.y + 0.5, cw - 1, chh - 1, 8);
+      c.strokeStyle = "rgba(43,125,233,0.55)";
+      c.lineWidth = 1;
+      c.stroke();
+      if(cw > 26 && chh > 16){
+        c.font = "600 11px " + FAMILY;
+        c.fillStyle = ACCENT;
+        c.textAlign = "center";
+        c.textBaseline = "middle";
+        c.fillText("child" + (i + 1), ch.x + cw / 2, ch.y + chh / 2);
+        c.textAlign = "left";
+      }
+    });
+
+    /* 信息 */
+    c.font = "11px " + FAMILY;
+    c.fillStyle = "#8a929c";
+    c.textBaseline = "middle";
+    c.fillText("lv_obj · pos " + state.xpct + "% / " + state.ypct + "% · size " +
+      state.wpct + "% × " + state.hpct + "% · flex:" + state.flow + "（3 子对象）", 10, H - 9);
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function bindRange(id, key, outId, fmt){
+    document.getElementById(id).addEventListener("input", function(){
+      var v = Number(this.value);
+      state[key] = v;
+      document.getElementById(outId).textContent = fmt(v);
+      renderCode();
+    });
+  }
+  bindRange("xpct", "xpct", "o-xpct", function(v){ return v + "%"; });
+  bindRange("ypct", "ypct", "o-ypct", function(v){ return v + "%"; });
+  bindRange("wpct", "wpct", "o-wpct", function(v){ return v + "%"; });
+  bindRange("hpct", "hpct", "o-hpct", function(v){ return v + "%"; });
+  bindRange("radius", "radius", "o-radius", function(v){ return v + " px"; });
+  bindRange("shadow", "shadow", "o-shadow", function(v){ return v + " px"; });
+
+  document.getElementById("flexflow").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.flow = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
+    renderCode();
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", function(){
+    state.xpct = 50; state.ypct = 50; state.wpct = 62; state.hpct = 55;
+    ["xpct", "ypct", "wpct", "hpct"].forEach(function(id){
+      var el = document.getElementById(id);
+      el.value = state[id];
+    });
+    document.getElementById("o-xpct").textContent = "50%";
+    document.getElementById("o-ypct").textContent = "50%";
+    document.getElementById("o-wpct").textContent = "62%";
+    document.getElementById("o-hpct").textContent = "55%";
+    renderCode();
+    setStatus("已恢复居中（50% / 50%）", true);
+  });
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var FLOW = { row: "LV_FLEX_FLOW_ROW", column: "LV_FLEX_FLOW_COLUMN", wrap: "LV_FLEX_FLOW_ROW_WRAP" };
+    var L = [];
+    L.push('<span class="cm">/* 由左列参数实时生成 */</span>');
+    L.push('lv_obj_t * obj = <span class="fn">lv_obj_create</span>(lv_screen_active());');
+    L.push('<span class="cm">/* 百分比定位与尺寸：lv_pct() 包装 */</span>');
+    L.push('<span class="fn">lv_obj_set_x</span>(obj, <span class="fn">lv_pct</span>(<span class="num">' + state.xpct + '</span>));');
+    L.push('<span class="fn">lv_obj_set_y</span>(obj, <span class="fn">lv_pct</span>(<span class="num">' + state.ypct + '</span>));');
+    L.push('<span class="fn">lv_obj_set_width</span>(obj, <span class="fn">lv_pct</span>(<span class="num">' + state.wpct + '</span>));');
+    L.push('<span class="fn">lv_obj_set_height</span>(obj, <span class="fn">lv_pct</span>(<span class="num">' + state.hpct + '</span>));');
+    L.push('<span class="fn">lv_obj_set_style_radius</span>(obj, <span class="num">' + state.radius + '</span>, LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_bg_color</span>(obj, <span class="fn">lv_color_hex</span>(<span class="num">0x2b7de9</span>), LV_PART_MAIN);');
+    if(state.shadow > 0){
+      L.push('<span class="fn">lv_obj_set_style_shadow_width</span>(obj, <span class="num">' + state.shadow + '</span>, LV_PART_MAIN);');
+      L.push('<span class="fn">lv_obj_set_style_shadow_opa</span>(obj, LV_OPA_40, LV_PART_MAIN);');
+    }else{
+      L.push('<span class="fn">lv_obj_set_style_shadow_width</span>(obj, <span class="num">0</span>, LV_PART_MAIN);');
+    }
+    L.push('');
+    L.push('<span class="cm">/* flex 布局：3 个子对象按 ' + state.flow + ' 自动排版 */</span>');
+    L.push('<span class="fn">lv_obj_set_layout</span>(obj, LV_LAYOUT_FLEX);');
+    L.push('<span class="fn">lv_obj_set_flex_flow</span>(obj, ' + FLOW[state.flow] + ');');
+    for(var i = 0; i < 3; i++){
+      L.push('lv_obj_t * c' + i + ' = <span class="fn">lv_obj_create</span>(obj);  <span class="cm">/* 尺寸 64×44 */</span>');
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- PNG 导出 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      download(blob, "object.png");
+      setStatus("PNG 已保存", true);
+    }, "image/png");
+  });
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function loop(){ draw(ctx); requestAnimationFrame(loop); }
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIView 操作绑定 + 实时生成代码
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+
+  var u = { w: 190 };
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_view.h） */</span>');
+    L.push('UIView * view = <span class="fn">new</span> UIViewGroup();');
+    L.push('view-&gt;<span class="fn">SetPosition</span>(<span class="num">85</span>, <span class="num">50</span>);');
+    L.push('view-&gt;<span class="fn">SetWidth</span>(<span class="num">' + u.w + '</span>);');
+    L.push('view-&gt;<span class="fn">SetHeight</span>(<span class="num">120</span>);');
+    L.push('<span class="cm">// 百分比接口（与 lv_pct 对应）：</span>');
+    L.push('<span class="cm">// view-&gt;SetPositionPercent(X, Y); view-&gt;SetWidthPercent(w);</span>');
+    L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_OPA, <span class="num">255</span>);');
+    L.push('view-&gt;<span class="fn">Add</span>(child);  <span class="cm">// 子对象 Add / Remove 与 lv_obj 一致</span>');
+    L.push('<span class="cm">// 布局需 FlexLayout / GridLayout（宏开启），样式为固定 Style 字段</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  function init(){
+    var api = (window.LV2 && window.LV2.api) || {};
+    if(api.setWidth) api.setWidth(u.w);
+    $("uw").addEventListener("input", function(){
+      u.w = Number(this.value);
+      $("o-uw").textContent = u.w + " px";
+      if(api.setWidth) api.setWidth(u.w);
+      renderCode();
+    });
+    renderCode();
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

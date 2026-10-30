@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu：lv_menu vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='5' width='9' height='22' rx='3' fill='%232b7de9'/%3E%3Cg fill='%23b8bfc9'%3E%3Crect x='14' y='8' width='15' height='3' rx='1'/%3E%3Crect x='14' y='15' width='15' height='3' rx='1'/%3E%3Crect x='14' y='22' width='10' height='3' rx='1'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Menu：lv_menu vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（侧栏 + 多级页面，条目点开子菜单浮层，子菜单项进入子页；新增对齐翻转），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——没有对应组件，只能给出最接近的替代实现。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_menu</code>
+        <span class="cmp-tag lv">子菜单层级 · 对齐自动翻转</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击侧栏切换根页面；点击带 ▸ 的条目会弹出子菜单浮层，再点子菜单项进入子页，返回按钮逐级回退。对齐切换为“自动”时，空间不足的条目子菜单自动向上翻转。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>子菜单对齐翻转（down/up/auto）<span class="api">lv_menu_set_submenu_align（演示简化为 向下 / 向上 / 自动翻转）</span></label>
+            <div class="seg" id="subalign">
+              <button type="button" data-val="down">down 向下</button>
+              <button type="button" data-val="up">up 向上</button>
+              <button type="button" data-val="auto" class="active">auto 自动</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>标题栏位置<span class="api">lv_menu_set_mode_header(LV_MENU_HEADER_TOP_FIXED / 隐藏主头部)</span></label>
+            <div class="seg" id="header">
+              <button type="button" data-val="top" class="active">顶部</button>
+              <button type="button" data-val="side">侧栏</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>侧栏宽度<output id="o-width">110 px</output><span class="api">lv_obj_set_width(sidebar)</span></label>
+            <input type="range" id="width" min="90" max="160" step="1" value="110">
+          </div>
+          <div class="field">
+            <label>根返回按钮<span class="api">lv_menu_set_mode_root_back_button</span></label>
+            <div class="check"><input type="checkbox" id="rootback" checked><span>根页面也显示返回</span></div>
+          </div>
+
+          <div class="field">
+            <label>侧栏标题<output id="o-sidetitle">开</output><span class="api">lv_menu_get_sidebar_header + lv_menu_set_page_title</span></label>
+            <div class="check"><input type="checkbox" id="sidetitle" checked><span>侧栏顶部显示 “菜单”</span></div>
+          </div>
+          <div class="field">
+            <label>自动演示导航<span class="api">首页 → 设置 → 子页 → 关于 循环</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>自动循环切换页面</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">需 Button + List 自建弹层</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 没有菜单组件：侧栏、子菜单层级、对齐翻转都要用 UIButton + UIList + 自建容器手动拼装。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240。静态页面，导出 PNG 即可留档；点击左侧菜单项切换主页面，点击带 ▸ 的条目打开子菜单浮层，返回按钮可逐级回退。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_menu 复刻（迁移自旧页，新增子菜单浮层 + 对齐翻转 seg）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+
+  var PAGES = {
+    home: {
+      root: "home", title: "首页",
+      items: [
+        { icon: "wifi", label: "网络设置", sub: [
+          { label: "WLAN 设置", page: "sub-wifi" },
+          { label: "热点设置", page: "sub-hotspot" },
+          { label: "蓝牙", page: "sub-bt" }
+        ], sym: "LV_SYMBOL_WIFI" },
+        { icon: "bell", label: "通知管理", page: "sub-notify", sym: "LV_SYMBOL_BELL" },
+        { icon: "folder", label: "我的文件", sub: [
+          { label: "文档", page: "sub-files" },
+          { label: "照片", page: "sub-photos" }
+        ], sym: "LV_SYMBOL_DIRECTORY" }
+      ]
+    },
+    settings: {
+      root: "settings", title: "设置",
+      items: [
+        { icon: "wifi", label: "无线网络", sub: [
+          { label: "WLAN 详情", page: "sub-wifi" },
+          { label: "信号强度", page: "sub-signal" },
+          { label: "IP 地址", page: "sub-ip" }
+        ], sym: "LV_SYMBOL_WIFI" },
+        { icon: "gear", label: "显示与亮度", page: "sub-display", sym: "LV_SYMBOL_SETTINGS" }
+      ]
+    },
+    about: {
+      root: "about", title: "关于",
+      items: [
+        { icon: "file", label: "版本信息", page: "sub-version", sym: "LV_SYMBOL_FILE" },
+        { icon: "user", label: "开发者", page: "sub-dev", sym: "LV_SYMBOL_USER" }
+      ]
+    },
+    "sub-wifi": { root: "settings", title: "无线网络", parent: "settings",
+      info: [["已连接", "Office-5G"], ["信号强度", "-42 dBm"], ["安全类型", "WPA2"]] },
+    "sub-hotspot": { root: "home", title: "热点设置", parent: "home",
+      info: [["热点名称", "MyDevice"], ["密码", "12345678"], ["频段", "2.4 GHz"]] },
+    "sub-bt": { root: "home", title: "蓝牙", parent: "home",
+      info: [["蓝牙", "开启"], ["已配对", "2 台"], ["可发现", "关闭"]] },
+    "sub-notify": { root: "home", title: "通知管理", parent: "home",
+      info: [["允许通知", "是"], ["横幅显示", "开启"], ["免打扰", "22:00"]] },
+    "sub-files": { root: "home", title: "文档", parent: "home",
+      info: [["文件数量", "328"], ["已用空间", "12.4 GB"], ["剩余空间", "51.8 GB"]] },
+    "sub-photos": { root: "home", title: "照片", parent: "home",
+      info: [["照片", "1284 张"], ["视频", "96 个"], ["相册", "12 个"]] },
+    "sub-display": { root: "settings", title: "显示与亮度", parent: "settings",
+      info: [["亮度", "70 %"], ["护眼模式", "关闭"], ["自动休眠", "2 分钟"]] },
+    "sub-signal": { root: "settings", title: "信号强度", parent: "settings",
+      info: [["RSSI", "-42 dBm"], ["信噪比", "34 dB"], ["速率", "866 Mbps"]] },
+    "sub-ip": { root: "settings", title: "IP 地址", parent: "settings",
+      info: [["IPv4", "192.168.1.64"], ["网关", "192.168.1.1"], ["DNS", "223.5.5.5"]] },
+    "sub-version": { root: "about", title: "版本信息", parent: "about",
+      info: [["LVGL", "v10.0"], ["构建日期", "2026-10"], ["内核", "demo"]] },
+    "sub-dev": { root: "about", title: "开发者", parent: "about",
+      info: [["团队", "LVGL Team"], ["许可", "MIT"], ["主页", "lvgl.io"]] }
+  };
+
+  var SIDE_ITEMS = [
+    { root: "home", label: "首页", icon: "home", sym: "LV_SYMBOL_HOME" },
+    { root: "settings", label: "设置", icon: "gear", sym: "LV_SYMBOL_SETTINGS" },
+    { root: "about", label: "关于", icon: "user", sym: "LV_SYMBOL_USER" }
+  ];
+
+  var state = {
+    subAlign: "auto",
+    header: "top",
+    width: 110,
+    rootBack: true,
+    sideTitle: true,
+    auto: false,
+    page: "home",
+    subOpen: null
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+
+  var autoStart = 0;
+  var sideRects = [], rowRects = [], subRects = [], backRect = null;
+  var AUTO_SEQ = ["home", "settings", "sub-wifi", "settings", "about", "home"];
+  var AUTO_STEP = 1500;
+
+  var SUB_ITEM_H = 24, SUB_PAD = 5, SUB_W = 118;
+
+  function canBack(){
+    var p = PAGES[state.page];
+    return !!p.parent || state.rootBack;
+  }
+  function backTarget(){
+    var p = PAGES[state.page];
+    if(p.parent) return p.parent;
+    if(state.page !== "home") return "home";
+    return null;
+  }
+
+  function subPanelH(items){ return items.length * SUB_ITEM_H + SUB_PAD * 2; }
+
+  function subPanelPos(rowRect, panelH){
+    var px = W - SUB_W - 8;
+    var downFits = rowRect.y + rowRect.h + panelH <= H - 6;
+    var mode = state.subAlign;
+    if(mode === "auto") mode = downFits ? "down" : "up";
+    var py = mode === "up" ? rowRect.y - panelH + 4 : rowRect.y + rowRect.h - 4;
+    if(py < 4) py = 4;
+    if(py + panelH > H - 4) py = H - 4 - panelH;
+    return { x: px, y: py, mode: mode };
+  }
+
+  /* ---------- 绘制 ---------- */
+  function drawScene(c){
+    var sw = state.width;
+    var mx = sw + 1;
+    var mw = W - mx;
+    var pg = PAGES[state.page];
+
+    sideRects = []; rowRects = []; subRects = []; backRect = null;
+
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+
+    /* 侧栏 */
+    c.fillStyle = "#f5f7fa";
+    c.fillRect(0, 0, sw, H);
+    c.fillStyle = "#e2e6eb";
+    c.fillRect(sw, 0, 1, H);
+
+    var sideHeaderH = state.sideTitle ? 36 : 0;
+    if(state.sideTitle){
+      K.text(c, "菜单", 16, 18, { size: 14, weight: 600, color: K.theme.text });
+      c.fillStyle = "#e8ebf0";
+      c.fillRect(12, 35, sw - 24, 1);
+    }
+
+    var listTop = sideHeaderH + 8;
+    if(state.header === "side"){
+      var ty = sideHeaderH + 26;
+      if(canBack()){
+        backRect = { x: 10, y: ty - 12, w: 24, h: 24 };
+        K.box(c, 10, ty - 12, 24, 24, { bg: "#e8eefb", radius: 12 });
+        K.icon(c, "left", 16, ty - 6, 12, K.theme.primary);
+      }
+      K.text(c, pg.title, canBack() ? 42 : 16, ty, { size: 12.5, weight: 600, color: K.theme.text });
+      listTop = ty + 28;
+    }
+
+    for(var i = 0; i < SIDE_ITEMS.length; i++){
+      var item = SIDE_ITEMS[i];
+      var iy = listTop + i * 44;
+      var active = (pg.root === item.root);
+      if(active) K.box(c, 8, iy + 4, sw - 16, 36, { bg: "#e4edfc", radius: 8 });
+      K.icon(c, item.icon, 16, iy + 13, 18, active ? K.theme.primary : K.theme.textMuted);
+      K.text(c, item.label, 42, iy + 22, {
+        size: 13, weight: active ? 600 : 400,
+        color: active ? K.theme.primary : K.theme.text
+      });
+      sideRects.push({ x: 0, y: iy, w: sw, h: 44, root: item.root });
+    }
+
+    /* 主区域 */
+    var contentTop;
+    if(state.header === "top"){
+      c.fillStyle = "#ffffff";
+      c.fillRect(mx, 0, mw, 34);
+      c.fillStyle = "#e8ebf0";
+      c.fillRect(mx, 33, mw, 1);
+      if(canBack()){
+        backRect = { x: mx + 8, y: 5, w: 24, h: 24 };
+        K.box(c, mx + 8, 5, 24, 24, { bg: "#e8eefb", radius: 12 });
+        K.icon(c, "left", mx + 14, 11, 12, K.theme.primary);
+      }
+      K.text(c, pg.title, mx + (canBack() ? 40 : 16), 17, { size: 14, weight: 600, color: K.theme.text });
+      contentTop = 46;
+    }else{
+      contentTop = 14;
+    }
+
+    if(pg.items){
+      for(var k = 0; k < pg.items.length; k++){
+        var it = pg.items[k];
+        var ry = contentTop + k * 44;
+        if(k > 0){
+          c.fillStyle = "#eef0f3";
+          c.fillRect(mx + 14, ry, mw - 28, 1);
+        }
+        var isOpen = state.subOpen && state.subOpen.row === k;
+        if(isOpen){
+          K.box(c, mx + 6, ry + 3, mw - 12, 38, { bg: "#eef4fd", radius: 8 });
+        }
+        K.icon(c, it.icon, mx + 16, ry + 13, 18, isOpen ? K.theme.primary : K.theme.textMuted);
+        K.text(c, it.label, mx + 44, ry + 22, {
+          size: 14, weight: isOpen ? 600 : 400, color: K.theme.text
+        });
+        K.text(c, it.sub ? "▸" : "›", mx + mw - 18, ry + 21, {
+          size: it.sub ? 13 : 17, color: it.sub ? K.theme.primary : "#b8bfc9", align: "center"
+        });
+        rowRects.push({ x: mx, y: ry, w: mw, h: 44, row: k });
+      }
+
+      /* 子菜单浮层 */
+      if(state.subOpen){
+        var sub = pg.items[state.subOpen.row];
+        if(sub && sub.sub){
+          var rr = rowRects[state.subOpen.row];
+          var panelH = subPanelH(sub.sub);
+          var pp = subPanelPos(rr, panelH);
+
+          K.box(c, pp.x, pp.y, SUB_W, panelH, {
+            bg: "#ffffff", radius: 8, borderWidth: 1, border: "#d6d9df",
+            shadow: K.alpha("#1c2128", 0.20), shadowBlur: 14, shadowY: 5
+          });
+          for(var s = 0; s < sub.sub.length; s++){
+            var si = sub.sub[s];
+            var sy = pp.y + SUB_PAD + s * SUB_ITEM_H;
+            K.text(c, si.label, pp.x + 12, sy + SUB_ITEM_H / 2, {
+              size: 12.5, color: K.theme.text
+            });
+            K.text(c, "›", pp.x + SUB_W - 10, sy + SUB_ITEM_H / 2 - 1, {
+              size: 13, color: "#b8bfc9", align: "center"
+            });
+            subRects.push({ x: pp.x, y: sy, w: SUB_W, h: SUB_ITEM_H, page: si.page });
+          }
+          /* 翻转标注 */
+          K.text(c, "子菜单对齐：" + (pp.mode === "up" ? "向上（翻转）" : "向下"),
+            pp.x + SUB_W / 2, pp.mode === "up" ? pp.y - 10 : pp.y + panelH + 12, {
+            size: 10, color: K.theme.textFaint, align: "center"
+          });
+        }
+      }
+    }else{
+      var cx = mx + 12, cy = contentTop, cw = mw - 24;
+      K.box(c, cx, cy, cw, 118, { bg: "#f7f8fa", radius: 10, borderWidth: 1, border: "#e6e9ee" });
+      for(var j = 0; j < pg.info.length; j++){
+        var ly = cy + 22 + j * 32;
+        K.text(c, pg.info[j][0], cx + 14, ly, { size: 12, color: K.theme.textMuted });
+        K.text(c, pg.info[j][1], cx + cw - 14, ly, {
+          size: 12.5, weight: 600, color: K.theme.text, align: "right"
+        });
+        if(j < pg.info.length - 1){
+          c.fillStyle = "#e6e9ee";
+          c.fillRect(cx + 14, ly + 16, cw - 28, 1);
+        }
+      }
+    }
+
+    K.text(c, "点击侧栏或条目切换页面 · 带 ▸ 的条目有子菜单", mx + mw / 2, H - 10, {
+      size: 10.5, color: K.theme.textFaint, align: "center"
+    });
+  }
+
+  K.run(function(now){
+    if(state.auto){
+      var idx = Math.floor((now - autoStart) / AUTO_STEP) % AUTO_SEQ.length;
+      if(state.page !== AUTO_SEQ[idx]){
+        state.page = AUTO_SEQ[idx];
+        state.subOpen = null;
+        renderCode();
+      }
+    }
+    drawScene(view.ctx);
+  });
+
+  /* ---------- 交互 ---------- */
+  function posOf(e){
+    var r = view.canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function inside(p, r){
+    return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+  }
+  function stopAuto(){
+    if(state.auto){
+      state.auto = false;
+      document.getElementById("auto").checked = false;
+    }
+  }
+
+  view.canvas.addEventListener("pointerdown", function(e){
+    var p = posOf(e);
+    var i;
+
+    /* 子菜单浮层优先 */
+    for(i = 0; i < subRects.length; i++){
+      if(inside(p, subRects[i])){
+        state.page = subRects[i].page;
+        state.subOpen = null;
+        stopAuto();
+        renderCode();
+        K.status("已选择：" + PAGES[state.page].title);
+        return;
+      }
+    }
+
+    if(backRect && inside(p, backRect)){
+      var target = backTarget();
+      if(target){
+        state.page = target;
+        state.subOpen = null;
+        stopAuto();
+        renderCode();
+      }
+      return;
+    }
+    for(i = 0; i < sideRects.length; i++){
+      if(inside(p, sideRects[i])){
+        state.page = sideRects[i].root;
+        state.subOpen = null;
+        stopAuto();
+        renderCode();
+        return;
+      }
+    }
+    for(i = 0; i < rowRects.length; i++){
+      if(inside(p, rowRects[i])){
+        var pg = PAGES[state.page];
+        var it = pg.items[rowRects[i].row];
+        stopAuto();
+        if(it.sub){
+          if(state.subOpen && state.subOpen.row === rowRects[i].row){
+            state.subOpen = null;
+            K.status("子菜单已收起");
+          }else{
+            state.subOpen = { row: rowRects[i].row };
+            K.status("打开子菜单：" + it.label);
+          }
+        }else if(it.page){
+          state.page = it.page;
+          state.subOpen = null;
+          renderCode();
+        }
+        return;
+      }
+    }
+    /* 点击空白处收起浮层 */
+    if(state.subOpen) state.subOpen = null;
+  });
+
+  /* ---------- 参数 ---------- */
+  K.bindSeg("subalign", function(v){
+    state.subAlign = v;
+    K.status("子菜单对齐：" + (v === "down" ? "向下" : v === "up" ? "向上" : "自动（空间不足向上翻转）"));
+    renderCode();
+  });
+  K.bindSeg("header", function(v){ state.header = v; renderCode(); });
+  K.bindRange("width", function(v){ return v + " px"; }, function(v){ state.width = v; renderCode(); });
+  K.bindCheck("rootback", function(on){ state.rootBack = on; renderCode(); });
+  K.bindCheck("sidetitle", function(on){
+    state.sideTitle = on;
+    document.getElementById("o-sidetitle").textContent = on ? "开" : "关";
+    renderCode();
+  });
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    autoStart = performance.now();
+    if(on){
+      state.page = "home";
+      state.subOpen = null;
+      renderCode();
+    }
+  });
+
+  /* ---------- C 代码 ---------- */
+  function renderCode(){
+    var pg = PAGES[state.page];
+    var L = [];
+
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * menu = " + K.fn("lv_menu_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(menu, " + K.num(W) + ", " + K.num(H) + ");");
+    L.push(K.fn("lv_obj_center") + "(menu);");
+    L.push("");
+
+    L.push("lv_obj_t * sidebar = " + K.fn("lv_menu_page_create") + "(menu, NULL);");
+    L.push(K.fn("lv_obj_set_width") + "(sidebar, " + K.num(state.width) + ");");
+    L.push(K.fn("lv_menu_set_sidebar_page") + "(menu, sidebar);");
+    L.push("lv_obj_t * sc = " + K.fn("lv_menu_cont_create") + "(sidebar);");
+    for(var s = 0; s < SIDE_ITEMS.length; s++){
+      var it = SIDE_ITEMS[s];
+      L.push("lv_obj_t * b_" + it.root + " = " + K.fn("lv_button_create") + "(sc);");
+      L.push("lv_obj_t * l_" + it.root + " = " + K.fn("lv_label_create") + "(b_" + it.root + ");");
+      L.push(K.fn("lv_label_set_text") + "(l_" + it.root + ", \"" + it.sym + " " + it.label + "\");");
+      L.push(K.fn("lv_menu_set_load_page_event") + "(menu, b_" + it.root + ", " + it.root + "_page);");
+    }
+    L.push("");
+
+    L.push(K.cm("/* 子菜单：条目悬停/点击时弹出，进入二级页面 */"));
+    var row0 = (pg.items && pg.items[0]) || null;
+    if(row0 && row0.sub){
+      L.push("lv_obj_t * cont = " + K.fn("lv_menu_cont_create") + "(" + pg.root + "_page);");
+      L.push("lv_obj_t * item_0 = " + K.fn("lv_button_create") + "(cont);");
+      L.push("lv_obj_t * lbl_0 = " + K.fn("lv_label_create") + "(item_0);");
+      L.push(K.fn("lv_label_set_text") + "(lbl_0, \"" + row0.sym + " " + row0.label + "\");");
+      L.push("");
+      L.push("lv_obj_t * submenu = " + K.fn("lv_menu_cont_create") + "(" + pg.root + "_page);");
+      for(var u = 0; u < row0.sub.length; u++){
+        L.push("lv_obj_t * sub_" + u + " = " + K.fn("lv_button_create") + "(submenu);");
+        L.push(K.fn("lv_menu_set_load_page_event") + "(menu, sub_" + u + ", " +
+          row0.sub[u].page.replace(/-/g, "_") + "_page);" + K.cm("  /* " + row0.sub[u].label + " */"));
+      }
+      L.push(K.fn("lv_menu_set_submenu_item") + "(menu, item_0, submenu);" + K.cm(" /* 条目挂子菜单 */"));
+    }
+    L.push("");
+
+    var ALIGN = { down: "LV_MENU_ALIGN_LEFT_TOP", up: "LV_MENU_ALIGN_LEFT_MID", auto: "LV_MENU_ALIGN_DEFAULT" };
+    L.push(K.fn("lv_menu_set_submenu_align") + "(menu, " + K.num(ALIGN[state.subAlign]) + ");" +
+      K.cm("  /* " + (state.subAlign === "auto" ? "auto：空间不足自动向上翻转" : state.subAlign === "up" ? "up：向上展开（演示简化）" : "down：向下展开") + " */"));
+    L.push(K.fn("lv_menu_set_mode_header") + "(menu, " +
+      K.num(state.header === "top" ? "LV_MENU_HEADER_TOP_FIXED" : "LV_MENU_HEADER_TOP_UNFIXED") + ");");
+    if(state.header === "side"){
+      L.push(K.fn("lv_obj_add_flag") + "(" + K.fn("lv_menu_get_main_header") + "(menu), " +
+        K.num("LV_OBJ_FLAG_HIDDEN") + ");" + K.cm("  /* 标题栏移到侧栏 */"));
+    }
+    if(!state.sideTitle){
+      L.push(K.fn("lv_obj_add_flag") + "(" + K.fn("lv_menu_get_sidebar_header") + "(menu), " +
+        K.num("LV_OBJ_FLAG_HIDDEN") + ");");
+    }
+    L.push(K.fn("lv_menu_set_mode_root_back_button") + "(menu, " +
+      K.num(state.rootBack ? "LV_MENU_ROOT_BACK_BUTTON_ENABLED" : "LV_MENU_ROOT_BACK_BUTTON_DISABLED") + ");");
+    L.push(K.fn("lv_menu_set_page") + "(menu, " + state.page.replace(/-/g, "_") + "_page);" +
+      K.cm("  /* 当前页：" + pg.title + " */"));
+
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "menu.png");
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js menu.alt：UIButton + UIList + 自建弹层容器
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_menu，以下为替代拼装骨架（静态示例） */"));
+  L.push(cm("/* 思路：UIList 做侧栏，UIViewGroup 做内容区，子菜单层级与对齐翻转全部自实现 */"));
+  L.push("");
+  L.push(cm("/* 1. 侧栏：UIList + Adapter（首页 / 设置 / 关于） */"));
+  L.push("UIList * sidebar = " + fn("new") + " UIList();");
+  L.push("sidebar-&gt;" + fn("SetPosition") + "(" + num(0) + ", " + num(0) + ");");
+  L.push("sidebar-&gt;" + fn("SetSize") + "(" + num(110) + ", " + num(240) + ");");
+  L.push("sidebar-&gt;" + fn("SetAdapter") + "(" + num("&sidebarAdapter") + ");");
+  L.push("");
+  L.push(cm("/* 2. 内容区：每个页面一个 UIViewGroup，自己维护页面栈与回退 */"));
+  L.push("UIViewGroup * homePage = " + fn("new") + " UIViewGroup();");
+  L.push("UIViewGroup * settingsPage = " + fn("new") + " UIViewGroup();");
+  L.push("homePage-&gt;" + fn("SetPosition") + "(" + num(111) + ", " + num(0) + ");");
+  L.push("homePage-&gt;" + fn("SetSize") + "(" + num(249) + ", " + num(240) + ");");
+  L.push("");
+  L.push(cm("/* 3. 条目：UIButton 点击时切换页面（等价 lv_menu_set_load_page_event） */"));
+  L.push("UIButton * item = " + fn("new") + " UIButton();");
+  L.push("item-&gt;" + fn("SetOnClickListener") + "(" + num("&navListener") + ");");
+  L.push(cm("/* navListener::OnClick 内："));
+  L.push("   currentPage-&gt;SetVisible(false);");
+  L.push("   nextPage-&gt;SetVisible(true);");
+  L.push("   pageStack.Push(nextPage);   // 自己实现回退栈 */");
+  L.push("");
+  L.push(cm("/* 4. 子菜单浮层：自建弹层容器，按剩余空间手动计算向上/向下翻转 */"));
+  L.push("UIViewGroup * submenuPopup = " + fn("new") + " UIViewGroup();");
+  L.push("submenuPopup-&gt;" + fn("SetPosition") + "(popupX, " + fn("calcFlippedY") + "(anchorY, popupH));");
+  L.push("submenuPopup-&gt;" + fn("SetVisible") + "(true);");
+  L.push("");
+  L.push(cm("/* 注意：无键盘/编码器导航，无内置弹出层与页面管理，全部要自己写 */"));
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

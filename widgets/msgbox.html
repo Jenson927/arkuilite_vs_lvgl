@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Msgbox：lv_msgbox vs UIDialog</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='7' width='24' height='18' rx='4' fill='%232b7de9'/%3E%3Cg fill='%23fff'%3E%3Crect x='8' y='11' width='16' height='2' rx='1'/%3E%3Crect x='8' y='15' width='11' height='2' rx='1'/%3E%3Crect x='17' y='20' width='7' height='2.6' rx='1.3'/%3E%3Crect x='8' y='20' width='6' height='2.6' rx='1.3'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Msgbox：lv_msgbox vs UIDialog</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（可勾选在弹窗内插入输入框 / 图片，并可开启淡入缩放动画），右列为按
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 渲染的 UIDialog 固定模板。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_msgbox</code>
+        <span class="cmp-tag lv">内容区任意塞控件 · 可加动画</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击底部按钮 / 右上角 × / 遮罩关闭弹窗；勾选“自定义内容区”后，弹窗内会插入输入框与图片——UIDialog 的固定模板做不到。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>标题<span class="api">lv_msgbox_add_title</span></label>
+            <input type="text" id="title" value="提示" maxlength="16">
+          </div>
+          <div class="field wide">
+            <label>正文<span class="api">lv_msgbox_add_text</span></label>
+            <textarea id="body" rows="2">确定要删除选中的文件吗？
+此操作不可撤销。</textarea>
+          </div>
+
+          <div class="field">
+            <label>按钮数量<output id="o-count">2</output><span class="api">lv_msgbox_add_footer_button（可任意数量）</span></label>
+            <input type="range" id="count" min="1" max="3" step="1" value="2">
+          </div>
+          <div class="field">
+            <label>关闭按钮<span class="api">lv_msgbox_add_close_button</span></label>
+            <div class="check"><input type="checkbox" id="close" checked><span>标题栏右上角显示 ×</span></div>
+          </div>
+
+          <div class="field">
+            <label>遮罩透明度<output id="o-mask">45%</output><span class="api">lv_obj_set_style_bg_opa(lv_layer_top(), ...)</span></label>
+            <input type="range" id="mask" min="0" max="0.8" step="0.05" value="0.45">
+          </div>
+          <div class="field">
+            <label>弹窗宽度<output id="o-width">260 px</output><span class="api">lv_obj_set_width</span></label>
+            <input type="range" id="width" min="200" max="300" step="2" value="260">
+          </div>
+
+          <div class="field wide">
+            <label>自定义内容区（弹窗内塞任意控件）<span class="api">lv_msgbox_add_content + lv_textarea_create / lv_image_create（ArkUI lite UIDialog 无此能力）</span></label>
+            <div class="stack">
+              <div class="check"><input type="checkbox" id="cinput" checked><span>插入输入框</span></div>
+              <div class="check"><input type="checkbox" id="cimg" checked><span>插入图片</span></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>打开/关闭动画（淡入 + 缩放）<span class="api">lv_anim_t：lv_anim_set_values(&amp;a, 0, 1) + 缩放执行回调</span></label>
+            <div class="check"><input type="checkbox" id="anim" checked><span>打开时 0.8→1 缩放 + 淡入</span></div>
+          </div>
+          <div class="field">
+            <label>自动演示循环<span class="api">自动点击确定并循环重开（导出动图用）</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>开 → 确定 → 关 → 重开</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIDialog</code>
+        <span class="cmp-tag ui">固定模板 · 无动画</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UIDialog 是固定模板：标题 + 正文 + 最多两个按钮，内容区不可自定义，也没有打开/关闭动画。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>点击按钮（模拟触发）<span class="api">UIDialog::SetButton(DialogButtonType, text, listener)：按钮类型有限，回调里自行关闭</span></label>
+            <div class="seg" id="uclick">
+              <button type="button" data-v="cancel">取消</button>
+              <button type="button" data-v="ok" class="active">确定</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          依据 <code>ui_dialog.h</code>：<code>SetTitle()</code> / <code>SetText()</code> /
+          <code>SetButton()</code> / <code>SetOnCancelListener()</code>；布局固定，
+          无法在标题与按钮之间插入输入框、图片等自定义控件，也不提供打开/关闭动画接口。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列演示按 foundation/arkui/ui_lite 的 UIDialog 行为渲染。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_msgbox 复刻（迁移自旧页，新增自定义内容区 + 打开/关闭动画）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+
+  var BTN_LABELS = { 1: ["确定"], 2: ["确定", "取消"], 3: ["确定", "取消", "关闭"] };
+  var AUTO_CYCLE = 4200;
+  var ANIM_DUR = 300;
+
+  var state = {
+    title: "提示",
+    body: "确定要删除选中的文件吗？\n此操作不可撤销。",
+    count: 2,
+    close: true,
+    mask: 0.45,
+    width: 260,
+    cinput: true,
+    cimg: true,
+    anim: true,
+    auto: false,
+    open: true,
+    hint: "",
+    closedAt: 0,
+    openT0: 0
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+
+  var t0 = performance.now();
+  var autoStart = 0;
+  var footerRects = [], closeRect = null, dialogRect = null;
+  var openT0 = 0;   /* 相对 t0 的打开时刻，用于淡入缩放动画 */
+
+  function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+
+  function sceneAt(t){
+    var tt = ((t % AUTO_CYCLE) + AUTO_CYCLE) % AUTO_CYCLE;
+    if(tt < 1700) return { open: true, k: state.anim ? clamp01(tt / ANIM_DUR) : 1, hint: "" };
+    if(tt < 3400) return { open: false, k: 0, hint: "选择了 确定" };
+    return { open: true, k: state.anim ? clamp01((tt - 3400) / ANIM_DUR) : 1, hint: "" };
+  }
+
+  /* ---------- 背景页面 ---------- */
+  function drawBackdrop(c){
+    c.fillStyle = "#ffffff";
+    c.fillRect(0, 0, W, H);
+    K.text(c, "设置", 16, 22, { size: 16, weight: 600, color: K.theme.text });
+    var rows = [["wifi", "无线局域网"], ["bell", "通知"], ["gear", "通用"]];
+    for(var i = 0; i < rows.length; i++){
+      var ry = 44 + i * 40;
+      K.icon(c, rows[i][0], 16, ry + 11, 18, K.theme.textMuted);
+      K.text(c, rows[i][1], 42, ry + 20, { size: 14, color: K.theme.text });
+      K.text(c, "›", W - 20, ry + 19, { size: 17, color: "#b8bfc9", align: "center" });
+      c.fillStyle = "#eef0f3";
+      c.fillRect(14, ry + 39, W - 28, 1);
+    }
+  }
+
+  /* ---------- 自定义内容区 ---------- */
+  function drawCustomContent(c, dx, y, dw){
+    var cy = y;
+    if(state.cinput){
+      K.box(c, dx + 18, cy, dw - 36, 28, {
+        bg: "#f7f8fa", radius: 6, borderWidth: 1, border: "#dfe3e8"
+      });
+      K.text(c, "请输入备注…", dx + 28, cy + 14, { size: 12, color: K.theme.textFaint });
+      c.fillStyle = K.theme.primary;
+      c.fillRect(dx + 28 + K.measure(c, "请输入备注…", { size: 12 }) + 2, cy + 7, 1.5, 14);
+      cy += 36;
+    }
+    if(state.cimg){
+      var iw = 76, ih = 50;
+      var ix = dx + 18;
+      K.box(c, ix, cy, iw, ih, { bg: "#eef3fb", radius: 6, borderWidth: 1, border: "#cfd9e6" });
+      c.save();
+      K.roundRectPath(c, ix, cy, iw, ih, 6);
+      c.clip();
+      c.fillStyle = "#c3d2e6";
+      c.beginPath(); c.arc(ix + 20, cy + 16, 6, 0, Math.PI * 2); c.fill();
+      c.beginPath();
+      c.moveTo(ix + 6, cy + 44);
+      c.lineTo(ix + 28, cy + 24);
+      c.lineTo(ix + 42, cy + 36);
+      c.lineTo(ix + 54, cy + 22);
+      c.lineTo(ix + 72, cy + 44);
+      c.closePath(); c.fill();
+      c.restore();
+      K.text(c, "lv_image", ix + iw + 10, cy + ih / 2, { size: 11, color: K.theme.textFaint });
+      cy += ih + 8;
+    }
+    return cy - y;
+  }
+
+  /* ---------- 对话框 ---------- */
+  function drawDialog(c){
+    var dw = state.width;
+    var lines = [];
+    String(state.body).split("\n").forEach(function(p){
+      lines = lines.concat(K.wrap(c, p, dw - 40, { size: 13 }));
+    });
+    if(lines.length > 4) lines = lines.slice(0, 4);
+
+    var bodyH = Math.max(28, lines.length * 19 + 2);
+    var customH = (state.cinput ? 36 : 0) + (state.cimg ? 58 : 0);
+    var dh = 44 + bodyH + 20 + customH + 52;
+    var dx = (W - dw) / 2;
+    var dy = Math.max(8, Math.round((H - dh) / 2));
+
+    dialogRect = { x: dx, y: dy, w: dw, h: dh };
+    footerRects = [];
+    closeRect = null;
+
+    K.box(c, dx, dy, dw, dh, {
+      bg: "#ffffff", radius: 14, borderWidth: 1, border: "#e2e6eb",
+      shadow: K.alpha("#0b1220", 0.3), shadowBlur: 22, shadowY: 8
+    });
+
+    K.text(c, state.title || "提示", dx + 18, dy + 23, { size: 15, weight: 600, color: K.theme.text });
+
+    if(state.close){
+      closeRect = { x: dx + dw - 36, y: dy + 11, w: 24, h: 24 };
+      K.box(c, closeRect.x, closeRect.y, 24, 24, { bg: "#f2f4f7", radius: 12 });
+      c.save();
+      c.strokeStyle = K.theme.textMuted;
+      c.lineWidth = 1.6;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(dx + dw - 29, dy + 18); c.lineTo(dx + dw - 19, dy + 28);
+      c.moveTo(dx + dw - 19, dy + 18); c.lineTo(dx + dw - 29, dy + 28);
+      c.stroke();
+      c.restore();
+    }
+
+    c.fillStyle = "#eceff3";
+    c.fillRect(dx + 1, dy + 43, dw - 2, 1);
+
+    for(var i = 0; i < lines.length; i++){
+      K.text(c, lines[i], dx + 20, dy + 56 + i * 19, { size: 13, color: K.theme.textMuted });
+    }
+
+    var contentTop = dy + 56 + lines.length * 19 + 2;
+    drawCustomContent(c, dx, contentTop, dw);
+
+    c.fillStyle = "#eceff3";
+    c.fillRect(dx + 1, dy + dh - 52, dw - 2, 1);
+
+    var labels = BTN_LABELS[state.count];
+    var gap = 8, bx0 = dx + 18, by = dy + dh - 41;
+    var total = dw - 36;
+    var bw = (total - gap * (labels.length - 1)) / labels.length;
+
+    for(var j = 0; j < labels.length; j++){
+      var bx = bx0 + j * (bw + gap);
+      var primary = (j === 0);
+      K.box(c, bx, by, bw, 29, {
+        bg: primary ? K.theme.primary : "#ffffff",
+        radius: 8, borderWidth: 1,
+        border: primary ? K.theme.primary : K.theme.border
+      });
+      K.text(c, labels[j], bx + bw / 2, by + 15, {
+        size: 12.5, weight: primary ? 600 : 500,
+        color: primary ? "#ffffff" : K.theme.text, align: "center"
+      });
+      footerRects.push({ x: bx, y: by, w: bw, h: 29, label: labels[j] });
+    }
+  }
+
+  function drawHint(c, hint){
+    var tw = K.measure(c, hint, { size: 12 }) + 28;
+    var x = (W - tw) / 2, y = H - 34;
+    K.box(c, x, y, tw, 24, {
+      bg: "rgba(28,33,40,0.92)", radius: 12,
+      shadow: K.alpha("#000000", 0.2), shadowBlur: 8, shadowY: 2
+    });
+    K.text(c, hint, W / 2, y + 12, { size: 12, color: "#ffffff", align: "center" });
+  }
+
+  /* ---------- 场景 ---------- */
+  function drawScene(c, t, forceAuto){
+    var autoOn = forceAuto || state.auto;
+    var open = state.open, hint = state.hint;
+    var animK = state.anim ? clamp01((t - openT0) / ANIM_DUR) : 1;
+
+    if(autoOn){
+      var s = sceneAt(t);
+      open = s.open; hint = s.hint; animK = s.k;
+    }
+
+    c.clearRect(0, 0, W, H);
+    drawBackdrop(c);
+
+    c.fillStyle = "rgba(0,0,0," + (state.mask * (open ? animK : 1)) + ")";
+    c.fillRect(0, 0, W, H);
+
+    footerRects = []; closeRect = null; dialogRect = null;
+
+    if(open){
+      if(state.anim && animK < 1){
+        var scale = 0.8 + 0.2 * animK;
+        c.save();
+        c.globalAlpha = animK;
+        c.translate(W / 2, H / 2);
+        c.scale(scale, scale);
+        c.translate(-W / 2, -H / 2);
+        drawDialog(c);
+        c.restore();
+      }else{
+        drawDialog(c);
+      }
+    }else if(hint){
+      drawHint(c, hint);
+    }
+  }
+
+  K.run(function(now){
+    if(!state.auto && !state.open && now - state.closedAt > 2000){
+      state.open = true;
+      state.hint = "";
+      openT0 = now - t0;
+    }
+    drawScene(view.ctx, now - t0, false);
+  });
+
+  /* ---------- 交互 ---------- */
+  function posOf(e){
+    var r = view.canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function inside(p, r){
+    return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+  }
+  function stopAuto(){
+    if(state.auto){
+      state.auto = false;
+      document.getElementById("auto").checked = false;
+    }
+  }
+  function closeBox(msg){
+    state.open = false;
+    state.hint = msg;
+    state.closedAt = performance.now();
+    stopAuto();
+  }
+
+  view.canvas.addEventListener("pointerdown", function(e){
+    var p = posOf(e);
+    if(!state.open){
+      state.open = true;
+      state.hint = "";
+      openT0 = performance.now() - t0;
+      stopAuto();
+      return;
+    }
+    if(closeRect && inside(p, closeRect)){ closeBox("已关闭"); return; }
+    for(var i = 0; i < footerRects.length; i++){
+      if(inside(p, footerRects[i])){ closeBox("选择了 " + footerRects[i].label); return; }
+    }
+    if(dialogRect && !inside(p, dialogRect)) closeBox("点击遮罩关闭");
+  });
+
+  /* ---------- 参数 ---------- */
+  document.getElementById("title").addEventListener("input", function(e){
+    state.title = e.target.value;
+    renderCode();
+  });
+  document.getElementById("body").addEventListener("input", function(e){
+    state.body = e.target.value;
+    renderCode();
+  });
+  K.bindRange("count", null, function(v){ state.count = v; renderCode(); });
+  K.bindCheck("close", function(on){ state.close = on; renderCode(); });
+  K.bindRange("mask", function(v){ return Math.round(v * 100) + "%"; }, function(v){
+    state.mask = v;
+    renderCode();
+  });
+  K.bindRange("width", function(v){ return v + " px"; }, function(v){
+    state.width = v;
+    renderCode();
+  });
+  K.bindCheck("cinput", function(on){ state.cinput = on; renderCode(); });
+  K.bindCheck("cimg", function(on){ state.cimg = on; renderCode(); });
+  K.bindCheck("anim", function(on){
+    state.anim = on;
+    if(on && state.open) openT0 = performance.now() - t0;
+    renderCode();
+  });
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    autoStart = performance.now();
+    state.open = true;
+    state.hint = "";
+    renderCode();
+  });
+
+  /* ---------- C 代码 ---------- */
+  function renderCode(){
+    var labels = BTN_LABELS[state.count];
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * mbox = " + K.fn("lv_msgbox_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_msgbox_add_title") + "(mbox, " + JSON.stringify(state.title || "") + ");");
+    if(state.close) L.push(K.fn("lv_msgbox_add_close_button") + "(mbox);");
+    L.push(K.fn("lv_msgbox_add_text") + "(mbox, " + JSON.stringify(state.body) + ");");
+
+    if(state.cinput || state.cimg){
+      L.push("");
+      L.push(K.cm("/* 自定义内容区：任意控件都能塞进弹窗（UIDialog 无此能力） */"));
+      L.push("lv_obj_t * content = " + K.fn("lv_msgbox_add_content") + "(mbox);");
+      if(state.cinput){
+        L.push("lv_obj_t * ta = " + K.fn("lv_textarea_create") + "(content);");
+        L.push(K.fn("lv_textarea_set_one_line") + "(ta, true);");
+        L.push(K.fn("lv_textarea_set_placeholder_text") + "(ta, \"请输入备注…\");");
+      }
+      if(state.cimg){
+        L.push("lv_obj_t * img = " + K.fn("lv_image_create") + "(content);");
+        L.push(K.fn("lv_image_set_src") + "(img, \"A:preview.png\");");
+      }
+    }
+
+    L.push("");
+    for(var i = 0; i < labels.length; i++){
+      L.push("lv_obj_t * btn_" + i + " = " + K.fn("lv_msgbox_add_footer_button") + "(mbox, " + JSON.stringify(labels[i]) + ");");
+    }
+    L.push(K.fn("lv_obj_set_width") + "(mbox, " + K.num(state.width) + ");");
+    L.push(K.fn("lv_obj_set_style_bg_opa") + "(lv_layer_top(), " + K.num(Math.round(state.mask * 255)) + ", 0);" +
+      K.cm("  /* 遮罩 " + Math.round(state.mask * 100) + "% */"));
+
+    if(state.anim){
+      L.push("");
+      L.push(K.cm("/* 打开动画：淡入 + 0.8→1 缩放（lv_anim） */"));
+      L.push("lv_anim_t a;");
+      L.push(K.fn("lv_anim_init") + "(&a);");
+      L.push(K.fn("lv_anim_set_var") + "(&a, mbox);");
+      L.push(K.fn("lv_anim_set_values") + "(&a, 0, 1);");
+      L.push(K.fn("lv_anim_set_duration") + "(&a, " + K.num(ANIM_DUR) + ");");
+      L.push(K.fn("lv_anim_set_exec_cb") + "(&a, (lv_anim_exec_xcb_t)msgbox_anim_cb);");
+      L.push(K.fn("lv_anim_start") + "(&a);");
+    }
+
+    L.push("");
+    L.push(K.fn("lv_obj_add_event_cb") + "(btn_0, msgbox_event_cb, LV_EVENT_CLICKED, mbox);");
+    L.push("");
+    L.push("static void msgbox_event_cb(lv_event_t * e)");
+    L.push("{");
+    L.push("    lv_obj_t * mbox = " + K.fn("lv_event_get_user_data") + "(e);");
+    L.push("    " + K.fn("lv_msgbox_close") + "(mbox);");
+    L.push("}");
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 导出 ---------- */
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "msgbox.png");
+  });
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "msgbox.gif", w: W, h: H, fps: 16, duration: AUTO_CYCLE,
+      frame: function(c, t){ drawScene(c, t, true); },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: view.canvas, name: "msgbox.webm", duration: AUTO_CYCLE,
+      before: function(){
+        var old = state.auto;
+        state.auto = true;
+        autoStart = performance.now();
+        document.getElementById("auto").checked = true;
+        state.open = true;
+        state.hint = "";
+        return old;
+      },
+      after: function(old){
+        state.auto = old;
+        document.getElementById("auto").checked = old;
+        state.open = true;
+        state.hint = "";
+      },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：UIDialog 操作绑定 + 等价 C++ 代码生成
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var clicked = "ok";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  function renderUCode(){
+    var L = [];
+    L.push(cm("/* 由右列参数实时生成（UIDialog 固定模板） */"));
+    L.push("UIDialog * dialog = " + fn("new") + " UIDialog();");
+    L.push("dialog-&gt;" + fn("SetTitle") + "(\"提示\");");
+    L.push("dialog-&gt;" + fn("SetText") + "(\"确定要删除选中的文件吗？\");");
+    L.push("dialog-&gt;" + fn("SetButton") + "(DIALOG_BUTTON_POSITIVE, \"确定\", " + num("&okListener") + ");");
+    L.push("dialog-&gt;" + fn("SetButton") + "(DIALOG_BUTTON_NEGATIVE, \"取消\", " + num("&cancelListener") + ");");
+    L.push("dialog-&gt;" + fn("SetOnCancelListener") + "(" + num("&onCancel") + ");");
+    L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(dialog);");
+    L.push("");
+    if(clicked === "ok"){
+      L.push(cm("/* 当前模拟触发：点击「确定」→ okListener 回调里调用 */"));
+      L.push("dialog-&gt;" + fn("Close") + "();");
+    }else{
+      L.push(cm("/* 当前模拟触发：点击「取消」→ onCancel / cancelListener 回调里调用 */"));
+      L.push("dialog-&gt;" + fn("Close") + "();");
+    }
+    L.push(cm("/* 注意：内容区不可自定义，无打开/关闭动画接口 */"));
+    document.getElementById("ucode").innerHTML = L.join("\n");
+  }
+
+  document.getElementById("uclick").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    clicked = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    if(window.LV2 && LV2.api && LV2.api.click) LV2.api.click(clicked);
+    renderUCode();
+  });
+
+  renderUCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar：lv_calendar vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='6' width='24' height='21' rx='4' fill='none' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M4 12h24M10 4v5M22 4v5' stroke='%232b7de9' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Calendar：lv_calendar vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>：月历网格、头部箭头切换月份、高亮日期列表与日期范围选择；
+      右列 ArkUI lite <b>没有对应的日历组件</b>，仅展示 LVGL 能力与替代思路（UIPicker 只能选值，没有月历网格）。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_calendar</code>
+        <span class="cmp-tag lv">月历网格 · 高亮可选</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击日期选中；点击头部左右箭头切换月份；勾选「日期范围选择」后点两个日期即高亮整段区间。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>年份 year<output id="o-year">2026 年</output><span class="api">lv_calendar_set_month_shown(cal, y, m)</span></label>
+            <input type="range" id="year" min="2015" max="2040" step="1" value="2026">
+          </div>
+          <div class="field">
+            <label>月份 month<output id="o-month">10 月</output><span class="api">lv_calendar_set_month_shown(cal, y, m)</span></label>
+            <input type="range" id="month" min="1" max="12" step="1" value="10">
+          </div>
+
+          <div class="field">
+            <label>显示头部 header<span class="api">lv_calendar_header_arrow_create(cal)：箭头按钮切换月份</span></label>
+            <div class="check"><input type="checkbox" id="header" checked><span>年月文字 + 左右箭头</span></div>
+          </div>
+          <div class="field">
+            <label>星期名称 day_names<span class="api">lv_calendar_set_day_names(cal, char**)</span></label>
+            <div class="seg" id="lang">
+              <button type="button" data-v="zh" class="active">日一二三四五六</button>
+              <button type="button" data-v="en">Sun..Sat</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>高亮今天 today<span class="api">lv_calendar_set_today_date(cal, y, m, d)</span></label>
+            <div class="check"><input type="checkbox" id="today" checked><span>今天用主色描边</span></div>
+          </div>
+          <div class="field">
+            <label>高亮日期列表 highlighted<span class="api">lv_calendar_set_highlighted_dates(cal, dates, num)：每月 5 / 14 / 22 日</span></label>
+            <div class="check"><input type="checkbox" id="hl" checked><span>高亮预设日期列表</span></div>
+          </div>
+
+          <div class="field">
+            <label>显示箭头 header_arrow<span class="api">点击画布上的箭头按钮切换月份</span></label>
+            <div class="check"><input type="checkbox" id="arrows" checked><span>点击箭头切换月份</span></div>
+          </div>
+          <div class="field">
+            <label>日期范围选择 range<span class="api">LVGL 无内置范围选择：监听 VALUE_CHANGED 后自行绘制区间高亮</span></label>
+            <div class="check"><input type="checkbox" id="range"><span>点两个日期选择区间</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>自动演示 · 月份切换按钮效果预览<span class="api">模拟箭头连点：逐月翻动 12 个月（导出动图用）</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>自动逐月切换（一圈 12 个月）</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-prev">◀ 上一月</button>
+          <button type="button" class="btn" id="btn-next">下一月 ▶</button>
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一圈 12 月）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一圈 12 月）</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">最接近的替代：UIPicker / UIDigitalClock 只能选值或显示时间，没有月历网格与日期选择，7×6 日期网格要自己用 UILabel 拼。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例（静态）</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×280。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列替代思路依据 foundation/arkui/ui_lite 的 UIPicker / UILabel 源码。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_calendar 复刻（迁移自旧版单页，补充高亮列表 / 月份按钮 / 范围选择）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 320, H = 280;
+  var X = 16, CW = 288, HEAD_H = 36, WEEK_H = 24, CELL_H = 30;
+  var ROWS = 6;
+  var HL_DAYS = [5, 14, 22];          // 预设高亮日期（每月）
+  var AUTO_HOLD = 700;                // 自动演示每月停留时间
+
+  var now = new Date();
+  var state = {
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+    selDay: now.getDate(),
+    showHeader: true,
+    lang: "zh",
+    highlightToday: true,
+    arrows: true,
+    hlOn: true,
+    rangeOn: false,
+    rangeStart: null,   // {y, m, d}
+    rangeEnd: null,
+    auto: false
+  };
+
+  var DAY_ZH = ["日", "一", "二", "三", "四", "五", "六"];
+  var DAY_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var WEEK_ZH = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var canvas = view.canvas;
+  canvas.style.cursor = "pointer";
+
+  document.getElementById("year").value = state.year;
+  document.getElementById("month").value = state.month;
+
+  var t0 = performance.now();
+  var autoStart = 0;
+
+  function daysInMonth(y, m){ return new Date(y, m, 0).getDate(); }
+  function firstDow(y, m){ return new Date(y, m - 1, 1).getDay(); }
+  function pad2(n){ return n < 10 ? "0" + n : String(n); }
+
+  function selectedText(){
+    var d = new Date(state.year, state.month - 1, state.selDay);
+    var wd = state.lang === "zh" ? WEEK_ZH[d.getDay()] : DAY_EN[d.getDay()];
+    return state.year + "-" + pad2(state.month) + "-" + pad2(state.selDay) + " " + wd;
+  }
+
+  function isToday(y, m, d){
+    return y === now.getFullYear() && m === now.getMonth() + 1 && d === now.getDate();
+  }
+
+  /* 范围（绝对日期序数比较） */
+  function dateOrd(y, m, d){ return y * 372 + m * 31 + d; }
+  function inRange(y, m, d){
+    if(!state.rangeOn || !state.rangeStart) return false;
+    var a = state.rangeStart, b = state.rangeEnd;
+    if(!b) return y === a.y && m === a.m && d === a.d;
+    var lo = dateOrd(a.y, a.m, a.d), hi = dateOrd(b.y, b.m, b.d);
+    if(lo > hi){ var tmp = lo; lo = hi; hi = tmp; }
+    var v = dateOrd(y, m, d);
+    return v >= lo && v <= hi;
+  }
+
+  function layout(){
+    var headerH = state.showHeader ? HEAD_H : 0;
+    return {
+      cardY: 16,
+      headerH: headerH,
+      cardH: headerH + WEEK_H + ROWS * CELL_H,
+      gridX: X + 6,
+      gridW: CW - 12,
+      colW: (CW - 12) / 7
+    };
+  }
+
+  function drawArrow(c, x, y, dir, color){
+    c.save();
+    c.strokeStyle = color;
+    c.lineWidth = 2;
+    c.lineCap = "round";
+    c.lineJoin = "round";
+    c.beginPath();
+    if(dir === "left"){
+      c.moveTo(x + 4, y - 5); c.lineTo(x - 2, y); c.lineTo(x + 4, y + 5);
+    }else{
+      c.moveTo(x - 4, y - 5); c.lineTo(x + 2, y); c.lineTo(x - 4, y + 5);
+    }
+    c.stroke();
+    c.restore();
+  }
+
+  function drawHeader(c, y){
+    K.text(c, state.year + " 年 " + state.month + " 月", X + CW / 2, y + 18, {
+      size: 15, weight: 600, align: "center", color: K.theme.text
+    });
+    if(!state.arrows) return;
+    var ly = y + 18;
+    K.box(c, X + 8, ly - 12, 24, 24, { bg: "#f4f6f9", radius: 6 });
+    K.box(c, X + CW - 32, ly - 12, 24, 24, { bg: "#f4f6f9", radius: 6 });
+    drawArrow(c, X + 20, ly, "left", K.theme.primary);
+    drawArrow(c, X + CW - 20, ly, "right", K.theme.primary);
+  }
+
+  function drawWeek(c, y){
+    var lt = layout();
+    var names = state.lang === "zh" ? DAY_ZH : DAY_EN;
+    for(var i = 0; i < 7; i++){
+      K.text(c, names[i], lt.gridX + lt.colW * i + lt.colW / 2, y + WEEK_H / 2, {
+        size: state.lang === "zh" ? 12 : 10.5,
+        color: K.theme.textFaint, align: "center"
+      });
+    }
+    c.strokeStyle = "#eef0f3";
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(X + 6, Math.round(y + WEEK_H) + 0.5);
+    c.lineTo(X + CW - 6, Math.round(y + WEEK_H) + 0.5);
+    c.stroke();
+  }
+
+  function drawGrid(c, y){
+    var lt = layout();
+    var days = daysInMonth(state.year, state.month);
+    var start = firstDow(state.year, state.month);
+
+    /* 范围背景先画一层 */
+    if(state.rangeOn){
+      for(var i0 = 0; i0 < ROWS * 7; i0++){
+        var day0 = i0 - start + 1;
+        if(day0 < 1 || day0 > days) continue;
+        if(!inRange(state.year, state.month, day0)) continue;
+        var row0 = Math.floor(i0 / 7), col0 = i0 % 7;
+        var rx = lt.gridX + col0 * lt.colW + 2;
+        var ry = y + row0 * CELL_H + 3;
+        K.box(c, rx, ry, lt.colW - 4, CELL_H - 6, { bg: K.alpha(K.theme.primary, 0.12), radius: 6 });
+      }
+    }
+
+    for(var i = 0; i < ROWS * 7; i++){
+      var day = i - start + 1;
+      if(day < 1 || day > days) continue;
+      var row = Math.floor(i / 7), col = i % 7;
+      var cx = lt.gridX + col * lt.colW + lt.colW / 2;
+      var cy = y + row * CELL_H + CELL_H / 2;
+      var sel = day === state.selDay;
+      var today = state.highlightToday && isToday(state.year, state.month, day);
+      var hl = state.hlOn && HL_DAYS.indexOf(day) >= 0;
+      var isRangeEnd = state.rangeOn && (
+        (state.rangeStart && state.rangeStart.y === state.year && state.rangeStart.m === state.month && state.rangeStart.d === day) ||
+        (state.rangeEnd && state.rangeEnd.y === state.year && state.rangeEnd.m === state.month && state.rangeEnd.d === day));
+
+      if(sel){
+        c.save();
+        c.shadowColor = K.alpha(K.theme.primary, 0.25);
+        c.shadowBlur = 8;
+        c.shadowOffsetY = 2;
+        K.box(c, cx - 17, cy - 13, 34, 26, { bg: K.theme.primary, radius: 6 });
+        c.restore();
+        K.text(c, day, cx, cy + 1, { size: 13, weight: 600, color: "#ffffff", align: "center" });
+      }else if(isRangeEnd){
+        K.box(c, cx - 17, cy - 13, 34, 26, { bg: K.theme.primary, radius: 6 });
+        K.text(c, day, cx, cy + 1, { size: 13, weight: 600, color: "#ffffff", align: "center" });
+      }else if(hl){
+        K.box(c, cx - 17, cy - 13, 34, 26, { bg: K.alpha("#e6a23c", 0.16), radius: 6 });
+        K.text(c, day, cx, cy + 1, { size: 13, weight: 600, color: "#c07f16", align: "center" });
+        /* 高亮日期底部小圆点 */
+        c.beginPath();
+        c.arc(cx, cy + 10, 1.6, 0, Math.PI * 2);
+        c.fillStyle = "#e6a23c";
+        c.fill();
+      }else if(today){
+        K.box(c, cx - 17, cy - 13, 34, 26, { radius: 6, borderWidth: 1.5, border: K.theme.primary });
+        K.text(c, day, cx, cy + 1, { size: 13, color: K.theme.primary, align: "center" });
+      }else{
+        K.text(c, day, cx, cy + 1, { size: 13, color: K.theme.text, align: "center" });
+      }
+    }
+  }
+
+  function rangeText(){
+    if(!state.rangeOn) return "";
+    if(!state.rangeStart) return "（点击第一个日期开始）";
+    var a = state.rangeStart, b = state.rangeEnd;
+    if(!b) return "（起点 " + a.y + "-" + pad2(a.m) + "-" + pad2(a.d) + "，再点击终点）";
+    var lo = dateOrd(a.y, a.m, a.d) <= dateOrd(b.y, b.m, b.d) ? a : b;
+    var hi = dateOrd(a.y, a.m, a.d) <= dateOrd(b.y, b.m, b.d) ? b : a;
+    return "（区间 " + lo.y + "-" + pad2(lo.m) + "-" + pad2(lo.d) +
+      " ~ " + hi.y + "-" + pad2(hi.m) + "-" + pad2(hi.d) + "）";
+  }
+
+  function draw(c){
+    c.clearRect(0, 0, W, H);
+    var lt = layout();
+
+    K.box(c, X, lt.cardY, CW, lt.cardH, {
+      bg: "#ffffff", radius: 10, borderWidth: 1, border: "#d6d9df",
+      shadow: K.alpha("#1c2128", 0.08), shadowBlur: 12, shadowY: 4
+    });
+
+    var y = lt.cardY;
+    if(state.showHeader){ drawHeader(c, y); y += HEAD_H; }
+    drawWeek(c, y);
+    y += WEEK_H;
+    drawGrid(c, y);
+
+    K.text(c, "已选：" + selectedText() + " " + rangeText(), W / 2, lt.cardY + lt.cardH + 18, {
+      size: 11.5, color: K.theme.textMuted, align: "center"
+    });
+  }
+
+  /* ---------- 自动逐月 ---------- */
+  function autoMonthAt(t){
+    var idx = Math.floor(t / AUTO_HOLD) % 12;
+    return idx + 1;
+  }
+
+  K.run(function(nowMs){
+    if(state.auto){
+      var m = autoMonthAt(nowMs - autoStart);
+      if(m !== state.month){
+        state.month = m;
+        state.selDay = Math.min(state.selDay, daysInMonth(state.year, state.month));
+        syncMonthInputs();
+        renderCode();
+      }
+    }
+    draw(view.ctx);
+  });
+
+  function syncMonthInputs(){
+    document.getElementById("year").value = state.year;
+    document.getElementById("month").value = state.month;
+    document.getElementById("o-year").textContent = state.year + " 年";
+    document.getElementById("o-month").textContent = state.month + " 月";
+  }
+
+  function afterChange(){
+    renderCode();
+    syncMonthInputs();
+  }
+
+  function stopAuto(){
+    if(state.auto){ state.auto = false; document.getElementById("auto").checked = false; }
+  }
+
+  function goMonth(delta){
+    var m = state.month + delta;
+    var y = state.year;
+    if(m < 1){ m = 12; y--; }
+    if(m > 12){ m = 1; y++; }
+    if(y < 2015){ y = 2015; m = 1; }
+    if(y > 2040){ y = 2040; m = 12; }
+    state.year = y;
+    state.month = m;
+    state.selDay = Math.min(state.selDay, daysInMonth(y, m));
+    afterChange();
+    K.status("显示 " + y + " 年 " + m + " 月");
+  }
+
+  /* ---------- 画布交互 ---------- */
+  canvas.addEventListener("pointerdown", function(e){
+    stopAuto();
+    var rect = canvas.getBoundingClientRect();
+    var px = (e.clientX - rect.left) * (W / rect.width);
+    var py = (e.clientY - rect.top) * (H / rect.height);
+    var lt = layout();
+
+    if(state.showHeader && state.arrows && py >= lt.cardY && py <= lt.cardY + HEAD_H){
+      if(px >= X + 4 && px <= X + 36){ goMonth(-1); return; }
+      if(px >= X + CW - 36 && px <= X + CW - 4){ goMonth(1); return; }
+    }
+
+    var gridY = lt.cardY + lt.headerH + WEEK_H;
+    if(px < lt.gridX || px > lt.gridX + lt.gridW || py < gridY) return;
+    var col = Math.floor((px - lt.gridX) / lt.colW);
+    var row = Math.floor((py - gridY) / CELL_H);
+    if(col < 0 || col > 6 || row < 0 || row >= ROWS) return;
+    var day = row * 7 + col - firstDow(state.year, state.month) + 1;
+    var days = daysInMonth(state.year, state.month);
+    if(day < 1 || day > days) return;
+
+    if(state.rangeOn){
+      var cur = { y: state.year, m: state.month, d: day };
+      if(!state.rangeStart || state.rangeEnd){
+        state.rangeStart = cur;
+        state.rangeEnd = null;
+      }else{
+        state.rangeEnd = cur;
+      }
+      state.selDay = day;
+    }else{
+      state.selDay = day;
+    }
+    afterChange();
+    K.status("已选择 " + selectedText() + (state.rangeOn ? " " + rangeText() : ""));
+  });
+
+  /* ---------- 参数 ---------- */
+  K.bindRange("year", function(v){ return v + " 年"; }, function(v){
+    state.year = v;
+    state.selDay = Math.min(state.selDay, daysInMonth(state.year, state.month));
+    afterChange();
+  });
+  K.bindRange("month", function(v){ return v + " 月"; }, function(v){
+    stopAuto();
+    state.month = v;
+    state.selDay = Math.min(state.selDay, daysInMonth(state.year, state.month));
+    afterChange();
+  });
+  K.bindCheck("header", function(on){ state.showHeader = on; renderCode(); });
+  K.bindCheck("today", function(on){ state.highlightToday = on; renderCode(); });
+  K.bindCheck("arrows", function(on){ state.arrows = on; renderCode(); });
+  K.bindCheck("hl", function(on){ state.hlOn = on; renderCode(); });
+  K.bindCheck("range", function(on){
+    state.rangeOn = on;
+    state.rangeStart = null;
+    state.rangeEnd = null;
+    renderCode();
+    K.status(on ? "日期范围选择：点击两个日期" : "");
+  });
+  K.bindSeg("lang", function(v){ state.lang = v; afterChange(); });
+
+  K.bindCheck("auto", function(on){
+    state.auto = on;
+    autoStart = performance.now();
+    if(on){
+      state.month = 1;
+      afterChange();
+    }
+  });
+
+  document.getElementById("btn-prev").addEventListener("click", function(){ stopAuto(); goMonth(-1); });
+  document.getElementById("btn-next").addEventListener("click", function(){ stopAuto(); goMonth(1); });
+
+  /* ---------- C 代码 ---------- */
+  function renderCode(){
+    var names = state.lang === "zh" ? DAY_ZH : DAY_EN;
+    var qnames = names.map(function(n){ return '"' + n + '"'; }).join(", ");
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("lv_obj_t * cal = " + K.fn("lv_calendar_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(cal, " + K.num(CW) + ", " + K.num((state.showHeader ? HEAD_H : 0) + WEEK_H + ROWS * CELL_H) + ");");
+    L.push(K.fn("lv_calendar_set_today_date") + "(cal, " + K.num(now.getFullYear()) + ", " + K.num(now.getMonth() + 1) + ", " + K.num(now.getDate()) + ");");
+    L.push(K.fn("lv_calendar_set_month_shown") + "(cal, " + K.num(state.year) + ", " + K.num(state.month) + ");");
+    L.push("static const char * day_names[7] = {" + qnames + "};");
+    L.push(K.fn("lv_calendar_set_day_names") + "(cal, day_names);");
+
+    if(state.hlOn){
+      L.push("");
+      L.push(K.cm("/* 高亮日期列表（每月 " + HL_DAYS.join(" / ") + " 日） */"));
+      L.push("static lv_calendar_date_t highlighted[" + HL_DAYS.length + "] = {");
+      for(var i = 0; i < HL_DAYS.length; i++){
+        L.push("    {" + state.year + ", " + state.month + ", " + HL_DAYS[i] + "}" + (i < HL_DAYS.length - 1 ? "," : ""));
+      }
+      L.push("};");
+      L.push(K.fn("lv_calendar_set_highlighted_dates") + "(cal, highlighted, " + K.num(HL_DAYS.length) + ");");
+    }
+
+    if(state.showHeader && state.arrows){
+      L.push("");
+      L.push(K.fn("lv_calendar_header_arrow_create") + "(cal);" + K.cm("  /* 左右箭头切换月份 */"));
+    }else if(state.showHeader){
+      L.push(K.cm("/* 无箭头头部：可在日历上方自建 lv_label 显示年月 */"));
+    }else{
+      L.push(K.cm("/* 不添加 header：仅显示星期行与日期网格 */"));
+    }
+
+    if(state.rangeOn){
+      L.push("");
+      L.push(K.cm("/* 范围选择非内置：监听 VALUE_CHANGED，记录起止日期后，"));
+      L.push(K.cm("   在刷新前把区间内日期加入 highlighted[] 重设即可 */"));
+      L.push(K.fn("lv_obj_add_event_cb") + "(cal, range_cb, LV_EVENT_VALUE_CHANGED, NULL);");
+    }
+
+    L.push(K.fn("lv_obj_center") + "(cal);");
+    K.code(L);
+  }
+
+  /* ---------- 导出 ---------- */
+  var FULL_CYCLE = AUTO_HOLD * 12;
+
+  function drawAuto(c, t){
+    var savedM = state.month;
+    state.month = autoMonthAt(t);
+    draw(c);
+    state.month = savedM;
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(canvas, "calendar.png");
+  });
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportGif({
+      name: "calendar.gif", w: W, h: H, fps: 16, duration: FULL_CYCLE,
+      frame: function(c, t){ drawAuto(c, t); },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    K.exportWebm({
+      canvas: canvas, name: "calendar.webm", duration: FULL_CYCLE,
+      before: function(){
+        var old = { auto: state.auto, month: state.month };
+        state.auto = true;
+        autoStart = performance.now();
+        document.getElementById("auto").checked = true;
+        state.month = 1;
+        return old;
+      },
+      after: function(old){
+        state.auto = old.auto;
+        state.month = old.month;
+        document.getElementById("auto").checked = old.auto;
+      },
+      onDone: function(){ btn.disabled = false; },
+      onError: function(){ btn.disabled = false; }
+    });
+  });
+
+  syncMonthInputs();
+  renderCode();
+  K.status("点击日期选择 · 点击箭头或按钮切换月份");
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite 替代思路静态示例代码（UILabel 拼 7×6 月历网格）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var L = [];
+  L.push('<span class="cm">/* ArkUI lite 没有 lv_calendar：UIPicker / UIDigitalClock 只能选值或显示时间，</span>');
+  L.push('<span class="cm">   月历网格要用 UILabel 阵列自己拼，日期选择与高亮全部手写。 */</span>');
+  L.push('');
+  L.push('static UILabel * cells[<span class="num">6</span>][<span class="num">7</span>];  <span class="cm">// 7 列 × 6 行日期格</span>');
+  L.push('static int16_t selDay = <span class="num">29</span>;');
+  L.push('');
+  L.push('UIViewGroup * <span class="fn">CreateCalendar</span>(UIViewGroup * root, int16_t x, int16_t y)');
+  L.push('{');
+  L.push('    UIViewGroup * cal = new UIViewGroup();');
+  L.push('    cal-&gt;<span class="fn">SetPosition</span>(x, y, <span class="num">288</span>, <span class="num">220</span>);');
+  L.push('');
+  L.push('    <span class="cm">// 1. 头部：UILabel 显示年月 + 两个 UILabelButton 做左右箭头</span>');
+  L.push('    UILabel * monthLabel = new UILabel();');
+  L.push('    monthLabel-&gt;<span class="fn">SetText</span>(<span class="str">"2026 年 10 月"</span>);');
+  L.push('    monthLabel-&gt;<span class="fn">SetPosition</span>(<span class="num">90</span>, <span class="num">8</span>, <span class="num">108</span>, <span class="num">20</span>);');
+  L.push('    cal-&gt;<span class="fn">Add</span>(monthLabel);');
+  L.push('    <span class="cm">// prevBtn / nextBtn 的点击回调里改月份文本并重排网格</span>');
+  L.push('');
+  L.push('    <span class="cm">// 2. 日期网格：手动计算每月天数与首日星期，逐格 SetText</span>');
+  L.push('    for (int r = <span class="num">0</span>; r &lt; <span class="num">6</span>; r++) {');
+  L.push('        for (int c = <span class="num">0</span>; c &lt; <span class="num">7</span>; c++) {');
+  L.push('            cells[r][c] = new UILabel();');
+  L.push('            cells[r][c]-&gt;<span class="fn">SetPosition</span>(c * <span class="num">41</span>, <span class="num">56</span> + r * <span class="num">28</span>, <span class="num">41</span>, <span class="num">28</span>);');
+  L.push('            cells[r][c]-&gt;<span class="fn">SetAlign</span>(TEXT_ALIGNMENT_CENTER);');
+  L.push('            cells[r][c]-&gt;<span class="fn">SetTouchable</span>(true);  <span class="cm">// 点击选中需自己判断日期</span>');
+  L.push('            cal-&gt;<span class="fn">Add</span>(cells[r][c]);');
+  L.push('        }');
+  L.push('    }');
+  L.push('');
+  L.push('    <span class="cm">// 3. 高亮日期 / 范围选择：改对应 cell 的 STYLE_BACKGROUND_COLOR，</span>');
+  L.push('    <span class="cm">//    选中态、"今天"描边都要自己维护状态数组后重绘样式</span>');
+  L.push('    root-&gt;<span class="fn">Add</span>(cal);');
+  L.push('    return cal;');
+  L.push('}');
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+/* ============================================================
+   LVGL 组件复刻页 · 公共面板样式
+   与 spinner.html / bar.html 的视觉规范一致
+   ============================================================ */
+
+:root{
+  --page:#e9ebef;
+  --card:#ffffff;
+  --line:#d6d9df;
+  --line-soft:#e7eaee;
+  --ink:#1c2128;
+  --ink-2:#5b6470;
+  --ink-3:#8a929c;
+  --accent:#2b7de9;
+  --accent-ink:#ffffff;
+  --track:#e3e6ea;
+  --ok:#1f9d66;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--page);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.6;
+  padding:32px 16px 56px;
+}
+.wrap{max-width:600px;margin:0 auto}
+
+header h1{font-size:20px;font-weight:650;letter-spacing:.2px}
+header p{color:var(--ink-2);font-size:14px;margin-top:6px}
+.back{display:inline-block;margin-bottom:10px;font-size:13px;color:var(--accent);text-decoration:none}
+.back:hover{text-decoration:underline}
+
+/* ===== 舞台 ===== */
+.stage{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin-top:22px;
+  padding:36px 20px;
+  display:flex;align-items:center;justify-content:center;
+  min-height:300px;
+}
+.stage-canvas-box{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  min-height:280px;
+}
+canvas#view{display:block;touch-action:none}
+
+/* ===== 参数面板 ===== */
+.panel{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin-top:16px;
+  padding:20px;
+}
+.panel h2{font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:.4px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px}
+@media (max-width:520px){.grid{grid-template-columns:1fr}}
+.field.wide{grid-column:1 / -1}
+.field label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink-2);margin-bottom:6px}
+.field label output{font-family:var(--mono);font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums}
+.field input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+.field input[type=color]{
+  width:100%;height:38px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:3px;cursor:pointer;
+}
+.field input[type=text]{
+  width:100%;height:38px;border:1px solid var(--line);border-radius:8px;padding:0 10px;
+  font-size:13px;font-family:inherit;color:var(--ink);background:#fff;
+}
+.field input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.field textarea{
+  width:100%;min-height:72px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+  font-size:13px;font-family:inherit;color:var(--ink);background:#fff;resize:vertical;
+}
+.field textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;height:38px}
+.seg button{
+  flex:1;border:0;background:#fff;color:var(--ink-2);font-size:13px;cursor:pointer;
+  font-family:inherit;transition:background .15s,color .15s;
+}
+.seg button.active{background:var(--accent);color:var(--accent-ink)}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);height:38px}
+.check input{accent-color:var(--accent);width:18px;height:18px}
+
+/* ===== 导出 ===== */
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.btn{
+  min-height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);font-size:14px;font-family:inherit;cursor:pointer;
+}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.55;cursor:wait}
+.status{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-top:12px;min-height:20px}
+.status.ok{color:var(--ok)}
+
+/* ===== 等价 C 代码 ===== */
+.code{
+  background:#1c2128;color:#d7dde5;border-radius:12px;margin-top:16px;
+  padding:16px 18px;font-family:var(--mono);font-size:12.5px;line-height:1.7;overflow-x:auto;
+}
+.code .cm{color:#7d8794}
+.code .fn{color:#7fb4f5}
+.code .num{color:#e6b873}
+footer{margin-top:18px;font-size:12.5px;color:var(--ink-3)}

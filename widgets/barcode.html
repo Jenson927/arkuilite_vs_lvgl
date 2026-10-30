@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barcode：lv_barcode vs 无对应组件</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='4' fill='%23fff' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M9 8v16M12 8v16M16 8v16M18 8v16M22 8v16M24 8v16' stroke='%231c2128' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Barcode：lv_barcode vs 无对应组件</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（一维条码编码与绘制，EAN13 含真实校验位），右列为
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 现状——只有二维码 UIQRCode，没有一维条码，仅展示能力缺口与最接近的替代思路。页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_barcode</code>
+        <span class="cmp-tag lv">编码 + 绘制一体 · 模块宽度可配</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">切换编码类型（Code128 / EAN13 / Code39）：EAN13 按标准 L/G/R 码表真实编码并自动补校验位；模块宽度、条高、方向、条码下方文本实时可调——右列连一维条都没有。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>编码类型<span class="api">lv_barcode_update（lv_barcode 内置仅 Code128；EAN13 按标准码表真实编码，Code39 为演示条纹）</span></label>
+            <div class="seg" id="encode">
+              <button type="button" data-val="code128" class="active">Code128</button>
+              <button type="button" data-val="ean13">EAN13</button>
+              <button type="button" data-val="code39">Code39</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>数据 update<output id="o-len">4 字符</output><span class="api">lv_barcode_update(bc, data)（EAN13 仅数字，自动补第 13 位校验）</span></label>
+            <input type="text" id="text" value="LVGL" maxlength="12">
+          </div>
+
+          <div class="field">
+            <label>模块宽度 set_scale<output id="o-scale">2 px</output><span class="api">lv_barcode_set_scale</span></label>
+            <input type="range" id="scale" min="1" max="4" step="1" value="2">
+          </div>
+          <div class="field">
+            <label>条高<output id="o-height">90 px</output><span class="api">对象高度自适应条高</span></label>
+            <input type="range" id="height" min="50" max="140" step="5" value="90">
+          </div>
+
+          <div class="field">
+            <label>深色 set_dark_color<output id="o-dark">#1c2128</output><span class="api">lv_barcode_set_dark_color</span></label>
+            <input type="color" id="dark" value="#1c2128">
+          </div>
+          <div class="field">
+            <label>浅色 set_light_color<output id="o-light">#ffffff</output><span class="api">lv_barcode_set_light_color</span></label>
+            <input type="color" id="light" value="#ffffff">
+          </div>
+
+          <div class="field">
+            <label>方向 set_direction<span class="api">lv_barcode_set_direction(LV_DIR_HOR / LV_DIR_VER)</span></label>
+            <div class="seg" id="dir">
+              <button type="button" data-val="h" class="active">水平</button>
+              <button type="button" data-val="v">垂直</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>条码下方文本<span class="api">lv_label 叠加（ArkUI lite 无条码，更无文本区）</span></label>
+            <div class="check"><input type="checkbox" id="showtext" checked><span>在条纹下方显示数据</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>无对应组件</code>
+        <span class="cmp-tag ui">无此能力</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">ArkUI lite 只有 UIQRCode（二维码）：一维条码的编码算法与条纹绘制都不存在，只能用 UIView::OnDraw 自己画。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）</h2>
+        <p class="cmp-ctrl-none">ArkUI lite 无对应组件，本页没有可操作项；最接近的替代实现见右列舞台卡片说明。</p>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 替代组合示例代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 360×240。条纹为演示用示意编码（EAN13 码表与校验位真实，但整体不保证可被扫描器识别）。右列「无对应组件」卡片、右上角红标与差异表格由 cmp2.js 自动渲染。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+/* =====================================================================
+   左列：LVGL lv_barcode 复刻（迁移自旧页，新增编码类型切换：
+   Code128 示意 / EAN13 真实码表 + 校验位 / Code39 示意）
+   ===================================================================== */
+(function(){
+  "use strict";
+  var K = LVKit, W = 360, H = 240;
+  var QUIET = 10;
+  var START128 = [2, 1, 1, 2, 1, 4];
+  var STOP128 = [2, 3, 3, 1, 1, 1, 2];
+
+  /* EAN13 标准码表（真实） */
+  var EAN_L = ["0001101","0011001","0010011","0111101","0100011","0110001","0101111","0111011","0110111","0001011"];
+  var EAN_G = ["0100111","0110011","0011011","0100001","0011101","0111001","0000101","0010001","0001001","0010111"];
+  var EAN_R = ["1110010","1100110","1101100","1000010","1011100","1001110","1010000","1000100","1001000","1110100"];
+  var EAN_PARITY = ["LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG","LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL"];
+
+  var ENCODE_NAME = { code128: "Code128 示意", ean13: "EAN13（真实码表）", code39: "Code39 示意" };
+
+  var state = {
+    encode: "code128",
+    text: "LVGL",
+    scale: 2,
+    height: 90,
+    dark: "#1c2128",
+    light: "#ffffff",
+    dir: "h",
+    showText: true
+  };
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+
+  /* ---------- Code128 / Code39：确定性示意条纹（沿用旧页） ---------- */
+  function charPattern(code, index){
+    var h = (code * 7919 + index * 104729 + 12345) % 2147483647;
+    var parts = [1, 1, 1, 1, 1, 1];
+    var extra = 5, guard = 0;
+    while(extra > 0 && guard < 200){
+      h = (h * 48271) % 2147483647;
+      var idx = h % 6;
+      if(parts[idx] < 4){ parts[idx]++; extra--; }
+      guard++;
+    }
+    return parts;
+  }
+
+  function widthsFromBits(bits){
+    var widths = [], i, run = 1;
+    for(i = 1; i < bits.length; i++){
+      if(bits[i] === bits[i - 1]) run++;
+      else{ widths.push(run); run = 1; }
+    }
+    widths.push(run);
+    return widths;
+  }
+
+  /* ---------- EAN13：真实编码 + 校验位 ---------- */
+  function eanCheckDigit(d12){
+    var sum = 0;
+    for(var i = 0; i < 12; i++){
+      sum += Number(d12[i]) * (i % 2 === 0 ? 1 : 3);
+    }
+    return (10 - sum % 10) % 10;
+  }
+
+  function buildEan(){
+    var data = state.text.replace(/\D/g, "");
+    while(data.length < 12) data += "0";
+    data = data.slice(0, 12);
+    var full = data + eanCheckDigit(data);
+
+    var bits = "101";
+    var parity = EAN_PARITY[Number(full[0])];
+    for(var i = 1; i <= 6; i++){
+      var d = Number(full[i]);
+      bits += parity[i - 1] === "L" ? EAN_L[d] : EAN_G[d];
+    }
+    bits += "01010";
+    for(var j = 7; j <= 12; j++) bits += EAN_R[Number(full[j])];
+    bits += "101";
+    return { widths: widthsFromBits(bits), label: full };
+  }
+
+  function buildPattern(){
+    var widths, label = state.text, i;
+    if(state.encode === "ean13"){
+      var e = buildEan();
+      widths = e.widths;
+      label = e.label;
+    }else{
+      widths = START128.slice();
+      for(i = 0; i < state.text.length; i++){
+        widths = widths.concat(charPattern(state.text.charCodeAt(i), i));
+      }
+      var sum = 0;
+      for(i = 0; i < state.text.length; i++) sum += (i + 1) * state.text.charCodeAt(i);
+      widths = widths.concat(charPattern(sum + 17, state.text.length));
+      widths = widths.concat(STOP128);
+    }
+
+    var bars = [], x = QUIET;
+    for(i = 0; i < widths.length; i++){
+      if(i % 2 === 0) bars.push({ x: x, w: widths[i] });
+      x += widths[i];
+    }
+    return { bars: bars, modules: x + QUIET, label: label };
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c){
+    c.clearRect(0, 0, W, H);
+    K.box(c, 12, 8, W - 24, H - 16, {
+      bg: "#ffffff", radius: 14, borderWidth: 1, border: "#e7eaee",
+      shadow: "rgba(28,33,40,0.07)", shadowBlur: 14, shadowY: 4
+    });
+
+    K.text(c, "lv_barcode", 26, 24, { size: 13, weight: 600, color: K.theme.text });
+    K.text(c, ENCODE_NAME[state.encode], W - 26, 24, { size: 11, color: K.theme.textFaint, align: "right" });
+
+    var pattern = buildPattern();
+    var unit = state.scale;
+    var patternW = pattern.modules * unit;
+
+    var vx = 20, vy = 40, vw = W - 40, vh = 146;
+    var horiz = state.dir === "h";
+    var span = horiz ? vw : vh;
+
+    K.box(c, vx, vy, vw, vh, { bg: state.light, radius: 10, borderWidth: 1, border: "#e3e8ef" });
+
+    c.save();
+    K.roundRectPath(c, vx, vy, vw, vh, 10);
+    c.clip();
+
+    function paintBars(base, barHeight){
+      for(var i = 0; i < pattern.bars.length; i++){
+        var b = pattern.bars[i];
+        c.fillStyle = state.dark;
+        c.fillRect(base + b.x * unit, -barHeight / 2, b.w * unit, barHeight);
+      }
+    }
+
+    c.save();
+    c.translate(vx + vw / 2, vy + vh / 2);
+    if(!horiz) c.rotate(-Math.PI / 2);
+    var startX = (span - patternW) / 2;
+    paintBars(startX, state.height);
+    c.restore();
+    c.restore();
+
+    if(state.showText){
+      K.text(c, pattern.label || "—", W / 2, 198, {
+        size: 14, weight: 600, mono: true, color: state.dark, align: "center"
+      });
+    }
+
+    var clipped = patternW > span;
+    var info = "模块 " + unit + " px · " + pattern.modules + " 模块 · 图示" + (horiz ? "宽 " : "高 ") + Math.round(patternW) + " px";
+    if(clipped) info += "（超出画布，已裁剪）";
+    K.text(c, info, W / 2, 214, { size: 10.5, color: K.theme.textMuted, align: "center" });
+    K.text(c, "演示用示意编码（EAN13 码表与校验位真实）", W / 2, 227, {
+      size: 9.5, color: K.theme.textFaint, align: "center"
+    });
+  }
+
+  /* ---------- 代码 ---------- */
+  function renderCode(){
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成：" + ENCODE_NAME[state.encode] + " */"));
+    L.push("lv_obj_t * bc = " + K.fn("lv_barcode_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_barcode_set_scale") + "(bc, " + K.num(state.scale) + ");");
+    L.push(K.fn("lv_barcode_set_dark_color") + "(bc, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.dark)) + "));");
+    L.push(K.fn("lv_barcode_set_light_color") + "(bc, " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(state.light)) + "));");
+    L.push(K.fn("lv_barcode_set_direction") + "(bc, " + (state.dir === "h" ? "LV_DIR_HOR" : "LV_DIR_VER") + ");");
+    L.push(K.fn("lv_barcode_update") + "(bc, " + JSON.stringify(state.text || "") + ");");
+    L.push(K.fn("lv_obj_center") + "(bc);");
+    if(state.encode === "ean13"){
+      L.push(K.cm("/* EAN13：第 13 位校验位由前 12 位按 1/3 权重和计算 */"));
+    }
+    if(state.showText) L.push(K.cm("/* 文本标签由 lv_label 叠加在条码下方 */"));
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件 ---------- */
+  var textEl = document.getElementById("text");
+
+  function filterText(){
+    var v = textEl.value;
+    if(state.encode === "ean13"){
+      v = v.replace(/\D/g, "").slice(0, 12);
+    }else{
+      v = v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+    }
+    if(v !== textEl.value) textEl.value = v;
+    state.text = v;
+    syncLen();
+  }
+
+  function syncLen(){
+    var n = state.text.length;
+    document.getElementById("o-len").textContent =
+      state.encode === "ean13" ? (n + " 位数字（补至 13 位）") : (n + " 字符");
+  }
+
+  textEl.addEventListener("input", function(){
+    filterText();
+    renderCode();
+  });
+
+  K.bindSeg("encode", function(v){
+    state.encode = v;
+    filterText();
+    renderCode();
+    draw(view.ctx);
+  });
+  K.bindSeg("dir", function(v){
+    state.dir = v;
+    renderCode();
+  });
+  K.bindRange("scale", function(v){ return v + " px"; }, function(v){ state.scale = v; renderCode(); });
+  K.bindRange("height", function(v){ return v + " px"; }, function(v){ state.height = v; renderCode(); });
+  document.getElementById("dark").addEventListener("input", function(e){
+    state.dark = e.target.value;
+    document.getElementById("o-dark").textContent = state.dark;
+    renderCode();
+  });
+  document.getElementById("light").addEventListener("input", function(e){
+    state.light = e.target.value;
+    document.getElementById("o-light").textContent = state.light;
+    renderCode();
+  });
+  K.bindCheck("showtext", function(on){ state.showText = on; renderCode(); });
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    K.exportPng(view.canvas, "barcode.png");
+  });
+
+  /* 静态内容：参数变化时重绘一次 */
+  K.run(function(){ draw(view.ctx); });
+
+  syncLen();
+  renderCode();
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：none 页无操作绑定，仅生成「替代组合」静态 C++ 示例代码
+   依据 compare-data.js barcode.alt：UI_Lite 只有 UIQRCode，无一维条码
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function fn(s){ return '<span class="fn">' + s + "</span>"; }
+  function num(v){ return '<span class="num">' + v + "</span>"; }
+  function cm(s){ return '<span class="cm">' + s + "</span>"; }
+
+  var L = [];
+  L.push(cm("/* ArkUI lite 无 lv_barcode，以下为替代拼装骨架（静态示例） */"));
+  L.push(cm("/* UI_Lite 只有 UIQRCode（二维矩阵），一维码的编码与绘制必须自己实现 */"));
+  L.push("");
+  L.push("class BarcodeView : public UIView {");
+  L.push("public:");
+  L.push("    BarcodeView() { " + fn("SetPosition") + "(" + num(0) + ", " + num(0) + "); " + fn("SetSize") + "(" + num(320) + ", " + num(120) + "); }");
+  L.push("    virtual ~BarcodeView() {}");
+  L.push("");
+  L.push("    bool " + fn("OnDraw") + "(const Canvas &canvas, const Rect &dirty) override");
+  L.push("    {");
+  L.push(cm("        /* 1. 编码：Code128 / EAN13 算法要自己移植（或引入第三方库） */"));
+  L.push("        const uint8_t *widths = " + fn("EncodeData") + "(data_);");
+  L.push(cm("        /* 2. 绘制：逐条 FillRect，模块宽度自行换算 */"));
+  L.push("        int16_t x = " + num(0) + ";");
+  L.push("        for (int i = " + num(0) + "; widths[i] != " + num(0) + "; i += " + num(2) + ") {");
+  L.push("            canvas." + fn("FillRect") + "({x, " + num(0) + ", x + widths[i] * scale_, " + num(90) + "}, dark_, " + num(0) + ");");
+  L.push("            x += (widths[i] + widths[i + " + num(1) + "]) * scale_;");
+  L.push("        }");
+  L.push("        return true;");
+  L.push("    }");
+  L.push("private:");
+  L.push("    const char *data_ = \"LVGL\";");
+  L.push("    int16_t scale_ = " + num(2) + ";");
+  L.push("    ColorType dark_ = Color::" + fn("GetColorFromRGB") + "(" + num("0x1c") + ", " + num("0x21") + ", " + num("0x28") + ").full;");
+  L.push("};");
+  L.push("");
+  L.push("BarcodeView * bc = " + fn("new") + " BarcodeView();");
+  L.push("UIViewGroup::" + fn("GetInstance") + "()-&gt;" + fn("GetRootView") + "()-&gt;" + fn("Add") + "(bc);");
+  L.push(cm("/* 条码下方文本：另挂 UILabel；对照参考：UIQRCode 只需 SetQrcodeInfo() 一行 */"));
+  document.getElementById("ucode").innerHTML = L.join("\n");
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

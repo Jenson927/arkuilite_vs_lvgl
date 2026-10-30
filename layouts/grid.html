@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LVGL Grid 布局复刻与导出</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Cpath d='M10 16l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../index.html">← 返回画廊</a>
+    <h1>LVGL Grid 布局本地复刻</h1>
+    <p>3×3 网格容器，实时修改列 / 行模板、间距与单元格跨度，参数对齐 <code>lv_obj_set_grid_dsc_array()</code> / <code>lv_obj_set_grid_cell()</code>，点击画布卡片可选中子项。</p>
+  </header>
+
+  <div class="stage">
+    <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+  </div>
+
+  <section class="panel">
+    <h2>参数（对应 LVGL 接口）</h2>
+    <div class="grid">
+      <div class="field">
+        <label>列模板 cols_dsc</label>
+        <div class="seg" id="cols">
+          <button type="button" data-val="eq" class="active">1fr×3</button>
+          <button type="button" data-val="mid">1fr 2fr</button>
+          <button type="button" data-val="px">60 1fr 60</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>行模板 rows_dsc</label>
+        <div class="seg" id="rows">
+          <button type="button" data-val="eq" class="active">1fr×3</button>
+          <button type="button" data-val="mid">1fr 2fr</button>
+          <button type="button" data-val="px">60 1fr 60</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>间距 pad_row / column <output id="o-gap">8 px</output></label>
+        <input type="range" id="gap" min="0" max="24" step="1" value="8">
+      </div>
+      <div class="field">
+        <label>对齐 grid_cell align</label>
+        <div class="seg" id="align">
+          <button type="button" data-val="STRETCH" class="active">拉伸</button>
+          <button type="button" data-val="START">起始</button>
+          <button type="button" data-val="CENTER">居中</button>
+          <button type="button" data-val="END">末端</button>
+        </div>
+      </div>
+      <div class="field wide">
+        <label>选中子项（点击画布卡片也可切换）</label>
+        <div class="seg" id="sel">
+          <button type="button" data-val="0" class="active">1</button>
+          <button type="button" data-val="1">2</button>
+          <button type="button" data-val="2">3</button>
+          <button type="button" data-val="3">4</button>
+          <button type="button" data-val="4">5</button>
+          <button type="button" data-val="5">6</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>列 col <output id="o-col">0</output></label>
+        <input type="range" id="col" min="0" max="2" step="1" value="0">
+      </div>
+      <div class="field">
+        <label>行 row <output id="o-row">0</output></label>
+        <input type="range" id="row" min="0" max="2" step="1" value="0">
+      </div>
+      <div class="field">
+        <label>跨列 colspan <output id="o-cspan">1</output></label>
+        <input type="range" id="cspan" min="1" max="3" step="1" value="1">
+      </div>
+      <div class="field">
+        <label>跨行 rowspan <output id="o-rspan">1</output></label>
+        <input type="range" id="rspan" min="1" max="3" step="1" value="1">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <pre class="code" id="code"></pre>
+
+  <footer>画布尺寸 320×240。Grid 布局为静态演示，仅导出 PNG，完全离线可用。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+(function () {
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+
+  var state = { cols: "eq", rows: "eq", gap: 8, sel: 0, align: "STRETCH" };
+  var CARDS = [
+    { color: "#2b7de9", cell: [0, 0, 1, 1] },
+    { color: "#1f9d66", cell: [1, 0, 1, 1] },
+    { color: "#e6a23c", cell: [2, 0, 1, 1] },
+    { color: "#e04b4b", cell: [0, 1, 1, 1] },
+    { color: "#8e6fe0", cell: [1, 1, 1, 1] },
+    { color: "#2aa8a8", cell: [2, 1, 1, 1] }
+  ];
+  var TEMPLATES = {
+    eq: ["1fr", "1fr", "1fr"],
+    mid: ["1fr", "2fr", "1fr"],
+    px: ["60", "1fr", "60"]
+  };
+  var CONT = { x: 10, y: 32, w: 300, h: 188 }, PAD = 8;
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+  var disp = null, lastT = 0;
+
+  function trackSizes(tpl, total) {
+    var fixed = 0, fr = 0, i, t;
+    for (i = 0; i < tpl.length; i++) {
+      t = tpl[i];
+      if (t.indexOf("fr") >= 0) fr += parseFloat(t); else fixed += parseFloat(t);
+    }
+    var free = Math.max(0, total - fixed);
+    var out = [];
+    for (i = 0; i < tpl.length; i++) {
+      t = tpl[i];
+      out.push(t.indexOf("fr") >= 0 ? free * parseFloat(t) / Math.max(1, fr) : parseFloat(t));
+    }
+    return out;
+  }
+
+  function computeTargets() {
+    var inner = { x: CONT.x + PAD, y: CONT.y + PAD, w: CONT.w - PAD * 2, h: CONT.h - PAD * 2 };
+    var cols = trackSizes(TEMPLATES[state.cols], inner.w - state.gap * 2);
+    var rows = trackSizes(TEMPLATES[state.rows], inner.h - state.gap * 2);
+    var colX = [], rowY = [], i, acc;
+    acc = inner.x;
+    for (i = 0; i < cols.length; i++) { colX.push(acc); acc += cols[i] + state.gap; }
+    acc = inner.y;
+    for (i = 0; i < rows.length; i++) { rowY.push(acc); acc += rows[i] + state.gap; }
+
+    var res = [];
+    for (i = 0; i < CARDS.length; i++) {
+      var cell = CARDS[i].cell, c = cell[0], r = cell[1], cs = cell[2], rs = cell[3];
+      var x = colX[c], y = rowY[r], cw = 0, ch = 0, j;
+      for (j = 0; j < cs; j++) cw += (cols[c + j] || 0) + (j ? state.gap : 0);
+      for (j = 0; j < rs; j++) ch += (rows[r + j] || 0) + (j ? state.gap : 0);
+      var al = (i === state.sel) ? state.align : "STRETCH";
+      var aw = cw, ah = ch, ax = x, ay = y;
+      if (al !== "STRETCH") {
+        aw = Math.min(cw, 56);
+        ah = Math.min(ch, 42);
+        if (al === "CENTER") { ax = x + (cw - aw) / 2; ay = y + (ch - ah) / 2; }
+        else if (al === "END") { ax = x + cw - aw; ay = y + ch - ah; }
+      }
+      res.push({ x: ax, y: ay, w: aw, h: ah });
+    }
+    return res;
+  }
+
+  function drawGuides(c) {
+    var inner = { x: CONT.x + PAD, y: CONT.y + PAD, w: CONT.w - PAD * 2, h: CONT.h - PAD * 2 };
+    var cols = trackSizes(TEMPLATES[state.cols], inner.w - state.gap * 2);
+    var rows = trackSizes(TEMPLATES[state.rows], inner.h - state.gap * 2);
+    var i, acc;
+    c.save();
+    c.strokeStyle = "#e8edf3";
+    c.lineWidth = 1;
+    c.setLineDash([3, 3]);
+    acc = inner.x;
+    for (i = 0; i < cols.length; i++) {
+      c.beginPath();
+      c.moveTo(acc, inner.y);
+      c.lineTo(acc, inner.y + inner.h);
+      c.stroke();
+      acc += cols[i] + state.gap;
+    }
+    acc = inner.y;
+    for (i = 0; i < rows.length; i++) {
+      c.beginPath();
+      c.moveTo(inner.x, acc);
+      c.lineTo(inner.x + inner.w, acc);
+      c.stroke();
+      acc += rows[i] + state.gap;
+    }
+    c.restore();
+  }
+
+  function draw(c) {
+    c.clearRect(0, 0, W, H);
+    K.text(c, "Grid 容器 · 3 × 3 轨道", 14, 16, { size: 11.5, color: K.theme.textMuted });
+    K.text(c, "点击卡片选中", W - 14, 16, { size: 11, color: K.theme.textFaint, align: "right" });
+
+    K.box(c, CONT.x, CONT.y, CONT.w, CONT.h, {
+      bg: "#fbfcfd", radius: 10, borderWidth: 1.5, border: "#c9d2de", dash: [5, 4]
+    });
+    drawGuides(c);
+
+    c.save();
+    K.roundRectPath(c, CONT.x + 1, CONT.y + 1, CONT.w - 2, CONT.h - 2, 9);
+    c.clip();
+
+    for (var i = 0; i < CARDS.length; i++) {
+      if (!disp) break;
+      var d = disp[i];
+      var sel = i === state.sel;
+      K.box(c, d.x, d.y, d.w, d.h, {
+        bg: CARDS[i].color, radius: 8,
+        shadow: sel ? "rgba(0,0,0,0.18)" : null,
+        shadowBlur: 10, shadowY: 3
+      });
+      c.save();
+      if (sel) {
+        c.strokeStyle = "#ffffff";
+        c.lineWidth = 2;
+        K.roundRectPath(c, d.x + 1.2, d.y + 1.2, d.w - 2.4, d.h - 2.4, 7);
+        c.stroke();
+      }
+      var cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+      K.text(c, String(i + 1), cx, cy - 4, {
+        size: Math.min(20, Math.max(12, d.w * 0.32)), weight: 650, color: "#ffffff", align: "center"
+      });
+      K.text(c, CARDS[i].cell[0] + "," + CARDS[i].cell[1], cx, cy + 13, {
+        size: 9.5, color: "rgba(255,255,255,0.85)", align: "center"
+      });
+      c.restore();
+    }
+    c.restore();
+
+    var cell = CARDS[state.sel].cell;
+    K.text(c, "当前 #" + (state.sel + 1) + "  col " + cell[0] + "  row " + cell[1] +
+      "  " + cell[2] + "×" + cell[3] + "  对齐 " + state.align,
+      W / 2, H - 12, { size: 10.5, color: K.theme.textFaint, align: "center" });
+  }
+
+  K.run(function (now) {
+    var t = now || performance.now();
+    if (!lastT) lastT = t;
+    var dt = K.clamp(t - lastT, 0, 64);
+    lastT = t;
+    var tg = computeTargets();
+    if (!disp) {
+      disp = tg.map(function (o) { return { x: o.x, y: o.y, w: o.w, h: o.h }; });
+    }
+    var k = 1 - Math.exp(-dt / 60);
+    for (var i = 0; i < disp.length; i++) {
+      disp[i].x = K.lerp(disp[i].x, tg[i].x, k);
+      disp[i].y = K.lerp(disp[i].y, tg[i].y, k);
+      disp[i].w = K.lerp(disp[i].w, tg[i].w, k);
+      disp[i].h = K.lerp(disp[i].h, tg[i].h, k);
+    }
+    draw(view.ctx);
+  });
+
+  function toDsc(t) {
+    if (t.indexOf("fr") >= 0) return K.fn("LV_GRID_FR") + "(" + K.num(parseFloat(t)) + ")";
+    return K.num(parseFloat(t));
+  }
+
+  function renderCode() {
+    var L = [];
+    var cols = TEMPLATES[state.cols], rows = TEMPLATES[state.rows];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("static int32_t " + K.num("cols_dsc") + "[] = {" + cols.map(toDsc).join(", ") + ", " + K.num("LV_GRID_TEMPLATE_LAST") + "};");
+    L.push("static int32_t " + K.num("rows_dsc") + "[] = {" + rows.map(toDsc).join(", ") + ", " + K.num("LV_GRID_TEMPLATE_LAST") + "};");
+    L.push("");
+    L.push("lv_obj_t * cont = " + K.fn("lv_obj_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(cont, " + K.num(CONT.w) + ", " + K.num(CONT.h) + ");");
+    L.push(K.fn("lv_obj_set_style_pad_all") + "(cont, " + K.num(PAD) + ", 0);");
+    L.push(K.fn("lv_obj_set_grid_dsc_array") + "(cont, cols_dsc, rows_dsc);");
+    L.push(K.fn("lv_obj_set_style_pad_row") + "(cont, " + K.num(state.gap) + ", 0);");
+    L.push(K.fn("lv_obj_set_style_pad_column") + "(cont, " + K.num(state.gap) + ", 0);");
+
+    for (var i = 0; i < CARDS.length; i++) {
+      var cell = CARDS[i].cell;
+      var al = (i === state.sel) ? state.align : "STRETCH";
+      L.push("");
+      L.push(K.cm("/* 子项 " + (i + 1) + (i === state.sel ? " · 选中" : "") + " */"));
+      L.push("lv_obj_t * c" + (i + 1) + " = " + K.fn("lv_obj_create") + "(cont);");
+      L.push(K.fn("lv_obj_set_style_bg_color") + "(c" + (i + 1) + ", " + K.fn("lv_color_hex") + "(" + K.num(K.hexCode(CARDS[i].color)) + "), 0);");
+      L.push(K.fn("lv_obj_set_style_radius") + "(c" + (i + 1) + ", " + K.num(8) + ", 0);");
+      L.push(K.fn("lv_obj_set_grid_cell") + "(c" + (i + 1) + ", " + K.num("LV_GRID_ALIGN_" + al) + ", " +
+        K.num(cell[0]) + ", " + K.num(cell[2]) + ", " + K.num("LV_GRID_ALIGN_" + al) + ", " +
+        K.num(cell[1]) + ", " + K.num(cell[3]) + ");");
+    }
+    L.push("");
+    L.push(K.fn("lv_obj_center") + "(cont);");
+    K.code(L);
+  }
+
+  function setRange(id, val) {
+    var el = document.getElementById(id);
+    el.value = val;
+    var out = document.getElementById("o-" + id);
+    if (out) out.textContent = val;
+  }
+
+  function syncPanel() {
+    var cell = CARDS[state.sel].cell;
+    setRange("col", cell[0]);
+    setRange("row", cell[1]);
+    setRange("cspan", cell[2]);
+    setRange("rspan", cell[3]);
+    Array.prototype.forEach.call(document.getElementById("sel").querySelectorAll("button"), function (b) {
+      b.classList.toggle("active", Number(b.dataset.val) === state.sel);
+    });
+    Array.prototype.forEach.call(document.getElementById("align").querySelectorAll("button"), function (b) {
+      b.classList.toggle("active", b.dataset.val === state.align);
+    });
+  }
+
+  function setCell(part, v) {
+    var cell = CARDS[state.sel].cell;
+    if (part === 0) cell[0] = K.clamp(v, 0, 3 - cell[2]);
+    if (part === 1) cell[1] = K.clamp(v, 0, 3 - cell[3]);
+    if (part === 2) { cell[2] = v; cell[0] = Math.min(cell[0], 3 - v); }
+    if (part === 3) { cell[3] = v; cell[1] = Math.min(cell[1], 3 - v); }
+    syncPanel();
+    renderCode();
+  }
+
+  function pos(e) {
+    var r = view.canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  view.canvas.addEventListener("pointerdown", function (e) {
+    var p = pos(e);
+    if (!disp) return;
+    for (var i = disp.length - 1; i >= 0; i--) {
+      var d = disp[i];
+      if (p.x >= d.x && p.x <= d.x + d.w && p.y >= d.y && p.y <= d.y + d.h) {
+        state.sel = i;
+        syncPanel();
+        renderCode();
+        return;
+      }
+    }
+  });
+
+  K.bindSeg("cols", function (v) { state.cols = v; renderCode(); });
+  K.bindSeg("rows", function (v) { state.rows = v; renderCode(); });
+  K.bindSeg("align", function (v) { state.align = v; renderCode(); });
+  K.bindSeg("sel", function (v) { state.sel = Number(v); syncPanel(); renderCode(); });
+  K.bindRange("gap", function (v) { return v + " px"; }, function (v) { state.gap = v; renderCode(); });
+  K.bindRange("col", null, function (v) { setCell(0, v); });
+  K.bindRange("row", null, function (v) { setCell(1, v); });
+  K.bindRange("cspan", null, function (v) { setCell(2, v); });
+  K.bindRange("rspan", null, function (v) { setCell(3, v); });
+
+  document.getElementById("btn-png").addEventListener("click", function () {
+    K.exportPng(view.canvas, "grid.png");
+  });
+
+  syncPanel();
+  renderCode();
+})();
+</script>
+</body>
+</html>

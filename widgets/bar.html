@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bar：LVGL lv_bar vs ArkUI lite UIBoxProgress</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='12' width='24' height='8' rx='4' fill='%23e3e6ea'/%3E%3Crect x='4' y='12' width='15' height='8' rx='4' fill='%232b7de9'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Bar：lv_bar vs UIBoxProgress</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，支持正常 / 对称 / 区间三种进度模式；右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+      <code>ui_box_progress.cpp</code> 渲染的单向填充 UIBoxProgress。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_bar</code>
+        <span class="cmp-tag lv">三种模式 · 起点值反向填充</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">画布上拖动可改值；切换「对称 / 区间」模式后填充从中心或 start_value 起算——这两种模式 UIBoxProgress 完全无法表达。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>模式 set_mode<span class="api">lv_bar_set_mode：NORMAL / SYMMETRICAL / RANGE</span></label>
+            <div class="seg" id="mode">
+              <button type="button" data-mode="normal" class="active">正常</button>
+              <button type="button" data-mode="sym">对称</button>
+              <button type="button" data-mode="range">区间</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>方向 orientation<span class="api">lv_bar_set_orientation</span></label>
+            <div class="seg" id="dir">
+              <button type="button" data-dir="h" class="active">水平</button>
+              <button type="button" data-dir="v">垂直</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>当前值 value<output id="o-value">65</output><span class="api">lv_bar_set_value</span></label>
+            <input type="range" id="value" min="0" max="100" step="1" value="65">
+          </div>
+          <div class="field">
+            <label>起始值 start_value<output id="o-start">20</output><span class="api">lv_bar_set_start_value：RANGE 模式区间另一端</span></label>
+            <input type="range" id="start" min="0" max="100" step="1" value="20">
+          </div>
+
+          <div class="field">
+            <label>最小值 min<output id="o-min">0</output><span class="api">lv_bar_set_range</span></label>
+            <input type="range" id="min" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>最大值 max<output id="o-max">100</output><span class="api">lv_bar_set_range</span></label>
+            <input type="range" id="max" min="100" max="255" step="1" value="100">
+          </div>
+
+          <div class="field">
+            <label>粗细 thickness<output id="o-thick">14 px</output><span class="api">lv_obj_set_height</span></label>
+            <input type="range" id="thick" min="4" max="48" step="1" value="14">
+          </div>
+          <div class="field">
+            <label>圆角 radius<output id="o-radius">100%</output><span class="api">lv_obj_set_style_radius</span></label>
+            <input type="range" id="radius" min="0" max="100" step="1" value="100">
+          </div>
+
+          <div class="field">
+            <label>指示条颜色 INDICATOR<span class="api">lv_obj_set_style_bg_color(…, LV_PART_INDICATOR)</span></label>
+            <input type="color" id="indic" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>轨道颜色 MAIN<span class="api">lv_obj_set_style_bg_color(…, LV_PART_MAIN)</span></label>
+            <input type="color" id="track" value="#e3e6ea">
+          </div>
+
+          <div class="field">
+            <label>单程时长<output id="o-duration">1200 ms</output><span class="api">lv_bar_set_value(bar, v, LV_ANIM_ON) 的过渡时长</span></label>
+            <input type="range" id="duration" min="300" max="4000" step="50" value="1200">
+          </div>
+          <div class="field">
+            <label>自动演示<span class="api">数值在 min~max 之间来回</span></label>
+            <div class="check"><input type="checkbox" id="auto" checked><span>自动来回填充</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一个来回）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一个来回）</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIBoxProgress</code>
+        <span class="cmp-tag ui">仅单向填充 · 无模式</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">拖动下方滑杆实时调用 SetValue；UIBoxProgress 只能从一端单向填充，没有对称 / 区间模式与起点值。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>当前值 value<output id="o-uvalue">62</output><span class="api">UIBoxProgress::SetValue(int32_t)：仅单向填充，无模式/起点值</span></label>
+            <input type="range" id="uvalue" min="0" max="100" step="1" value="62">
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_box_progress.cpp</code> / <code>style.cpp</code> ——
+          底槽 <code>#e3e6ea</code>、前景填充 <code>#007dff</code>（style.cpp 默认色值）；
+          <code>SetRange</code> 设范围、<code>SetDirection</code> 仅改填充方向；
+          无 SYMMETRICAL / RANGE 模式、无 start_value、无数值过渡动画。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列 GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列渲染参数全部取自 foundation/arkui/ui_lite 与 graphic_utils_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_bar 复刻（迁移自旧页，保留三模式 / 起点值 / 方向）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var state = {
+    mode: "normal",     // normal | sym | range
+    dir: "h",           // h | v
+    value: 65,
+    start: 20,
+    min: 0,
+    max: 100,
+    thickness: 14,
+    radius: 100,        // 百分比
+    indic: "#2b7de9",
+    track: "#e3e6ea",
+    auto: true,
+    duration: 1200
+  };
+
+  var LEN = 280;              // 进度条长度（固定）
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var t0 = performance.now();
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function roundRect(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function metrics(){
+    return state.dir === "h"
+      ? { w: LEN, h: state.thickness }
+      : { w: state.thickness, h: LEN };
+  }
+
+  /* 归一化位置 0..1 */
+  function ratio(v){
+    var span = state.max - state.min;
+    if(span <= 0) return 0;
+    return clamp((v - state.min) / span, 0, 1);
+  }
+
+  /* 自动演示时，t 时刻的数值 */
+  function valueAt(t){
+    if(!state.auto) return state.value;
+    var cycle = state.duration * 2;
+    var p = (t % cycle) / cycle;
+    var k = p < 0.5 ? p * 2 : (1 - p) * 2;
+    return state.min + k * (state.max - state.min);
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c, tMs){
+    var m = metrics();
+    var W = m.w, H = m.h;
+
+    c.clearRect(0, 0, W, H);
+
+    /* 轨道 */
+    var r = (state.radius / 100) * Math.min(W, H) / 2;
+    roundRect(c, 0, 0, W, H, r);
+    c.fillStyle = state.track;
+    c.fill();
+
+    /* 计算填充区间 */
+    var v = valueAt(tMs);
+    var pv = ratio(v);
+    var pa = pv, pb = pv;
+
+    if(state.mode === "normal"){
+      pa = 0; pb = pv;
+    }else if(state.mode === "sym"){
+      pa = Math.min(0.5, pv);
+      pb = Math.max(0.5, pv);
+    }else{ /* range */
+      var ps = ratio(state.start);
+      pa = Math.min(ps, pv);
+      pb = Math.max(ps, pv);
+    }
+
+    if(pb - pa > 0.0001){
+      var ir = Math.min(r, Math.min(W, H) / 2);
+      if(state.dir === "h"){
+        var x = pa * W;
+        var w = (pb - pa) * W;
+        roundRect(c, x, 0, w, H, ir);
+      }else{
+        var y = H - pb * H;
+        var h = (pb - pa) * H;
+        roundRect(c, 0, y, W, h, ir);
+      }
+      c.fillStyle = state.indic;
+      c.fill();
+    }
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var m = metrics();
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = m.w * dpr;
+    canvas.height = m.h * dpr;
+    canvas.style.width = m.w + "px";
+    canvas.style.height = m.h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.cursor = state.dir === "h" ? "ew-resize" : "ns-resize";
+  }
+
+  function loop(now){
+    draw(ctx, now - t0);
+    if(state.auto) syncValueUI(valueAt(now - t0));
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- UI 同步 ---------- */
+  function syncValueUI(v){
+    var n = Math.round(v);
+    document.getElementById("o-value").textContent = n;
+    document.getElementById("value").value = n;
+  }
+
+  function renderCode(){
+    var m = metrics();
+    var hex = function(c){ return "0x" + c.replace("#", ""); };
+    var L = [];
+
+    L.push('<span class="cm">/* 由页面参数实时生成 */</span>');
+    L.push('lv_obj_t * bar = <span class="fn">lv_bar_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_obj_set_size</span>(bar, <span class="num">' + m.w + '</span>, <span class="num">' + m.h + '</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(bar);');
+
+    if(state.dir === "v"){
+      L.push('<span class="fn">lv_bar_set_orientation</span>(bar, LV_BAR_ORIENTATION_VERTICAL);');
+    }
+    if(state.mode === "sym"){
+      L.push('<span class="fn">lv_bar_set_mode</span>(bar, LV_BAR_MODE_SYMMETRICAL);');
+    }else if(state.mode === "range"){
+      L.push('<span class="fn">lv_bar_set_mode</span>(bar, LV_BAR_MODE_RANGE);');
+      L.push('<span class="fn">lv_bar_set_start_value</span>(bar, <span class="num">' + state.start + '</span>, LV_ANIM_OFF);');
+    }
+
+    L.push('<span class="fn">lv_bar_set_range</span>(bar, <span class="num">' + state.min + '</span>, <span class="num">' + state.max + '</span>);');
+    L.push('<span class="fn">lv_bar_set_value</span>(bar, <span class="num">' + Math.round(state.value) + '</span>, LV_ANIM_ON);');
+
+    var radiusArg = state.radius >= 100 ? "LV_RADIUS_CIRCLE" : state.radius;
+    L.push('<span class="fn">lv_obj_set_style_radius</span>(bar, <span class="num">' + radiusArg + '</span>, LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_bg_color</span>(bar, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.track) + '</span>), LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_bg_color</span>(bar, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.indic) + '</span>), LV_PART_INDICATOR);');
+    L.push('<span class="fn">lv_obj_set_style_radius</span>(bar, <span class="num">' + radiusArg + '</span>, LV_PART_INDICATOR);');
+
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  function bindRange(id, key, outId, fmt){
+    var el = document.getElementById(id);
+    var out = document.getElementById(outId);
+    el.addEventListener("input", function(){
+      state[key] = Number(el.value);
+      if(key === "min" || key === "max"){
+        /* 保证 min < max */
+        if(state.min >= state.max) state.max = state.min + 1;
+        document.getElementById("o-min").textContent = state.min;
+        document.getElementById("o-max").textContent = state.max;
+      }else{
+        out.textContent = fmt(Number(el.value));
+      }
+      /* 手动调值即视为接管演示，关掉自动循环 */
+      if(key === "value"){
+        state.auto = false;
+        document.getElementById("auto").checked = false;
+      }
+      if(key === "thick") fitCanvas();
+      renderCode();
+    });
+  }
+
+  bindRange("value",   "value",   "o-value",   function(v){ return v; });
+  bindRange("start",   "start",   "o-start",   function(v){ return v; });
+  bindRange("min",     "min",     "o-min",     function(v){ return v; });
+  bindRange("max",     "max",     "o-max",     function(v){ return v; });
+  bindRange("thick",   "thickness","o-thick",  function(v){ return v + " px"; });
+  bindRange("radius",  "radius",  "o-radius",  function(v){ return v + "%"; });
+  bindRange("duration","duration","o-duration",function(v){ return v + " ms"; });
+
+  document.getElementById("indic").addEventListener("input", function(e){
+    state.indic = e.target.value; renderCode();
+  });
+  document.getElementById("track").addEventListener("input", function(e){
+    state.track = e.target.value; renderCode();
+  });
+  document.getElementById("auto").addEventListener("change", function(e){
+    state.auto = e.target.checked;
+    if(!state.auto) syncValueUI(state.value);
+  });
+
+  document.getElementById("mode").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.mode = btn.getAttribute("data-mode");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    renderCode();
+  });
+
+  document.getElementById("dir").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.dir = btn.getAttribute("data-dir");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    fitCanvas();
+    renderCode();
+  });
+
+  /* ---------- 画布拖动改值 ---------- */
+  (function(){
+    var dragging = false;
+    function apply(e){
+      var r = canvas.getBoundingClientRect();
+      var p = state.dir === "h"
+        ? (e.clientX - r.left) / r.width
+        : 1 - (e.clientY - r.top) / r.height;
+      p = clamp(p, 0, 1);
+      state.value = Math.round(state.min + p * (state.max - state.min));
+      syncValueUI(state.value);
+      state.auto = false;
+      document.getElementById("auto").checked = false;
+      renderCode();
+    }
+    canvas.addEventListener("pointerdown", function(e){
+      dragging = true;
+      canvas.setPointerCapture(e.pointerId);
+      apply(e);
+    });
+    canvas.addEventListener("pointermove", function(e){
+      if(dragging) apply(e);
+    });
+    canvas.addEventListener("pointerup", function(){ dragging = false; });
+    canvas.addEventListener("pointercancel", function(){ dragging = false; });
+  })();
+
+  /* ---------- 下载 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ---------- GIF 导出 ---------- */
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网），可改用 WebM")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    var m = metrics();
+    loadGif().then(function(GIF){
+      var fps = 20;
+      var cycle = state.duration * 2;
+      var frames = Math.max(2, Math.round(cycle / 1000 * fps));
+      var gif = new GIF({ workers: 2, quality: 10, width: m.w, height: m.h, workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = m.w; off.height = m.h;
+      var octx = off.getContext("2d");
+      var i = 0;
+      var prevAuto = state.auto;
+      state.auto = true;
+
+      function step(){
+        if(i < frames){
+          draw(octx, i / fps * 1000);
+          gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          function fail(msg){
+            state.auto = prevAuto;
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("finished", function(blob){
+            state.auto = prevAuto;
+            download(blob, "bar.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  /* ---------- WebM 录制（原生，离线可用） ---------- */
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    if(!canvas.captureStream || typeof MediaRecorder === "undefined"){
+      setStatus("当前浏览器不支持 MediaRecorder，请用 Chrome/Edge");
+      return;
+    }
+    btn.disabled = true;
+    var prevAuto = state.auto;
+    state.auto = true;
+    var cycle = state.duration * 2;
+
+    var stream = canvas.captureStream(30);
+    var rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    var chunks = [];
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      state.auto = prevAuto;
+      download(new Blob(chunks, { type: "video/webm" }), "bar.webm");
+      setStatus("WebM 已保存（一个来回 " + cycle + " ms）", true);
+      btn.disabled = false;
+    };
+    setStatus("录制中，约 " + Math.round(cycle / 1000) + " 秒…");
+    rec.start();
+    setTimeout(function(){ rec.stop(); }, cycle);
+  });
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIBoxProgress 操作绑定 + 实时生成等价 C++ 代码
+   演示组件由 cmp2.js 自动挂进 #udemo（LV2.api.setValue）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+  function api(){ return (window.LV2 && window.LV2.api) || {}; }
+
+  var u = { value: 62 };
+
+  function renderUCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_box_progress.h / style.cpp） */</span>');
+    L.push('UIBoxProgress * progress = <span class="fn">new</span> UIBoxProgress();');
+    L.push('progress-&gt;<span class="fn">SetPosition</span>(<span class="num">70</span>, <span class="num">104</span>);');
+    L.push('progress-&gt;<span class="fn">SetRange</span>(<span class="num">0</span>, <span class="num">100</span>);');
+    L.push('progress-&gt;<span class="fn">SetValue</span>(<span class="num">' + u.value + '</span>);  <span class="cm">// 仅单向填充</span>');
+    L.push('progress-&gt;<span class="fn">SetForegroundStyle</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(0x00, 0x7d, 0xff).full);');
+    L.push('progress-&gt;<span class="fn">SetBackgroundStyle</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(0xe3, 0xe6, 0xea).full);');
+    L.push('<span class="cm">/* 无 SYMMETRICAL / RANGE 模式，无 start_value 与数值动画 */</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  $("uvalue").addEventListener("input", function(){
+    u.value = Number(this.value);
+    $("o-uvalue").textContent = u.value;
+    var a = api();
+    if(a.setValue) a.setValue(u.value);
+    renderUCode();
+  });
+
+  renderUCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

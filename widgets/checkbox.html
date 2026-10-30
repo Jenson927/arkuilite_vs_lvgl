@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkbox：LVGL lv_checkbox vs ArkUI lite UICheckBox</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Cpath d='M10 16l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Checkbox：lv_checkbox vs UICheckBox</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+      <code>ui_check_box.cpp</code> 两态与切换动画渲染的 UICheckBox。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_checkbox</code>
+        <span class="cmp-tag lv">状态可叠加 · 支持半选</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击画布第一行切换勾选；勾选 / 禁用可叠加，半选（indeterminate）与「勾选+禁用」同时生效是 ArkUI lite 表达不了的。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>文本 set_text<span class="api">lv_checkbox_set_text(cb, "…")：文字内置于控件（ArkUI lite 需另挂 UILabel）</span></label>
+            <input type="text" id="text" value="记住密码" maxlength="14">
+          </div>
+
+          <div class="field wide">
+            <label>状态叠加 state<span class="api">lv_obj_add_state / lv_obj_remove_state：勾选 + 禁用可同时叠加（ArkUI lite 两态互斥）</span></label>
+            <div class="stack" id="mode">
+              <div class="check"><input type="checkbox" id="st-checked"><span>勾选 CHECKED</span></div>
+              <div class="check"><input type="checkbox" id="st-disabled"><span>禁用 DISABLED</span></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>半选 indeterminate<span class="api">INDICATOR 自绘横线表示半选（ArkUI lite 无）</span></label>
+            <div class="check"><input type="checkbox" id="indet"><span>显示半选横线</span></div>
+          </div>
+          <div class="field">
+            <label>勾选颜色 INDICATOR<span class="api">lv_obj_set_style_bg_color(cb, …, LV_PART_INDICATOR | LV_STATE_CHECKED)</span></label>
+            <input type="color" id="color" value="#2b7de9">
+          </div>
+
+          <div class="field">
+            <label>动画时长 anim_duration<output id="o-dur">200 ms</output><span class="api">lv_obj_set_style_anim_duration</span></label>
+            <input type="range" id="dur" min="0" max="1000" step="20" value="200">
+          </div>
+          <div class="field">
+            <label>自动演示<span class="api">约 1.8 s 一轮：勾选 / 取消循环（导出 GIF 用）</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>勾选 / 取消循环</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一轮勾选）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一轮勾选）</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UICheckBox</code>
+        <span class="cmp-tag ui">两态互斥 · 内置切换动画</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">点击画布上的勾选框可切换；只有 SELECTED / UNSELECTED 两态，没有半选，也没有禁用叠加。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>状态 state<span class="api">UICheckBox::SetState(bool)：仅 SELECTED / UNSELECTED，无半选与禁用叠加</span></label>
+            <div class="seg" id="umode">
+              <button type="button" data-v="off">未选中</button>
+              <button type="button" data-v="on" class="active">选中</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_check_box.cpp</code> / <code>ui_abstract_button.cpp</code> ——
+          两态 <code>SELECTED / UNSELECTED</code>，内置切换动画（DEFAULT_ANIMATION_TIME）；
+          选中色 <code>SetSelectedStateColor()</code>（主题默认 <code>#007dff</code>）；
+          文字需另挂 <code>UILabel</code>，无半选状态。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列 GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列渲染参数全部取自 foundation/arkui/ui_lite 与 graphic_utils_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_checkbox 复刻（迁移自旧页 + 半选 / 状态叠加）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 320, H = 250;
+  var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+
+  var state = {
+    text: "记住密码",
+    checked: false,
+    disabled: false,
+    indet: false,
+    color: "#2b7de9",
+    dur: 200,
+    auto: false
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var autoEl = document.getElementById("auto");
+  var t0 = performance.now();
+  var anim = { from: 0, to: 0, start: t0 };
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function roundRect(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function rgbOf(hex){
+    var h = hex.replace("#", "");
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+
+  function mix(a, b, t){
+    var A = rgbOf(a), B = rgbOf(b);
+    return "rgb(" + Math.round(A[0] + (B[0] - A[0]) * t) + "," +
+                    Math.round(A[1] + (B[1] - A[1]) * t) + "," +
+                    Math.round(A[2] + (B[2] - A[2]) * t) + ")";
+  }
+
+  function ease(k){ return k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; }
+
+  /* 自动演示：1.8s 一轮，勾选 / 取消 */
+  function autoAt(t){
+    var CYCLE = 1800, ANIM = 600;
+    var seg = Math.floor(t / CYCLE) % 2;
+    var k = clamp((t % CYCLE) / ANIM, 0, 1);
+    var from = seg === 0 ? 0 : 1, to = 1 - from;
+    return from + (to - from) * ease(k);
+  }
+
+  function currentP(){
+    if(state.auto) return autoAt(performance.now() - t0);
+    var k = clamp((performance.now() - anim.start) / Math.max(1, state.dur), 0, 1);
+    return anim.from + (anim.to - anim.from) * ease(k);
+  }
+
+  function drawCheck(c, x, y, s, color){
+    c.save();
+    c.strokeStyle = color;
+    c.lineWidth = Math.max(2, s * 0.14);
+    c.lineCap = "round";
+    c.lineJoin = "round";
+    c.beginPath();
+    c.moveTo(x - s * 0.28, y + s * 0.02);
+    c.lineTo(x - s * 0.08, y + s * 0.22);
+    c.lineTo(x + s * 0.30, y - s * 0.22);
+    c.stroke();
+    c.restore();
+  }
+
+  /* 半选横线 */
+  function drawDash(c, x, y, s, color){
+    c.save();
+    c.strokeStyle = color;
+    c.lineWidth = Math.max(2.5, s * 0.16);
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(x - s * 0.24, y);
+    c.lineTo(x + s * 0.24, y);
+    c.stroke();
+    c.restore();
+  }
+
+  function drawRow(c, y, label, p, disabled, indet){
+    var s = 26, gap = 12;
+    c.font = "400 14px " + FAMILY;
+    var tw = c.measureText(label).width;
+    var x = (W - (s + gap + tw)) / 2;
+    var top = y - s / 2;
+
+    c.save();
+    if(disabled) c.globalAlpha = 0.42;
+
+    var fill = p > 0.001 ? mix("#ffffff", state.color, p) : "#ffffff";
+    var border = p > 0.001 ? mix("#b8bfc9", state.color, p) : "#b8bfc9";
+
+    roundRect(c, x, top, s, s, 6);
+    c.fillStyle = fill;
+    c.fill();
+    c.lineWidth = 2;
+    c.strokeStyle = border;
+    c.stroke();
+
+    if(indet){
+      drawDash(c, x + s / 2, y, s, "#ffffff");
+    }else if(p > 0.001){
+      c.save();
+      roundRect(c, x + 2, top + 2, s - 4, s - 4, 5);
+      c.clip();
+      c.globalAlpha *= p;
+      drawCheck(c, x + s / 2, y, s * (0.55 + 0.45 * p), "#ffffff");
+      c.restore();
+    }
+
+    c.fillStyle = disabled ? "#9aa3ad" : "#1c2128";
+    c.textBaseline = "middle";
+    c.textAlign = "left";
+    c.fillText(label, x + s + gap, y + 1);
+    c.restore();
+  }
+
+  function draw(c, tMs){
+    c.clearRect(0, 0, W, H);
+    var p = currentP();
+
+    drawRow(c, 52, state.text || " ", p, state.disabled, state.indet);
+    drawRow(c, 104, "勾选 (LV_STATE_CHECKED)", 1, false, false);
+    drawRow(c, 156, "半选 (indeterminate)", 1, false, true);
+    drawRow(c, 208, "勾选 + 禁用叠加", 1, true, false);
+
+    c.globalAlpha = 0.35;
+    c.font = "400 11.5px " + FAMILY;
+    c.fillStyle = "#8a929c";
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText("点击第一行可切换", W / 2, H - 16);
+    c.globalAlpha = 1;
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.cursor = "pointer";
+  }
+
+  function syncBoxes(){
+    document.getElementById("st-checked").checked = state.checked;
+    document.getElementById("st-disabled").checked = state.disabled;
+  }
+
+  function loop(now){
+    draw(ctx, now - t0);
+    if(state.auto){
+      var on = autoAt(now - t0) > 0.5;
+      if(on !== state.checked){
+        state.checked = on;
+        syncBoxes();
+        renderCode();
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var hex = function(c){ return "0x" + c.replace("#", ""); };
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成 */</span>');
+    L.push('lv_obj_t * cb = <span class="fn">lv_checkbox_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_checkbox_set_text</span>(cb, "' + (state.text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;") + '");');
+    if(state.checked) L.push('<span class="fn">lv_obj_add_state</span>(cb, LV_STATE_CHECKED);');
+    if(state.disabled) L.push('<span class="fn">lv_obj_add_state</span>(cb, LV_STATE_DISABLED);');
+    if(state.indet){
+      L.push('<span class="cm">/* 半选：INDICATOR 上自绘横线（无原生 API，ArkUI lite 完全无半选） */</span>');
+      L.push('<span class="fn">lv_obj_set_style_bg_color</span>(cb, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.color) + '</span>), LV_PART_INDICATOR);');
+    }
+    L.push('<span class="fn">lv_obj_set_style_bg_color</span>(cb, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.color) + '</span>), LV_PART_INDICATOR | LV_STATE_CHECKED);');
+    L.push('<span class="fn">lv_obj_set_style_bg_opa</span>(cb, LV_OPA_COVER, LV_PART_INDICATOR | LV_STATE_CHECKED);');
+    L.push('<span class="fn">lv_obj_set_style_text_color</span>(cb, <span class="fn">lv_color_hex</span>(<span class="num">0x1c2128</span>), LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_anim_duration</span>(cb, <span class="num">' + state.dur + '</span>, 0);');
+    L.push('<span class="fn">lv_obj_center</span>(cb);');
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  function setChecked(on, animate){
+    var p = currentP();
+    state.checked = !!on;
+    anim.from = animate ? p : (on ? 1 : 0);
+    anim.to = on ? 1 : 0;
+    anim.start = performance.now();
+    syncBoxes();
+    renderCode();
+  }
+
+  document.getElementById("text").addEventListener("input", function(e){
+    state.text = e.target.value;
+    renderCode();
+  });
+
+  ["checked", "disabled"].forEach(function(k){
+    document.getElementById("st-" + k).addEventListener("change", function(e){
+      state[k] = e.target.checked;
+      if(k === "checked"){
+        state.auto = false;
+        autoEl.checked = false;
+        var p = currentP();
+        anim.from = p;
+        anim.to = state.checked ? 1 : 0;
+        anim.start = performance.now();
+      }
+      renderCode();
+    });
+  });
+
+  document.getElementById("indet").addEventListener("change", function(e){
+    state.indet = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("color").addEventListener("input", function(e){
+    state.color = e.target.value;
+    renderCode();
+  });
+  document.getElementById("dur").addEventListener("input", function(e){
+    state.dur = Number(e.target.value);
+    document.getElementById("o-dur").textContent = state.dur + " ms";
+    renderCode();
+  });
+  autoEl.addEventListener("change", function(e){
+    state.auto = e.target.checked;
+    if(state.auto) t0 = performance.now();
+  });
+
+  /* ---------- 画布点击切换 ---------- */
+  canvas.addEventListener("pointerdown", function(){
+    if(state.disabled) return;
+    state.auto = false;
+    autoEl.checked = false;
+    setChecked(!state.checked, true);
+  });
+
+  /* ---------- 下载 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ---------- GIF 导出 ---------- */
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网），可改用 WebM")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    loadGif().then(function(GIF){
+      var fps = 20;
+      var cycle = 1800;
+      var frames = Math.max(2, Math.round(cycle / 1000 * fps));
+      var gif = new GIF({ workers: 2, quality: 10, width: W, height: H, workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = W; off.height = H;
+      var octx = off.getContext("2d");
+      var i = 0;
+      var prevAuto = state.auto;
+      state.auto = true;
+
+      function step(){
+        if(i < frames){
+          draw(octx, i / fps * 1000);
+          gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          function fail(msg){
+            state.auto = prevAuto;
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("finished", function(blob){
+            state.auto = prevAuto;
+            download(blob, "checkbox.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  /* ---------- WebM 录制（原生，离线可用） ---------- */
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    if(!canvas.captureStream || typeof MediaRecorder === "undefined"){
+      setStatus("当前浏览器不支持 MediaRecorder，请用 Chrome/Edge");
+      return;
+    }
+    btn.disabled = true;
+    var prevAuto = state.auto;
+    state.auto = true;
+    t0 = performance.now();
+    var cycle = 1800;
+
+    var stream = canvas.captureStream(30);
+    var rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    var chunks = [];
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      state.auto = prevAuto;
+      autoEl.checked = prevAuto;
+      download(new Blob(chunks, { type: "video/webm" }), "checkbox.webm");
+      setStatus("WebM 已保存（一轮勾选 " + cycle + " ms）", true);
+      btn.disabled = false;
+    };
+    setStatus("录制中，约 " + Math.round(cycle / 1000) + " 秒…");
+    rec.start();
+    setTimeout(function(){ rec.stop(); }, cycle);
+  });
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UICheckBox 操作绑定 + 实时生成等价 C++ 代码
+   演示组件由 cmp2.js 自动挂进 #udemo（LV2.api.set）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+  function api(){ return (window.LV2 && window.LV2.api) || {}; }
+
+  var u = { on: true };
+
+  function renderUCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_check_box.h） */</span>');
+    L.push('UICheckBox * checkBox = <span class="fn">new</span> UICheckBox();');
+    L.push('checkBox-&gt;<span class="fn">SetState</span>(' + (u.on ? "true" : "false") + ');  <span class="cm">// SELECTED / UNSELECTED</span>');
+    L.push('checkBox-&gt;<span class="fn">SetSelectedStateColor</span>(Color::<span class="fn">GetColorFromRGB</span>(0x00, 0x7d, 0xff).full);');
+    L.push('<span class="cm">/* 文字需另挂 UILabel：UICheckBox 本体无内置文字 */</span>');
+    L.push('UILabel * label = <span class="fn">new</span> UILabel();');
+    L.push('label-&gt;<span class="fn">SetText</span>("Check");');
+    L.push('checkBox-&gt;<span class="fn">Add</span>(label);');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  $("umode").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    u.on = btn.getAttribute("data-v") === "on";
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    var a = api();
+    if(a.set) a.set(u.on);
+    renderUCode();
+  });
+
+  renderUCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

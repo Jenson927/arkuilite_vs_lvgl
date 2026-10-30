@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image：LVGL lv_image vs ArkUI lite UIImageView</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='7' width='24' height='18' rx='3' fill='%23a7d3fa'/%3E%3Cpath d='M4 20l7-6 5 4 6-7 6 6v8H4z' fill='%234f738f'/%3E%3Ccircle cx='23' cy='12' r='3' fill='%23ffe08a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Image：lv_image vs UIImageView</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（旋转 / 缩放 / pivot / recolor / 九宫格拉伸），右列为按
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码渲染的 UIImageView（缩放模式）。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_image</code>
+        <span class="cmp-tag lv">旋转缩放 · 九宫格拉伸</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">棋盘格 = 透明区域，虚线 = 原始轮廓；勾选「九宫格」后演示角部不变形、边与中心拉伸的 9-slice 效果。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>旋转 rotation<output id="o-rotation">0.0°</output><span class="api">lv_image_set_rotation（单位 0.1°）</span></label>
+            <input type="range" id="rotation" min="0" max="3599" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>缩放 scale<output id="o-zoom">256（100%）</output><span class="api">lv_image_set_scale（256 = 100%）</span></label>
+            <input type="range" id="zoom" min="32" max="512" step="8" value="256">
+          </div>
+
+          <div class="field">
+            <label>旋转中心 pivot x<output id="o-px">80</output><span class="api">lv_image_set_pivot(img, x, y)</span></label>
+            <input type="range" id="px" min="0" max="160" step="1" value="80">
+          </div>
+          <div class="field">
+            <label>旋转中心 pivot y<output id="o-py">60</output><span class="api">lv_image_set_pivot(img, x, y)</span></label>
+            <input type="range" id="py" min="0" max="120" step="1" value="60">
+          </div>
+
+          <div class="field">
+            <label>重着色 recolor<span class="api">lv_obj_set_style_image_recolor + recolor_opa</span></label>
+            <input type="color" id="recolor" value="#ffb703">
+          </div>
+          <div class="field">
+            <label>重着色强度 recolor_opa<output id="o-recoloropa">0</output><span class="api">lv_obj_set_style_image_recolor_opa（0–255）</span></label>
+            <input type="range" id="recoloropa" min="0" max="255" step="1" value="0">
+          </div>
+
+          <div class="field wide">
+            <label>九宫格拉伸（9-slice）<span class="api">LV_IMAGE header 九宫格标志：四角保持原尺寸，边与中心拉伸到目标框</span></label>
+            <div class="check"><input type="checkbox" id="ninepatch"><span>切换到九宫格示意（角部不变形）</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（自动旋转）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIImageView</code>
+        <span class="cmp-tag ui">缩放模式 · 自带模糊</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UIImageView 支持多种缩放模式，并自带模糊 / 边缘平滑；但没有旋转、缩放变换与九宫格拉伸。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>缩放模式 resize_mode<span class="api">SetResizeMode(ImageResizeMode)：STRETCH 拉伸 / CONTAIN 完整显示 / COVER 裁剪填充</span></label>
+            <div class="seg" id="umode">
+              <button type="button" data-v="stretch" class="active">STRETCH</button>
+              <button type="button" data-v="contain">CONTAIN</button>
+              <button type="button" data-v="cover">COVER</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_image_view.cpp</code> / <code>ui_image_view.h</code> ——
+          <code>SetSrc</code> 资源路径或 ImageInfo、<code>SetResizeMode</code> 缩放模式、
+          <code>SetBlurLevel</code> 模糊、<code>SetEdgeSmoothRadius</code> 边缘平滑；
+          旋转 / 缩放变换与九宫格拉伸在 UI_Lite 中没有对应接口（见右上角红色标注）。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列 GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列能力描述取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_image 复刻（迁移自旧页 + 九宫格示意增强）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 360, H = 220;
+  var IW = 160, IH = 120;
+  var IX = (W - IW) / 2, IY = (H - IH) / 2;
+  var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+
+  var state = {
+    rotation: 0,     // 0.1° 单位
+    zoom: 256,       // 256 = 100%
+    px: 80, py: 60,
+    recolor: "#ffb703",
+    recolorOpa: 0,
+    ninepatch: false
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var t0 = performance.now();
+  var recording = false;   // WebM 录制期间由录制循环绘制
+
+  function setStatus(msg, ok){ statusEl.textContent = msg; statusEl.className = "status" + (ok ? " ok" : ""); }
+
+  function roundRectPath(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function alphaOf(hex, a){
+    var s = hex.replace("#", "");
+    return "rgba(" + parseInt(s.substr(0, 2), 16) + "," + parseInt(s.substr(2, 2), 16) + "," +
+           parseInt(s.substr(4, 2), 16) + "," + a + ")";
+  }
+
+  /* ---------- 程序化源图 160×120 风景 ---------- */
+  function buildSource(){
+    var cv = document.createElement("canvas");
+    cv.width = IW;
+    cv.height = IH;
+    var c = cv.getContext("2d");
+
+    var sky = c.createLinearGradient(0, 0, 0, 82);
+    sky.addColorStop(0, "#57a8f0");
+    sky.addColorStop(0.55, "#a7d3fa");
+    sky.addColorStop(1, "#eaf5ff");
+    c.fillStyle = sky;
+    c.fillRect(0, 0, IW, 82);
+
+    c.save();
+    c.shadowColor = "#ffd166";
+    c.shadowBlur = 16;
+    c.fillStyle = "#ffe08a";
+    c.beginPath();
+    c.arc(118, 30, 13, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+    c.fillStyle = "#fff6cf";
+    c.beginPath();
+    c.arc(118, 30, 8, 0, Math.PI * 2);
+    c.fill();
+
+    c.beginPath();
+    c.moveTo(0, 88); c.lineTo(0, 62); c.lineTo(26, 48); c.lineTo(46, 66);
+    c.lineTo(68, 44); c.lineTo(92, 68); c.lineTo(118, 50); c.lineTo(160, 70); c.lineTo(160, 92);
+    c.closePath();
+    c.fillStyle = "#8fb0c9";
+    c.fill();
+
+    c.beginPath();
+    c.moveTo(0, 98); c.lineTo(0, 78); c.lineTo(24, 64); c.lineTo(50, 86);
+    c.lineTo(78, 60); c.lineTo(104, 84); c.lineTo(132, 68); c.lineTo(160, 84); c.lineTo(160, 102);
+    c.closePath();
+    c.fillStyle = "#4f738f";
+    c.fill();
+
+    var grass = c.createLinearGradient(0, 90, 0, IH);
+    grass.addColorStop(0, "#7ecb73");
+    grass.addColorStop(1, "#3f8f4f");
+    c.fillStyle = grass;
+    c.fillRect(0, 90, IW, IH - 90);
+
+    c.save();
+    c.strokeStyle = "rgba(255,255,255,0.20)";
+    c.lineWidth = 1;
+    for(var i = 8; i < IW; i += 17){
+      c.beginPath();
+      c.moveTo(i, 108);
+      c.lineTo(i + 4, 98);
+      c.stroke();
+    }
+    c.restore();
+
+    /* 圆角处留透明，便于看到棋盘格 */
+    c.globalCompositeOperation = "destination-in";
+    c.fillStyle = "#ffffff";
+    roundRectPath(c, 0, 0, IW, IH, 10);
+    c.fill();
+    c.globalCompositeOperation = "source-over";
+    return cv;
+  }
+
+  var src = buildSource();
+  var tinted = null, tintKey = "";
+
+  function getImage(){
+    if(state.recolorOpa <= 0) return src;
+    var key = state.recolor + "|" + state.recolorOpa;
+    if(tinted && key === tintKey) return tinted;
+    var cv = document.createElement("canvas");
+    cv.width = IW;
+    cv.height = IH;
+    var c = cv.getContext("2d");
+    c.drawImage(src, 0, 0);
+    c.globalCompositeOperation = "source-atop";
+    c.fillStyle = alphaOf(state.recolor, state.recolorOpa / 255);
+    c.fillRect(0, 0, IW, IH);
+    tinted = cv;
+    tintKey = key;
+    return tinted;
+  }
+
+  /* ---------- 棋盘格（透明区） ---------- */
+  function checker(c, x, y, w, h){
+    c.save();
+    c.beginPath();
+    c.rect(x, y, w, h);
+    c.clip();
+    var s = 8;
+    for(var yy = 0; yy < h; yy += s){
+      for(var xx = 0; xx < w; xx += s){
+        c.fillStyle = ((xx / s + yy / s) % 2 === 0) ? "#f4f6f8" : "#e6e9ee";
+        c.fillRect(x + xx, y + yy, s, s);
+      }
+    }
+    c.restore();
+    c.strokeStyle = "#dfe3e8";
+    c.lineWidth = 1;
+    c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  }
+
+  function rotationAt(t, forceAuto){
+    if(forceAuto) return (t * 0.6) % 3600;   // 60°/s，导出用
+    return state.rotation;
+  }
+
+  function drawPivot(c, x, y){
+    c.save();
+    c.strokeStyle = alphaOf("#2b7de9", 0.9);
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(x - 9, y); c.lineTo(x + 9, y);
+    c.moveTo(x, y - 9); c.lineTo(x, y + 9);
+    c.stroke();
+    c.fillStyle = "#ffffff";
+    c.beginPath();
+    c.arc(x, y, 4, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = "#2b7de9";
+    c.lineWidth = 1.5;
+    c.stroke();
+    c.restore();
+  }
+
+  /* ---------- 九宫格示意 ---------- */
+  function drawNinePatch(c){
+    var cs = 24;                       // 角部切片尺寸（源像素，保持不变形）
+    var tx = 60, ty = 26, tw = 240, th = 150;
+    var img = getImage();
+
+    checker(c, tx - 6, ty - 6, tw + 12, th + 12);
+
+    /* 九宫格绘制：四角原样，边与中心拉伸 */
+    c.drawImage(img, 0, 0, cs, cs, tx, ty, cs, cs);
+    c.drawImage(img, IW - cs, 0, cs, cs, tx + tw - cs, ty, cs, cs);
+    c.drawImage(img, 0, IH - cs, cs, cs, tx, ty + th - cs, cs, cs);
+    c.drawImage(img, IW - cs, IH - cs, cs, cs, tx + tw - cs, ty + th - cs, cs, cs);
+    c.drawImage(img, cs, 0, IW - cs * 2, cs, tx + cs, ty, tw - cs * 2, cs);
+    c.drawImage(img, cs, IH - cs, IW - cs * 2, cs, tx + cs, ty + th - cs, tw - cs * 2, cs);
+    c.drawImage(img, 0, cs, cs, IH - cs * 2, tx, ty + cs, cs, th - cs * 2);
+    c.drawImage(img, IW - cs, cs, cs, IH - cs * 2, tx + tw - cs, ty + cs, cs, th - cs * 2);
+    c.drawImage(img, cs, cs, IW - cs * 2, IH - cs * 2, tx + cs, ty + cs, tw - cs * 2, th - cs * 2);
+
+    /* 切片分界虚线 */
+    c.save();
+    c.setLineDash([4, 3]);
+    c.strokeStyle = "#2b7de9";
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(tx + cs, ty); c.lineTo(tx + cs, ty + th);
+    c.moveTo(tx + tw - cs, ty); c.lineTo(tx + tw - cs, ty + th);
+    c.moveTo(tx, ty + cs); c.lineTo(tx + tw, ty + cs);
+    c.moveTo(tx, ty + th - cs); c.lineTo(tx + tw, ty + th - cs);
+    c.stroke();
+    c.restore();
+
+    c.font = "11px " + FAMILY;
+    c.fillStyle = "#5b6470";
+    c.textBaseline = "middle";
+    c.textAlign = "center";
+    c.fillText("九宫格：四角 24px 不变形 · 边与中心拉伸到 240×150", W / 2, H - 10);
+  }
+
+  function drawScene(c, t, forceAuto){
+    c.clearRect(0, 0, W, H);
+
+    if(state.ninepatch && !forceAuto){
+      drawNinePatch(c);
+      return;
+    }
+
+    checker(c, 70, 30, 220, 160);
+
+    c.save();
+    c.setLineDash([4, 4]);
+    c.strokeStyle = "#8a929c";
+    c.lineWidth = 1;
+    c.strokeRect(IX + 0.5, IY + 0.5, IW - 1, IH - 1);
+    c.restore();
+
+    var rot = rotationAt(t, forceAuto);
+    var s = state.zoom / 256;
+
+    c.save();
+    c.translate(IX, IY);
+    c.translate(state.px, state.py);
+    c.rotate(rot / 10 * Math.PI / 180);
+    c.scale(s, s);
+    c.translate(-state.px, -state.py);
+    c.drawImage(getImage(), 0, 0, IW, IH);
+    c.restore();
+
+    drawPivot(c, IX + state.px, IY + state.py);
+
+    c.font = "11px " + FAMILY;
+    c.textBaseline = "middle";
+    c.textAlign = "left";
+    c.fillStyle = "#8a929c";
+    c.fillText("源图 160×120 · 程序化风景", 10, 13);
+    c.textAlign = "right";
+    if(forceAuto){
+      c.fillStyle = "#2b7de9";
+      c.fillText("自动旋转 60°/s", W - 10, 13);
+    }else{
+      c.fillText("rotation " + (rot / 10).toFixed(1) + "° · scale " + Math.round(s * 100) + "%", W - 10, 13);
+    }
+    c.textAlign = "center";
+    c.fillStyle = "#a7aeb8";
+    c.fillText("棋盘格 = 透明区域 · 虚线 = 原始轮廓 · 十字 = pivot", W / 2, H - 9);
+  }
+
+  function loop(){
+    if(!recording) drawScene(ctx, performance.now() - t0, false);
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function bindRange(id, key, outId, fmt){
+    document.getElementById(id).addEventListener("input", function(){
+      var v = Number(this.value);
+      state[key] = v;
+      document.getElementById(outId).textContent = fmt(v);
+      renderCode();
+    });
+  }
+  bindRange("rotation", "rotation", "o-rotation", function(v){ return (v / 10).toFixed(1) + "°"; });
+  bindRange("zoom", "zoom", "o-zoom", function(v){ return v + "（" + Math.round(v / 256 * 100) + "%）"; });
+  bindRange("px", "px", "o-px", function(v){ return String(v); });
+  bindRange("py", "py", "o-py", function(v){ return String(v); });
+  bindRange("recoloropa", "recolorOpa", "o-recoloropa", function(v){ return String(v); });
+
+  document.getElementById("recolor").addEventListener("input", function(e){
+    state.recolor = e.target.value;
+    renderCode();
+  });
+
+  document.getElementById("ninepatch").addEventListener("change", function(e){
+    state.ninepatch = e.target.checked;
+    renderCode();
+    setStatus(state.ninepatch ? "九宫格示意：调整旋转/缩放前先取消勾选" : "已恢复变换演示", true);
+  });
+
+  /* ---------- 等价 C 代码 ---------- */
+  function renderCode(){
+    var hex = "0x" + state.recolor.replace("#", "");
+    var L = [];
+    L.push('<span class="cm">/* 由左列参数实时生成 · 源图 160×120 ARGB8888 */</span>');
+    L.push('lv_obj_t * img = <span class="fn">lv_image_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_image_set_src</span>(img, &landscape_dsc);');
+    L.push('<span class="fn">lv_obj_set_size</span>(img, <span class="num">' + IW + '</span>, <span class="num">' + IH + '</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(img);');
+    L.push('');
+    L.push('<span class="fn">lv_image_set_pivot</span>(img, <span class="num">' + state.px + '</span>, <span class="num">' + state.py + '</span>);');
+    L.push('<span class="fn">lv_image_set_scale</span>(img, <span class="num">' + state.zoom + '</span>);   <span class="cm">/* 256 = 100% */</span>');
+    L.push('<span class="fn">lv_image_set_rotation</span>(img, <span class="num">' + state.rotation + '</span>);   <span class="cm">/* 单位 0.1° */</span>');
+    L.push('<span class="fn">lv_obj_set_style_image_recolor</span>(img, <span class="fn">lv_color_hex</span>(<span class="num">' + hex + '</span>), LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_image_recolor_opa</span>(img, <span class="num">' + state.recolorOpa + '</span>, LV_PART_MAIN);');
+    if(state.ninepatch){
+      L.push('');
+      L.push('<span class="cm">/* 九宫格：源图 header 设置九宫格标志后，四角保持原尺寸、边与中心拉伸 */</span>');
+      L.push('<span class="cm">/* lv_image_set_src(img, &src_nine_patch);  目标框 240×150 */</span>');
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 导出 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网），可改用 WebM")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      download(blob, "image.png");
+      setStatus("PNG 已保存", true);
+    }, "image/png");
+  });
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    loadGif().then(function(GIF){
+      var fps = 15, duration = 6000;
+      var frames = Math.max(2, Math.round(duration / 1000 * fps));
+      var gif = new GIF({ workers: 2, quality: 10, width: W, height: H,
+        workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = W; off.height = H;
+      var octx = off.getContext("2d");
+      var i = 0;
+      function step(){
+        if(i < frames){
+          drawScene(octx, i / fps * 1000, true);
+          gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          gif.on("finished", function(blob){
+            download(blob, "image.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          function fail(msg){
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    if(!canvas.captureStream || typeof MediaRecorder === "undefined"){
+      setStatus("当前浏览器不支持 MediaRecorder，请用 Chrome/Edge");
+      return;
+    }
+    btn.disabled = true;
+    var stream = canvas.captureStream(30);
+    var rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    var chunks = [];
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      recording = false;
+      download(new Blob(chunks, { type: "video/webm" }), "image.webm");
+      setStatus("WebM 已保存（自动旋转 6 秒）", true);
+      btn.disabled = false;
+    };
+    setStatus("录制中，约 6 秒（画布自动旋转）…");
+    recording = true;
+    rec.start();
+    var recT0 = performance.now();
+    (function tick(){
+      if(performance.now() - recT0 < 6000){
+        drawScene(ctx, performance.now() - recT0, true);
+        requestAnimationFrame(tick);
+      }else{
+        rec.stop();
+      }
+    })();
+  });
+
+  /* ---------- 高清适配 + 启动 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIImageView 操作绑定 + 实时生成代码
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+
+  var u = { mode: "stretch" };
+  var MODE = { stretch: "IMAGE_RESIZE_STRETCH", contain: "IMAGE_RESIZE_CONTAIN", cover: "IMAGE_RESIZE_COVER" };
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_image_view.h） */</span>');
+    L.push('UIImageView * img = <span class="fn">new</span> UIImageView();');
+    L.push('img-&gt;<span class="fn">SetPosition</span>(<span class="num">90</span>, <span class="num">30</span>);');
+    L.push('img-&gt;<span class="fn">SetWidth</span>(<span class="num">180</span>);');
+    L.push('img-&gt;<span class="fn">SetHeight</span>(<span class="num">110</span>);');
+    L.push('img-&gt;<span class="fn">SetSrc</span>("images/landscape.png");');
+    L.push('img-&gt;<span class="fn">SetResizeMode</span>(' + MODE[u.mode] + ');');
+    L.push('img-&gt;<span class="fn">SetBlurLevel</span>(UIImageBlurLevel::BLUR_LEVEL0);');
+    L.push('<span class="cm">// 无旋转/缩放变换与九宫格接口，需自绘或裁图</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  function init(){
+    var api = (window.LV2 && window.LV2.api) || {};
+    if(api.setMode) api.setMode(u.mode);
+    $("umode").addEventListener("click", function(e){
+      var btn = e.target.closest ? e.target.closest("button") : null;
+      if(!btn || btn.parentNode !== this) return;
+      u.mode = btn.getAttribute("data-v");
+      var btns = this.getElementsByTagName("button");
+      for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
+      if(api.setMode) api.setMode(u.mode);
+      renderCode();
+    });
+    renderCode();
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

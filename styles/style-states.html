@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LVGL 状态与过渡样式复刻与导出</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Cpath d='M10 16l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="back" href="../index.html">← 返回画廊</a>
+    <h1>LVGL 状态与过渡样式本地复刻</h1>
+    <p>按钮真实响鼠标悬停、按下、点击勾选、禁用与聚焦，四态颜色配合 <code>lv_style_transition_dsc_init()</code> 平滑过渡，画布顶部实时显示当前 <code>LV_STATE_*</code>。</p>
+  </header>
+
+  <div class="stage">
+    <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+  </div>
+
+  <section class="panel">
+    <h2>参数（对应 LVGL 状态与样式）</h2>
+    <div class="grid">
+      <div class="field">
+        <label>常态色 bg_color</label>
+        <input type="color" id="c-normal" value="#2b7de9">
+      </div>
+      <div class="field">
+        <label>悬停色 HOVERED</label>
+        <input type="color" id="c-hover" value="#1f6fd0">
+      </div>
+      <div class="field">
+        <label>按下色 PRESSED</label>
+        <input type="color" id="c-press" value="#154f9b">
+      </div>
+      <div class="field">
+        <label>勾选色 CHECKED</label>
+        <input type="color" id="c-checked" value="#1f9d66">
+      </div>
+      <div class="field">
+        <label>圆角 radius <output id="o-radius">12 px</output></label>
+        <input type="range" id="radius" min="0" max="30" step="1" value="12">
+      </div>
+      <div class="field">
+        <label>过渡时长 transition <output id="o-dur">200 ms</output></label>
+        <input type="range" id="dur" min="0" max="600" step="20" value="200">
+      </div>
+      <div class="field wide">
+        <label>过渡属性 trans_props</label>
+        <div style="display:flex;gap:18px;flex-wrap:wrap">
+          <div class="check"><input type="checkbox" id="t-bg" checked><span>background</span></div>
+          <div class="check"><input type="checkbox" id="t-color" checked><span>color</span></div>
+          <div class="check"><input type="checkbox" id="t-shadow" checked><span>shadow</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>禁用 LV_STATE_DISABLED</label>
+        <div class="check"><input type="checkbox" id="disabled"><span>启用禁用态</span></div>
+      </div>
+      <div class="field">
+        <label>勾选 LV_STATE_CHECKED</label>
+        <div class="check"><input type="checkbox" id="checked"><span>启用勾选态</span></div>
+      </div>
+      <div class="field">
+        <label>聚焦 LV_STATE_FOCUSED</label>
+        <div class="check"><input type="checkbox" id="focus"><span>强制叠加聚焦态</span></div>
+      </div>
+      <div class="field">
+        <label>状态机说明</label>
+        <div class="check"><input type="checkbox" id="map" checked><span>在画布显示说明文字</span></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <pre class="code" id="code"></pre>
+
+  <footer>画布尺寸 320×240。可在画布上悬停 / 按下 / 点击按钮体验真实状态，仅导出 PNG，完全离线可用。</footer>
+</div>
+
+<script src="../assets/widget-kit.js"></script>
+<script>
+(function () {
+  "use strict";
+  var K = LVKit, W = 320, H = 240;
+
+  var state = {
+    cNormal: "#2b7de9", cHover: "#1f6fd0", cPress: "#154f9b", cChecked: "#1f9d66",
+    radius: 12, dur: 200,
+    tBg: true, tColor: true, tShadow: true,
+    disabled: false, checked: false, focus: false, map: true
+  };
+  var ui = { hover: false, pressed: false, focused: false };
+  var BTN = { x: 85, y: 78, w: 150, h: 54 };
+  var BASE_SW = 12, BASE_SY = 4;
+
+  var view = K.view(document.getElementById("view"));
+  view.resize(W, H);
+
+  var shown = { bg: state.cNormal, text: "#ffffff", sw: BASE_SW, sy: BASE_SY };
+  var from = { bg: state.cNormal, text: "#ffffff", sw: BASE_SW, sy: BASE_SY };
+  var lastSig = "", startT = 0;
+
+  function focused() { return state.focus || ui.focused; }
+
+  function target() {
+    if (state.disabled) return { bg: "#c9cfd8", text: "#f2f4f7", sw: 0, sy: 0 };
+    if (ui.pressed) return { bg: state.cPress, text: "#ffffff", sw: 4, sy: 1 };
+    if (ui.hover) return { bg: state.cHover, text: "#ffffff", sw: 24, sy: 9 };
+    if (state.checked) return { bg: state.cChecked, text: "#ffffff", sw: 14, sy: 5 };
+    return { bg: state.cNormal, text: "#ffffff", sw: BASE_SW, sy: BASE_SY };
+  }
+
+  function step(now) {
+    var t = target();
+    var sig = t.bg + "|" + t.text + "|" + t.sw + "|" + t.sy;
+    if (sig !== lastSig) {
+      lastSig = sig;
+      from.bg = shown.bg;
+      from.text = shown.text;
+      from.sw = shown.sw;
+      from.sy = shown.sy;
+      startT = now;
+    }
+    var k = state.dur > 0 ? K.clamp((now - startT) / state.dur, 0, 1) : 1;
+    var e = K.ease(k);
+    shown.bg = state.tBg ? K.mix(from.bg, t.bg, e) : t.bg;
+    shown.text = state.tColor ? K.mix(from.text, t.text, e) : t.text;
+    if (state.tShadow) {
+      shown.sw = K.lerp(from.sw, t.sw, e);
+      shown.sy = K.lerp(from.sy, t.sy, e);
+    } else {
+      shown.sw = t.sw;
+      shown.sy = t.sy;
+    }
+  }
+
+  function activeStates() {
+    var a = [];
+    if (state.disabled) {
+      a.push("DISABLED");
+      if (state.checked) a.push("CHECKED");
+    } else {
+      if (ui.pressed) a.push("PRESSED");
+      if (ui.hover) a.push("HOVERED");
+      if (state.checked) a.push("CHECKED");
+    }
+    if (focused()) a.push("FOCUSED");
+    if (!a.length) a.push("DEFAULT");
+    return a;
+  }
+
+  function draw(c) {
+    c.clearRect(0, 0, W, H);
+
+    var label = "状态 " + activeStates().join(" | ");
+    var tw = K.measure(c, label, { size: 9, mono: true });
+    var chipW = Math.min(W - 20, tw + 18);
+    K.box(c, 10, 10, chipW, 20, { bg: "#f1f4f8", radius: 10, borderWidth: 1, border: "#dde3ea" });
+    c.save();
+    K.roundRectPath(c, 10, 10, chipW, 20, 10);
+    c.clip();
+    K.text(c, label, 19, 20, { size: 9, mono: true, color: K.theme.textMuted });
+    c.restore();
+
+    K.box(c, BTN.x, BTN.y, BTN.w, BTN.h, {
+      bg: shown.bg, radius: state.radius,
+      shadow: shown.sw > 0.2 ? "rgba(28,33,40,0.22)" : null,
+      shadowBlur: shown.sw, shadowY: shown.sy
+    });
+    K.text(c, "按钮", BTN.x + BTN.w / 2, BTN.y + BTN.h / 2, {
+      size: 16, weight: 600, color: shown.text, align: "center"
+    });
+
+    if (focused()) {
+      c.save();
+      c.strokeStyle = "#2b7de9";
+      c.lineWidth = 2;
+      K.roundRectPath(c, BTN.x - 5, BTN.y - 5, BTN.w + 10, BTN.h + 10, state.radius + 5);
+      c.stroke();
+      c.restore();
+    }
+
+    if (state.map) {
+      K.text(c, "默认 → HOVERED → PRESSED", W / 2, 178, { size: 10.5, color: K.theme.textMuted, align: "center" });
+      K.text(c, "点击切换 CHECKED · DISABLED 优先级最高", W / 2, 194, { size: 10, color: K.theme.textFaint, align: "center" });
+      K.text(c, "点击按钮或勾选参数可叠加 FOCUSED", W / 2, 210, { size: 10, color: K.theme.textFaint, align: "center" });
+    }
+  }
+
+  K.run(function (now) {
+    step(now || performance.now());
+    draw(view.ctx);
+  });
+
+  function col(hex) { return K.fn("lv_color_hex") + "(" + K.num(K.hexCode(hex)) + ")"; }
+
+  function renderCode() {
+    var props = [];
+    if (state.tBg) props.push("LV_STYLE_BG_COLOR");
+    if (state.tColor) props.push("LV_STYLE_TEXT_COLOR");
+    if (state.tShadow) {
+      props.push("LV_STYLE_SHADOW_WIDTH");
+      props.push("LV_STYLE_SHADOW_OFFSET_Y");
+    }
+    var propStr = props.map(function (p) { return K.num(p); }).join(", ");
+    if (propStr) propStr += ", ";
+
+    var L = [];
+    L.push(K.cm("/* 由页面参数实时生成 */"));
+    L.push("static lv_style_t style_hov, style_pr, style_chk, style_dis;");
+    L.push("static const lv_style_prop_t trans_props[] = {" + propStr + "0};");
+    L.push("static lv_style_transition_dsc_t trans;");
+    L.push(K.fn("lv_style_transition_dsc_init") + "(&trans, trans_props, " + K.fn("lv_anim_path_ease_out") + ", " + K.num(state.dur) + ", 0, NULL);");
+    L.push("");
+    L.push(K.fn("lv_style_init") + "(&style_hov);");
+    L.push(K.fn("lv_style_set_bg_color") + "(&style_hov, " + col(state.cHover) + ");");
+    L.push(K.fn("lv_style_set_shadow_width") + "(&style_hov, " + K.num(24) + ");");
+    L.push(K.fn("lv_style_set_transition") + "(&style_hov, &trans);");
+    L.push("");
+    L.push(K.fn("lv_style_init") + "(&style_pr);");
+    L.push(K.fn("lv_style_set_bg_color") + "(&style_pr, " + col(state.cPress) + ");");
+    L.push(K.fn("lv_style_set_shadow_width") + "(&style_pr, " + K.num(4) + ");");
+    L.push(K.fn("lv_style_set_transition") + "(&style_pr, &trans);");
+    L.push("");
+    L.push(K.fn("lv_style_init") + "(&style_chk);");
+    L.push(K.fn("lv_style_set_bg_color") + "(&style_chk, " + col(state.cChecked) + ");");
+    L.push(K.fn("lv_style_set_shadow_width") + "(&style_chk, " + K.num(14) + ");");
+    L.push(K.fn("lv_style_set_transition") + "(&style_chk, &trans);");
+    L.push("");
+    L.push(K.fn("lv_style_init") + "(&style_dis);");
+    L.push(K.fn("lv_style_set_bg_color") + "(&style_dis, " + col("#c9cfd8") + ");");
+    L.push(K.fn("lv_style_set_text_color") + "(&style_dis, " + col("#f2f4f7") + ");");
+    L.push(K.fn("lv_style_set_shadow_width") + "(&style_dis, " + K.num(0) + ");");
+    L.push(K.fn("lv_style_set_transition") + "(&style_dis, &trans);");
+    L.push("");
+    L.push("lv_obj_t * btn = " + K.fn("lv_button_create") + "(lv_screen_active());");
+    L.push(K.fn("lv_obj_set_size") + "(btn, " + K.num(BTN.w) + ", " + K.num(BTN.h) + ");");
+    L.push(K.fn("lv_obj_set_style_radius") + "(btn, " + K.num(state.radius) + ", 0);");
+    L.push(K.fn("lv_obj_set_style_bg_color") + "(btn, " + col(state.cNormal) + ", 0);");
+    L.push(K.fn("lv_obj_set_style_shadow_width") + "(btn, " + K.num(BASE_SW) + ", 0);");
+    L.push(K.fn("lv_obj_set_style_shadow_offset_y") + "(btn, " + K.num(BASE_SY) + ", 0);");
+    L.push(K.fn("lv_obj_set_style_text_color") + "(btn, " + col("#ffffff") + ", 0);");
+    L.push(K.fn("lv_obj_add_flag") + "(btn, " + K.num("LV_OBJ_FLAG_CLICKABLE") + ");");
+    L.push(K.fn("lv_obj_add_flag") + "(btn, " + K.num("LV_OBJ_FLAG_CHECKABLE") + ");");
+    L.push(K.fn("lv_obj_add_style") + "(btn, &style_hov, " + K.num("LV_STATE_HOVERED") + ");");
+    L.push(K.fn("lv_obj_add_style") + "(btn, &style_pr, " + K.num("LV_STATE_PRESSED") + ");");
+    L.push(K.fn("lv_obj_add_style") + "(btn, &style_chk, " + K.num("LV_STATE_CHECKED") + ");");
+    L.push(K.fn("lv_obj_add_style") + "(btn, &style_dis, " + K.num("LV_STATE_DISABLED") + ");");
+    if (state.checked) L.push(K.fn("lv_obj_add_state") + "(btn, " + K.num("LV_STATE_CHECKED") + ");");
+    if (state.disabled) L.push(K.fn("lv_obj_add_state") + "(btn, " + K.num("LV_STATE_DISABLED") + ");");
+    if (state.focus) L.push(K.fn("lv_obj_add_state") + "(btn, " + K.num("LV_STATE_FOCUSED") + ");");
+    L.push("");
+    L.push("lv_obj_t * label = " + K.fn("lv_label_create") + "(btn);");
+    L.push(K.fn("lv_label_set_text") + "(label, \"按钮\");");
+    L.push(K.fn("lv_obj_center") + "(label);");
+    L.push(K.fn("lv_obj_center") + "(btn);");
+    K.code(L);
+  }
+
+  function pos(e) {
+    var r = view.canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function inside(p) {
+    return p.x >= BTN.x && p.x <= BTN.x + BTN.w && p.y >= BTN.y && p.y <= BTN.y + BTN.h;
+  }
+
+  view.canvas.addEventListener("pointermove", function (e) {
+    ui.hover = !state.disabled && inside(pos(e));
+  });
+  view.canvas.addEventListener("pointerleave", function () {
+    ui.hover = false;
+    ui.pressed = false;
+  });
+  view.canvas.addEventListener("pointercancel", function () {
+    ui.pressed = false;
+  });
+  view.canvas.addEventListener("pointerdown", function (e) {
+    var p = pos(e);
+    if (!inside(p)) {
+      ui.focused = false;
+      return;
+    }
+    if (state.disabled) return;
+    ui.pressed = true;
+    ui.focused = true;
+  });
+  view.canvas.addEventListener("pointerup", function (e) {
+    var was = ui.pressed;
+    ui.pressed = false;
+    if (was && !state.disabled && inside(pos(e))) {
+      state.checked = !state.checked;
+      document.getElementById("checked").checked = state.checked;
+      renderCode();
+    }
+  });
+
+  function bindColor(id, key) {
+    document.getElementById(id).addEventListener("input", function (e) {
+      state[key] = e.target.value;
+      renderCode();
+    });
+  }
+  bindColor("c-normal", "cNormal");
+  bindColor("c-hover", "cHover");
+  bindColor("c-press", "cPress");
+  bindColor("c-checked", "cChecked");
+
+  K.bindRange("radius", function (v) { return v + " px"; }, function (v) { state.radius = v; renderCode(); });
+  K.bindRange("dur", function (v) { return v + " ms"; }, function (v) { state.dur = v; renderCode(); });
+
+  K.bindCheck("t-bg", function (on) { state.tBg = on; renderCode(); });
+  K.bindCheck("t-color", function (on) { state.tColor = on; renderCode(); });
+  K.bindCheck("t-shadow", function (on) { state.tShadow = on; renderCode(); });
+  K.bindCheck("disabled", function (on) {
+    state.disabled = on;
+    if (on) {
+      ui.pressed = false;
+      ui.hover = false;
+    }
+    renderCode();
+  });
+  K.bindCheck("checked", function (on) { state.checked = on; renderCode(); });
+  K.bindCheck("focus", function (on) { state.focus = on; renderCode(); });
+  K.bindCheck("map", function (on) { state.map = on; });
+
+  document.getElementById("btn-png").addEventListener("click", function () {
+    K.exportPng(view.canvas, "style-states.png");
+  });
+
+  renderCode();
+})();
+</script>
+</body>
+</html>

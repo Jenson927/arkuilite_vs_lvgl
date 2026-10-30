@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LVGL 与 ArkUI lite 组件对比演示</title>
+<link rel="stylesheet" href="assets/theme.css">
+<link rel="stylesheet" href="assets/components.css">
+<style>
+  .lv-cmp-summary{
+    margin:26px 0 4px;padding:12px 16px;background:var(--lv-card);
+    border:var(--lv-border) solid var(--lv-grey);border-radius:var(--lv-radius);
+    font-size:13px;line-height:1.7;
+  }
+  .lv-cmp-summary b{font-weight:600}
+  .lv-cmp-summary .ok{color:#1f9d66;font-weight:600}
+  .lv-cmp-summary .part{color:#b07800;font-weight:600}
+  .lv-cmp-summary .none{color:#c23b3b;font-weight:600}
+  /* 与子页差异对照同款的汇总 chips */
+  .lv-cmp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .lv-cmp-chip{font-size:12.5px;border-radius:8px;padding:6px 12px;border:1px solid;font-weight:600}
+  .lv-cmp-chip.ok{background:#eef9f3;border-color:#bfe7d3;color:#1f7a4d}
+  .lv-cmp-chip.part{background:#fff7ea;border-color:#f2dcb3;color:#a06600}
+  .lv-cmp-chip.none{background:#fdeeee;border-color:#f3c9c9;color:#b52a2a}
+  .lv-badge--part{background:rgba(240,160,32,.16);color:#a06600}
+  .lv-badge--none{background:rgba(214,69,69,.14);color:#b52a2a}
+  /* 优先级徽标（取自需求表「使用频率」列 / 「组件优先级」排名） */
+  .lv-prio{display:inline-block;margin:8px 6px 0 0;font-size:11px;font-weight:600;
+    border-radius:6px;padding:2px 8px;border:1px solid;letter-spacing:.2px}
+  .lv-prio.p1{background:#fdeeee;border-color:#f3c9c9;color:#c23b3b}
+  .lv-prio.p2{background:#fff3e6;border-color:#f2d3ac;color:#c25e00}
+  .lv-prio.p3{background:#eef4fd;border-color:#c9dcf3;color:#2b6cb8}
+  .lv-prio.p4{background:#f2f4f7;border-color:#dcdfe5;color:#6b7480}
+  /* 「项目」= 需求表「美的使用」为是；「ToB」= 需求表「策略」为 ToB */
+  .lv-prio--use{background:#e9f7ef;border-color:#bfe7d3;color:#1f7a4d}
+  .lv-prio--tob{background:#f0ecfb;border-color:#d5c9f0;color:#6a4bb8}
+  .lv-card-item__gap{margin:8px 0 0;font-size:11.5px;line-height:1.6;color:#c23b3b}
+  .lv-card-item__gap.part{color:#a06600}
+  .lv-card-item__gap.full{color:#1f7a4d}
+  /* 卡片内 ✓/△/✗ 判定计数 */
+  .lv-card-item__diffs{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .lv-card-item__diffs span{
+    font-size:11px;font-weight:600;border-radius:6px;padding:1px 7px;border:1px solid;
+  }
+  .lv-card-item__diffs .ok{background:#eef9f3;border-color:#bfe7d3;color:#1f7a4d}
+  .lv-card-item__diffs .part{background:#fff7ea;border-color:#f2dcb3;color:#a06600}
+  .lv-card-item__diffs .none{background:#fdeeee;border-color:#f3c9c9;color:#b52a2a}
+  [data-theme="dark"] .lv-badge--part{color:#ffcc80}
+  [data-theme="dark"] .lv-badge--none{color:#ef9a9a}
+  [data-theme="dark"] .lv-prio.p1{background:rgba(214,69,69,.14);border-color:rgba(214,69,69,.4);color:#ef9a9a}
+  [data-theme="dark"] .lv-prio.p2{background:rgba(240,160,32,.14);border-color:rgba(240,160,32,.4);color:#ffcc80}
+  [data-theme="dark"] .lv-prio.p3{background:rgba(43,125,233,.14);border-color:rgba(43,125,233,.4);color:#90caf9}
+  [data-theme="dark"] .lv-prio.p4{background:rgba(138,146,156,.14);border-color:rgba(138,146,156,.4);color:#aab2bc}
+  [data-theme="dark"] .lv-prio--use{background:rgba(31,157,102,.14);border-color:rgba(31,157,102,.4);color:#9be3bd}
+  [data-theme="dark"] .lv-prio--tob{background:rgba(106,75,184,.16);border-color:rgba(106,75,184,.45);color:#c3b1f0}
+  [data-theme="dark"] .lv-card-item__gap{color:#ef9a9a}
+  [data-theme="dark"] .lv-card-item__gap.part{color:#ffcc80}
+  [data-theme="dark"] .lv-card-item__gap.full{color:#9be3bd}
+  [data-theme="dark"] .lv-cmp-chip.ok{background:rgba(31,157,102,.14);color:#9be3bd}
+  [data-theme="dark"] .lv-cmp-chip.part{background:rgba(240,160,32,.14);color:#ffcc80}
+  [data-theme="dark"] .lv-cmp-chip.none{background:rgba(214,69,69,.14);color:#ef9a9a}
+  [data-theme="dark"] .lv-card-item__diffs .ok{background:rgba(31,157,102,.14);border-color:rgba(31,157,102,.4);color:#9be3bd}
+  [data-theme="dark"] .lv-card-item__diffs .part{background:rgba(240,160,32,.14);border-color:rgba(240,160,32,.4);color:#ffcc80}
+  [data-theme="dark"] .lv-card-item__diffs .none{background:rgba(214,69,69,.14);border-color:rgba(214,69,69,.4);color:#ef9a9a}
+</style>
+</head>
+<body>
+<div class="lv-page">
+  <header class="lv-topbar">
+    <div>
+      <h1 class="lv-topbar__title">LVGL 与 ArkUI lite 组件对比演示</h1>
+      <p class="lv-topbar__sub">左侧 LVGL 复刻 · 右侧 ArkUI lite（small UI_Lite）真实能力 · 缺失能力直接标注</p>
+    </div>
+    <div class="lv-topbar__spacer"></div>
+    <button class="lv-theme-btn" id="lv-theme-toggle" onclick="lvToggleTheme()">深色主题</button>
+  </header>
+
+  <div class="lv-cmp-summary" id="lv-cmp-summary"></div>
+  <div id="gallery"></div>
+
+  <div class="lv-note" style="margin-top:32px">
+    <h3 class="lv-note__title">说明</h3>
+    <ul>
+      <li>每页为左右双栏：左列 LVGL 复刻演示 + 独立操作区（尽量演示右列缺失的能力），右列 ArkUI lite（small UI_Lite）演示 + 独立操作区；差异对照位于双栏之后、实时生成代码之前。</li>
+      <li>右列舞台右上角以红色标注「ArkUI lite 无法表达」的能力缺口；左列舞台左上角以灰色标注「LVGL 不可演示」项。</li>
+      <li>每页底部为双列实时生成代码：左列 LVGL C 代码、右列 ArkUI lite C++ 代码，随操作参数实时刷新；右列渲染参数取自 ui_lite / graphic_utils_lite 源码并附依据说明。</li>
+      <li>卡片右上角标注 ArkUI lite 的对应情况：能力对齐 / 部分缺失 / 无对应组件；卡片下方列出具体缺口与 ✓/△/✗ 逐项判定计数。</li>
+      <li>组件按《LVGL_VS_UILITE需求_已刷新》「组件」表的分类列排布（基础与文本 / 进度与数值 / 选择与开关 / 文本输入 / 导航&容器 / 数据展示 / 扩展控件）；卡片上的优先级徽标取自该表「使用频率」列及「组件优先级」表的排名与估算使用率（# 号越小优先级越高）。</li>
+      <li>优先级徽标后的绿色「项目」标注表示需求表「美的使用」列为"是"（美的项目在用）；紫色「ToB」标注表示需求表「策略」列为 ToB 标准。</li>
+      <li>左列演示画布统一为 360×220，与官方 <code>examples/widgets</code> 的小屏目标一致；多数页面保留 PNG / GIF / WebM 导出。</li>
+      <li>覆盖 36 个控件、2 种布局（Flex / Grid）与 2 组样式（基础 / 状态过渡）。</li>
+    </ul>
+  </div>
+</div>
+<script src="assets/demo.js"></script>
+<script src="assets/compare-data.js"></script>
+<script>
+lvRenderGallery();
+
+(function () {
+  var DATA = window.LV_COMPARE_DATA || {};
+  var cards = document.querySelectorAll("#gallery .lv-card-item");
+  var stat = { full: 0, partial: 0, none: 0 };
+
+  Array.prototype.forEach.call(cards, function (card) {
+    var href = card.getAttribute("href") || "";
+    var id = href.split("/").pop().replace(/\.html$/i, "");
+    var d = DATA[id];
+    var badge = card.querySelector(".lv-badge");
+
+    if (!d) {
+      if (badge) {
+        badge.className = "lv-badge";
+        badge.textContent = "LVGL 演示";
+      }
+      return;
+    }
+
+    stat[d.level] = (stat[d.level] || 0) + 1;
+
+    if (badge) {
+      badge.className = "lv-badge " +
+        (d.level === "full" ? "lv-badge--ok" : d.level === "partial" ? "lv-badge--part" : "lv-badge--none");
+      badge.textContent = d.level === "full" ? "能力对齐" : d.level === "partial" ? "部分缺失" : "无对应组件";
+    }
+
+    var gap = document.createElement("p");
+    gap.className = "lv-card-item__gap " + d.level;
+    if (d.level === "none") {
+      gap.textContent = "ArkUI lite 无对应组件" + (d.alt ? "；最接近：" + d.alt : "");
+    } else if (d.level === "partial") {
+      gap.textContent = "缺口：" + (d.gaps || []).join("、");
+    } else {
+      gap.textContent = "两侧能力基本对齐";
+    }
+    card.appendChild(gap);
+
+    /* 与子页差异对照同款的 ✓/△/✗ 判定计数 */
+    if (d.diffs && d.diffs.length) {
+      var n = { ok: 0, part: 0, none: 0 };
+      d.diffs.forEach(function (r) { n[r[3]] = (n[r[3]] || 0) + 1; });
+      var box = document.createElement("div");
+      box.className = "lv-card-item__diffs";
+      box.innerHTML =
+        '<span class="ok">✓ ' + n.ok + "</span>" +
+        '<span class="part">△ ' + n.part + "</span>" +
+        '<span class="none">✗ ' + n.none + "</span>";
+      box.title = "双方具备 / 部分对齐 / 仅 LVGL 具备 的逐项判定数";
+      card.appendChild(box);
+    }
+  });
+
+  var host = document.getElementById("lv-cmp-summary");
+  if (host) {
+    host.innerHTML =
+      "<b>能力差距一览</b>：本页 " + (stat.full + stat.partial + stat.none) +
+      " 个 LVGL 控件中，ArkUI lite <span class=\"ok\">能力对齐 " + stat.full +
+      "</span> · <span class=\"part\">部分缺失 " + stat.partial +
+      "</span> · <span class=\"none\">无对应组件 " + stat.none +
+      "</span>。点击卡片进入左右分列对比页：左列 LVGL 演示 + 独立操作，右列 ArkUI lite 演示 + 独立操作，" +
+      "页面下方为逐项差异对照与双列实时生成代码。" +
+      '<div class="lv-cmp-chips">' +
+      '<span class="lv-cmp-chip ok">✓ 能力对齐 ' + stat.full + " 个控件</span>" +
+      '<span class="lv-cmp-chip part">△ 部分缺失 ' + stat.partial + " 个控件</span>" +
+      '<span class="lv-cmp-chip none">✗ 无对应组件 ' + stat.none + " 个控件</span>" +
+      "</div>";
+  }
+})();
+</script>
+</body>
+</html>

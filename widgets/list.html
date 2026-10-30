@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>List：LVGL lv_list vs ArkUI lite UIList</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='4' width='22' height='24' rx='4' fill='%232b7de9'/%3E%3Cg fill='%23fff'%3E%3Crect x='8' y='8' width='16' height='1.6'/%3E%3Crect x='8' y='13' width='12' height='1.6'/%3E%3Crect x='8' y='18' width='14' height='1.6'/%3E%3Crect x='8' y='23' width='10' height='1.6'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>List：lv_list vs UIList</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（内置按钮项 / 文本项 / 分组头 + 动态增删动画），右列为按
+      <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码渲染的 UIList（纯滚动容器 + Adapter）。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_list</code>
+        <span class="cmp-tag lv">内置项类型 · 增删动画</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击条目选中（仅按钮项）；滚轮 / 拖动滚动；「添加 / 删除」按条目类型实时增删，带滑入滑出动画。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>列表标题（顶部文本项）<span class="api">lv_list_add_text(list, "标题")</span></label>
+            <input type="text" id="title" value="快捷入口" maxlength="12">
+          </div>
+
+          <div class="field wide">
+            <label>待添加项类型<span class="api">lv_list_add_button（按钮项）/ lv_list_add_text（文本项 · 分组头）</span></label>
+            <div class="seg" id="itype">
+              <button type="button" data-v="button" class="active">按钮项</button>
+              <button type="button" data-v="text">文本项</button>
+              <button type="button" data-v="header">分组头</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>显示图标<span class="api">lv_list_add_button(list, LV_SYMBOL_*, "文本")</span></label>
+            <div class="check"><input type="checkbox" id="icons" checked><span>为按钮项绘制图标</span></div>
+          </div>
+          <div class="field">
+            <label>显示滚动条<span class="api">lv_obj_set_scrollbar_mode(list, LV_SCROLLBAR_MODE_AUTO)</span></label>
+            <div class="check"><input type="checkbox" id="scrollbar" checked><span>内容超出时显示</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>自动滚动演示<span class="api">来回滚动（导出动图用）</span></label>
+            <div class="check"><input type="checkbox" id="auto"><span>自动来回滚动</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="btn-add">＋ 添加条目</button>
+          <button type="button" class="btn" id="btn-del">－ 删除末项</button>
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM</button>
+          <button type="button" class="btn" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIList</code>
+        <span class="cmp-tag ui">纯滚动容器 · 项靠 Adapter</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UIList 本身只是滚动容器：列表项、按钮、分组头都要在 AbstractAdapter 里自建子控件。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>选中项<span class="api">SetSelectPosition(uint16_t index)：选中项高亮（需 Adapter 配合渲染）</span></label>
+            <div class="seg" id="usel">
+              <button type="button" data-v="0">第 1 项</button>
+              <button type="button" data-v="1" class="active">第 2 项</button>
+              <button type="button" data-v="2">第 3 项</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_list.cpp</code> / <code>ui_list.h</code> ——
+          UIList 继承 UIScrollView，通过 <code>SetAdapter(AbstractAdapter*)</code> 绑定数据；
+          <code>SetLoopState</code> 循环、<code>SetSelectPosition</code> 选中、
+          <code>SetYScrollBarVisible</code> 滚动条；没有内置按钮/文本/分组项，也没有增删动画。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列 GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列能力描述取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_list 复刻（迁移自旧页 + 项类型 / 动态增删动画增强）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 360, H = 220;
+  var CARD = { x: 36, y: 16, w: 288, h: 178 };
+  var TITLE_H = 30;
+  var VIEW = { x: CARD.x + 1, y: CARD.y + TITLE_H, w: CARD.w - 2, h: CARD.h - TITLE_H - 1 };
+  var ITEM_H = 40, HEADER_H = 28, ANIM_MS = 260;
+
+  var POOL = [
+    { icon: "home",   label: "首页",     sym: "LV_SYMBOL_HOME" },
+    { icon: "user",   label: "用户中心", sym: "LV_SYMBOL_USER" },
+    { icon: "gear",   label: "设置",     sym: "LV_SYMBOL_SETTINGS" },
+    { icon: "bell",   label: "通知",     sym: "LV_SYMBOL_BELL" },
+    { icon: "trash",  label: "回收站",   sym: "LV_SYMBOL_TRASH" },
+    { icon: "folder", label: "我的文件", sym: "LV_SYMBOL_DIRECTORY" },
+    { icon: "search", label: "搜索",     sym: "LV_SYMBOL_SEARCH" },
+    { icon: "wifi",   label: "网络",     sym: "LV_SYMBOL_WIFI" }
+  ];
+  var state = {
+    title: "快捷入口",
+    icons: true,
+    showScrollbar: true,
+    auto: false,
+    sel: 1,
+    scroll: 0,
+    addType: "button"
+  };
+
+  var textSeq = 0, headerSeq = 0;
+  var items = [];        // { kind:'button'|'text'|'header', icon,label,sym, t0, anim:'in'|'out'|null }
+
+  function makeItem(kind){
+    if(kind === "button"){
+      var p = POOL[(items.filter(function(x){ return x.kind === "button"; }).length) % POOL.length];
+      return { kind: "button", icon: p.icon, label: p.label, sym: p.sym, t0: 0, anim: null };
+    }
+    if(kind === "text"){
+      textSeq++;
+      return { kind: "text", label: "文本条目 " + textSeq, t0: 0, anim: null };
+    }
+    headerSeq++;
+    return { kind: "header", label: "分组 " + String.fromCharCode(64 + ((headerSeq - 1) % 26) + 1), t0: 0, anim: null };
+  }
+
+  for(var i0 = 0; i0 < 4; i0++) items.push(makeItem("button"));
+
+  /* ---------- 5×7 点阵图标 ---------- */
+  var ICONS = {
+    home: ["00100","01110","11111","01110","01110","11111","00000"],
+    user: ["01110","01110","00100","11111","00100","01010","10001"],
+    gear: ["01010","11111","11011","00100","11011","11111","01010"],
+    bell: ["00100","01110","01110","01110","11111","00100","01110"],
+    trash: ["00100","11111","01010","01010","01010","01110","11111"],
+    folder: ["11110","10000","11110","10001","10001","10001","11110"],
+    search: ["01110","10001","10001","10001","01110","00100","00010"],
+    wifi: ["01110","10001","00100","01010","00000","00100","00000"]
+  };
+  function drawIcon(c, name, x, y, size, color){
+    var g = ICONS[name];
+    if(!g) return;
+    var px = size / 7;
+    c.save();
+    c.fillStyle = color;
+    for(var r = 0; r < 7; r++){
+      for(var col = 0; col < 5; col++){
+        if(g[r][col] === "1") c.fillRect(x + col * px, y + r * px, px + 0.4, px + 0.4);
+      }
+    }
+    c.restore();
+  }
+
+  /* ---------- 工具 ---------- */
+  var FAMILY = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+  function easeOut(k){ return 1 - Math.pow(1 - k, 3); }
+  function roundRect(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var t0 = performance.now();
+  var autoStart = 0;
+  var hitItems = [];
+
+  function setStatus(msg, ok){ statusEl.textContent = msg; statusEl.className = "status" + (ok ? " ok" : ""); }
+
+  function fullH(it){ return it.kind === "header" ? HEADER_H : ITEM_H; }
+
+  function animH(it, now){
+    if(!it.anim) return fullH(it);
+    var p = clamp((now - it.t0) / ANIM_MS, 0, 1);
+    return it.anim === "in" ? fullH(it) * easeOut(p) : fullH(it) * (1 - easeOut(p));
+  }
+
+  function metrics(now){
+    var contentH = 8;
+    for(var i = 0; i < items.length; i++) contentH += animH(items[i], now);
+    var maxScroll = Math.max(0, contentH - (VIEW.h - 4));
+    return { contentH: contentH, maxScroll: maxScroll };
+  }
+
+  function scrollAt(t){
+    var m = metrics(performance.now());
+    if(m.maxScroll <= 0) return 0;
+    var cycle = 3200;
+    var k = 0.5 - 0.5 * Math.cos((t % cycle) / cycle * Math.PI * 2);
+    return m.maxScroll * k;
+  }
+
+  /* ---------- 绘制 ---------- */
+  function drawScene(c, now, forceAuto){
+    var m = metrics(now);
+    var autoOn = forceAuto || state.auto;
+    var sc = autoOn ? scrollAt(now - autoStart) : clamp(state.scroll, 0, m.maxScroll);
+
+    c.clearRect(0, 0, W, H);
+
+    /* 卡片 */
+    c.save();
+    c.shadowColor = "rgba(28,33,40,0.10)";
+    c.shadowBlur = 12;
+    c.shadowOffsetY = 4;
+    roundRect(c, CARD.x, CARD.y, CARD.w, CARD.h, 12);
+    c.fillStyle = "#ffffff";
+    c.fill();
+    c.restore();
+    roundRect(c, CARD.x, CARD.y, CARD.w, CARD.h, 12);
+    c.strokeStyle = "#d6d9df";
+    c.lineWidth = 1;
+    c.stroke();
+
+    c.font = "600 12.5px " + FAMILY;
+    c.fillStyle = "#5b6470";
+    c.textBaseline = "middle";
+    c.textAlign = "left";
+    c.fillText(state.title || "列表", CARD.x + 14, CARD.y + TITLE_H / 2);
+    c.fillStyle = "#eceff3";
+    c.fillRect(CARD.x + 1, CARD.y + TITLE_H - 1, CARD.w - 2, 1);
+
+    hitItems = [];
+    c.save();
+    c.beginPath();
+    c.rect(VIEW.x, VIEW.y, VIEW.w, VIEW.h);
+    c.clip();
+
+    var y = VIEW.y + 4 - sc;
+    var btnIdx = -1;
+    for(var i = 0; i < items.length; i++){
+      var it = items[i];
+      var h = animH(it, now);
+      var fade = it.anim ? clamp((now - it.t0) / ANIM_MS, 0, 1) : 1;
+      var alpha = it.anim === "out" ? 1 - fade : (it.anim === "in" ? 0.25 + 0.75 * fade : 1);
+      if(it.kind === "button") btnIdx++;
+
+      if(y + h >= VIEW.y && y <= VIEW.y + VIEW.h && h > 0.5){
+        c.save();
+        c.globalAlpha = alpha;
+
+        if(it.kind === "button"){
+          var sel = (btnIdx === state.sel);
+          if(sel){
+            roundRect(c, VIEW.x + 8, y + 3, VIEW.w - 22, h - 6, 8);
+            c.fillStyle = "#eaf1fd";
+            c.fill();
+          }
+          if(state.icons) drawIcon(c, it.icon, VIEW.x + 18, y + h / 2 - 8, 16, sel ? "#2b7de9" : "#5b6470");
+          c.font = (sel ? "600 " : "400 ") + "13.5px " + FAMILY;
+          c.fillStyle = sel ? "#2b7de9" : "#1c2128";
+          c.fillText(it.label, VIEW.x + (state.icons ? 44 : 18), y + h / 2);
+          c.font = "16px " + FAMILY;
+          c.fillStyle = "#b8bfc9";
+          c.textAlign = "center";
+          c.fillText("›", VIEW.x + VIEW.w - 16, y + h / 2);
+          c.textAlign = "left";
+        }else if(it.kind === "header"){
+          c.fillStyle = "#eceff3";
+          c.fillRect(VIEW.x + 8, y + h - 1, VIEW.w - 22, 1);
+          c.font = "600 11px " + FAMILY;
+          c.fillStyle = "#8a929c";
+          c.fillText(it.label.toUpperCase(), VIEW.x + 18, y + h / 2);
+        }else{
+          c.font = "400 13.5px " + FAMILY;
+          c.fillStyle = "#5b6470";
+          c.fillText(it.label, VIEW.x + 18, y + h / 2);
+        }
+        c.restore();
+      }
+
+      hitItems.push({ i: i, kind: it.kind, btnIdx: btnIdx, y: y, h: h });
+      y += h;
+    }
+    c.restore();
+
+    /* 滚动条 */
+    if(state.showScrollbar && m.maxScroll > 0.5){
+      var trackX = VIEW.x + VIEW.w - 7, trackY = VIEW.y + 6, trackH = VIEW.h - 12;
+      var thumbH = Math.max(22, trackH * (VIEW.h / m.contentH));
+      var thumbY = trackY + (trackH - thumbH) * (sc / m.maxScroll);
+      roundRect(c, trackX, trackY, 4, trackH, 2); c.fillStyle = "#eef0f3"; c.fill();
+      roundRect(c, trackX, thumbY, 4, thumbH, 2); c.fillStyle = "#c2c8d1"; c.fill();
+    }
+
+    c.font = "11px " + FAMILY;
+    c.fillStyle = "#a7aeb8";
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText("点击按钮项选中 · 滚轮 / 拖动滚动 · 添加 / 删除带动画", W / 2, H - 8);
+    c.textAlign = "left";
+  }
+
+  /* ---------- 主循环 ---------- */
+  function loop(now){
+    /* 清理退场完成的条目 */
+    for(var i = items.length - 1; i >= 0; i--){
+      if(items[i].anim === "out" && now - items[i].t0 > ANIM_MS){
+        items.splice(i, 1);
+        renderCode();
+      }
+    }
+    if(!state.auto){
+      var m = metrics(now);
+      state.scroll = clamp(state.scroll, 0, m.maxScroll);
+    }
+    drawScene(ctx, now, false);
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 交互 ---------- */
+  var drag = { active: false, y0: 0, s0: 0, moved: false };
+
+  function posOf(e){
+    var r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function inView(p){
+    return p.x >= VIEW.x && p.x <= VIEW.x + VIEW.w && p.y >= VIEW.y && p.y <= VIEW.y + VIEW.h;
+  }
+  function stopAuto(){
+    if(state.auto){ state.auto = false; document.getElementById("auto").checked = false; }
+  }
+
+  canvas.addEventListener("pointerdown", function(e){
+    var p = posOf(e);
+    if(!inView(p)) return;
+    stopAuto();
+    drag.active = true;
+    drag.y0 = p.y;
+    drag.s0 = state.scroll;
+    drag.moved = false;
+  });
+  canvas.addEventListener("pointermove", function(e){
+    if(!drag.active) return;
+    var p = posOf(e);
+    var dy = p.y - drag.y0;
+    if(Math.abs(dy) > 3) drag.moved = true;
+    state.scroll = clamp(drag.s0 - dy, 0, metrics(performance.now()).maxScroll);
+  });
+  canvas.addEventListener("pointerup", function(e){
+    if(!drag.active) return;
+    drag.active = false;
+    if(drag.moved) return;
+    var p = posOf(e);
+    if(!inView(p)) return;
+    for(var i = 0; i < hitItems.length; i++){
+      var hi = hitItems[i];
+      if(p.y >= hi.y && p.y < hi.y + hi.h && hi.kind === "button" && hi.btnIdx >= 0){
+        state.sel = hi.btnIdx;
+        renderCode();
+        break;
+      }
+    }
+  });
+  canvas.addEventListener("pointercancel", function(){ drag.active = false; });
+  canvas.addEventListener("wheel", function(e){
+    stopAuto();
+    state.scroll = clamp(state.scroll + e.deltaY, 0, metrics(performance.now()).maxScroll);
+    e.preventDefault();
+  }, { passive: false });
+
+  /* ---------- 动态增删（带简单动画） ---------- */
+  function livingCount(){
+    var n = 0;
+    for(var i = 0; i < items.length; i++) if(items[i].anim !== "out") n++;
+    return n;
+  }
+
+  document.getElementById("btn-add").addEventListener("click", function(){
+    if(livingCount() >= 9){ setStatus("条目已达上限 9 个（演示滚动）"); return; }
+    var it = makeItem(state.addType);
+    it.t0 = performance.now();
+    it.anim = "in";
+    items.push(it);
+    setStatus("已添加：" + (it.kind === "button" ? "按钮项" : it.kind === "text" ? "文本项" : "分组头"), true);
+    renderCode();
+  });
+
+  document.getElementById("btn-del").addEventListener("click", function(){
+    for(var i = items.length - 1; i >= 0; i--){
+      if(items[i].anim !== "out"){
+        items[i].anim = "out";
+        items[i].t0 = performance.now();
+        var nBtn = 0;
+        for(var k = 0; k < items.length; k++) if(items[k].kind === "button" && items[k].anim !== "out") nBtn++;
+        state.sel = clamp(state.sel, 0, Math.max(0, nBtn - 1));
+        setStatus("已删除末项", true);
+        renderCode();
+        return;
+      }
+    }
+    setStatus("列表已空");
+  });
+
+  /* ---------- 控件绑定 ---------- */
+  document.getElementById("title").addEventListener("input", function(e){
+    state.title = e.target.value;
+    renderCode();
+  });
+  document.getElementById("itype").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.addType = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
+  });
+  document.getElementById("icons").addEventListener("change", function(e){
+    state.icons = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("scrollbar").addEventListener("change", function(e){
+    state.showScrollbar = e.target.checked;
+    renderCode();
+  });
+  document.getElementById("auto").addEventListener("change", function(e){
+    state.auto = e.target.checked;
+    autoStart = performance.now();
+  });
+
+  /* ---------- 等价 C 代码 ---------- */
+  function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function qstr(s){ return '"' + esc(String(s)) + '"'; }
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由左列参数实时生成 */</span>');
+    L.push('lv_obj_t * list = <span class="fn">lv_list_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_obj_set_size</span>(list, <span class="num">' + CARD.w + '</span>, <span class="num">' + CARD.h + '</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(list);');
+    L.push('<span class="fn">lv_list_add_text</span>(list, ' + qstr(state.title || "列表") + ');  <span class="cm">/* 分组头/文本项 */</span>');
+    var bIdx = -1;
+    for(var i = 0; i < items.length; i++){
+      var it = items[i];
+      if(it.anim === "out") continue;
+      if(it.kind === "button"){
+        bIdx++;
+        var iconArg = state.icons ? it.sym : "NULL";
+        L.push('lv_obj_t * b' + bIdx + ' = <span class="fn">lv_list_add_button</span>(list, ' + iconArg + ', ' + qstr(it.label) + ');');
+      }else if(it.kind === "header"){
+        L.push('<span class="fn">lv_list_add_text</span>(list, ' + qstr(it.label) + ');  <span class="cm">/* 分组头 */</span>');
+      }else{
+        L.push('<span class="fn">lv_list_add_text</span>(list, ' + qstr(it.label) + ');  <span class="cm">/* 文本项 */</span>');
+      }
+    }
+    if(state.sel >= 0 && state.sel <= bIdx){
+      L.push('<span class="fn">lv_obj_add_state</span>(b' + state.sel + ', LV_STATE_CHECKED);  <span class="cm">/* 选中高亮 */</span>');
+    }
+    L.push('<span class="fn">lv_obj_set_scrollbar_mode</span>(list, ' +
+      (state.showScrollbar ? "LV_SCROLLBAR_MODE_AUTO" : "LV_SCROLLBAR_MODE_OFF") + ');');
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 导出 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网），可改用 WebM")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      download(blob, "list.png");
+      setStatus("PNG 已保存", true);
+    }, "image/png");
+  });
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    loadGif().then(function(GIF){
+      var fps = 16, duration = 3200;
+      var frames = Math.max(2, Math.round(duration / 1000 * fps));
+      var gif = new GIF({ workers: 2, quality: 10, width: W, height: H,
+        workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = W; off.height = H;
+      var octx = off.getContext("2d");
+      var i = 0;
+      function step(){
+        if(i < frames){
+          drawScene(octx, i / fps * 1000, true);
+          gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          gif.on("finished", function(blob){
+            download(blob, "list.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          function fail(msg){
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    if(!canvas.captureStream || typeof MediaRecorder === "undefined"){
+      setStatus("当前浏览器不支持 MediaRecorder，请用 Chrome/Edge");
+      return;
+    }
+    btn.disabled = true;
+    var prevAuto = state.auto;
+    state.auto = true;
+    autoStart = performance.now();
+    var stream = canvas.captureStream(30);
+    var rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    var chunks = [];
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      state.auto = prevAuto;
+      document.getElementById("auto").checked = prevAuto;
+      download(new Blob(chunks, { type: "video/webm" }), "list.webm");
+      setStatus("WebM 已保存（一轮 3.2 秒）", true);
+      btn.disabled = false;
+    };
+    setStatus("录制中，约 3 秒…");
+    rec.start();
+    setTimeout(function(){ rec.stop(); }, 3200);
+  });
+
+  /* ---------- 启动 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIList 操作绑定 + 实时生成代码
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+
+  var u = { sel: 1 };
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由右列参数实时生成（见 ui_list.h） */</span>');
+    L.push('UIList * list = <span class="fn">new</span> UIList();');
+    L.push('list-&gt;<span class="fn">SetPosition</span>(<span class="num">70</span>, <span class="num">16</span>);');
+    L.push('list-&gt;<span class="fn">SetWidth</span>(<span class="num">220</span>);');
+    L.push('list-&gt;<span class="fn">SetHeight</span>(<span class="num">190</span>);');
+    L.push('<span class="cm">// 列表项必须自建：Adapter + 子控件</span>');
+    L.push('list-&gt;<span class="fn">SetAdapter</span>(<span class="fn">new</span> ListAdapter(<span class="num">4</span>));');
+    L.push('list-&gt;<span class="fn">SetSelectPosition</span>(<span class="num">' + u.sel + '</span>);');
+    L.push('list-&gt;<span class="fn">SetYScrollBarVisible</span>(true);');
+    L.push('<span class="cm">// 无内置按钮/文本/分组项，也无增删动画</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  function init(){
+    var api = (window.LV2 && window.LV2.api) || {};
+    if(api.setSel) api.setSel(u.sel);
+    $("usel").addEventListener("click", function(e){
+      var btn = e.target.closest ? e.target.closest("button") : null;
+      if(!btn || btn.parentNode !== this) return;
+      u.sel = Number(btn.getAttribute("data-v"));
+      var btns = this.getElementsByTagName("button");
+      for(var i = 0; i < btns.length; i++) btns[i].className = btns[i] === btn ? "active" : "";
+      if(api.setSel) api.setSel(u.sel);
+      renderCode();
+    });
+    renderCode();
+  }
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

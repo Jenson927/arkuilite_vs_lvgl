@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Switch：LVGL lv_switch vs ArkUI lite UIToggleButton</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='9' width='26' height='14' rx='7' fill='%232b7de9'/%3E%3Ccircle cx='22' cy='16' r='5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Switch：lv_switch vs UIToggleButton</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，轨道与滑块分离设样式；右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+      <code>ui_toggle_button.cpp</code>「两张整图切换」方式渲染的 UIToggleButton。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_switch</code>
+        <span class="cmp-tag lv">轨道/滑块分离样式 · 状态可叠加</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">点击画布切换开关；轨道色（MAIN / INDICATOR）与滑块色（KNOB）独立可调，按下 / 禁用可叠加在开关态上。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>状态 LV_STATE_CHECKED<span class="api">lv_obj_add_state(sw, LV_STATE_CHECKED)</span></label>
+            <div class="seg" id="state">
+              <button type="button" data-state="off" class="active">关</button>
+              <button type="button" data-state="on">开</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>切换时长 anim_duration<output id="o-duration">240 ms</output><span class="api">lv_obj_set_style_anim_duration</span></label>
+            <input type="range" id="duration" min="80" max="1200" step="20" value="240">
+          </div>
+
+          <div class="field">
+            <label>宽度 set_size<output id="o-w">140 px</output><span class="api">lv_obj_set_width</span></label>
+            <input type="range" id="w" min="60" max="300" step="2" value="140">
+          </div>
+          <div class="field">
+            <label>高度 set_size<output id="o-h">54 px</output><span class="api">lv_obj_set_height</span></label>
+            <input type="range" id="h" min="20" max="100" step="2" value="54">
+          </div>
+
+          <div class="field">
+            <label>关闭态轨道色 MAIN<span class="api">lv_obj_set_style_bg_color(sw, …, LV_PART_MAIN)</span></label>
+            <input type="color" id="off" value="#d3d8df">
+          </div>
+          <div class="field">
+            <label>开启态轨道色 INDICATOR<span class="api">lv_obj_set_style_bg_color(sw, …, LV_PART_INDICATOR)</span></label>
+            <input type="color" id="on" value="#2b7de9">
+          </div>
+
+          <div class="field">
+            <label>滑块颜色 KNOB<span class="api">lv_obj_set_style_bg_color(sw, …, LV_PART_KNOB)</span></label>
+            <input type="color" id="knob" value="#ffffff">
+          </div>
+          <div class="field">
+            <label>自动切换演示<span class="api">每 1.5 秒自动开 / 关</span></label>
+            <div class="check"><input type="checkbox" id="auto" checked><span>自动开 / 关循环</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>状态叠加 state<span class="api">lv_obj_add_state：按下 / 禁用可与开 / 关叠加（ArkUI lite 两态整图，无叠加）</span></label>
+            <div class="stack" id="mode">
+              <div class="check"><input type="checkbox" id="st-pressed"><span>按下 PRESSED</span></div>
+              <div class="check"><input type="checkbox" id="st-disabled"><span>禁用 DISABLED</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-gif">导出 GIF（一次往返）</button>
+          <button type="button" class="btn" id="btn-webm">录制 WebM（一次往返）</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIToggleButton</code>
+        <span class="cmp-tag ui">两张整图切换 · 仅两态</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">点击画布上的开关切换；SetState(true/false) 两态整图切换，轨道色 / 滑块色无法分离设置。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>状态 state<span class="api">UIToggleButton::SetState(bool)：仅开 / 关两态，无按下 / 禁用叠加</span></label>
+            <div class="seg" id="umode">
+              <button type="button" data-v="off">关</button>
+              <button type="button" data-v="on" class="active">开</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>ui_toggle_button.cpp</code> / <code>ui_abstract_button.cpp</code> ——
+          开 / 关为两张整图 <code>SetImages()</code> 切换，内置切换动画；
+          主题默认开态 <code>#007dff</code>、关态 <code>#cfd6df</code>、滑块白色（<code>style.cpp</code>）；
+          无轨道 / 滑块分离样式与自定义过渡曲线。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列 GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。右列渲染参数全部取自 foundation/arkui/ui_lite 与 graphic_utils_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_switch 复刻（迁移自旧页 + 按下 / 禁用状态叠加）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var PERIOD = 1500;   /* 自动演示每次切换的间隔（ms） */
+
+  var state = {
+    checked: false,
+    pressed: false,
+    disabled: false,
+    w: 140,
+    h: 54,
+    off: "#d3d8df",
+    on: "#2b7de9",
+    knob: "#ffffff",
+    duration: 240,
+    auto: true
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+  var autoEl = document.getElementById("auto");
+  var t0 = performance.now();
+  var anim = { from: 0, to: 0, start: t0 };
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function roundRect(c, x, y, w, h, r){
+    r = Math.min(r, w / 2, h / 2);
+    if(r < 0) r = 0;
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function hexToRgb(h){
+    h = h.replace("#", "");
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+
+  function mixColor(a, b, t){
+    var A = hexToRgb(a), B = hexToRgb(b);
+    return "rgb(" + Math.round(A[0] + (B[0] - A[0]) * t) + "," +
+                    Math.round(A[1] + (B[1] - A[1]) * t) + "," +
+                    Math.round(A[2] + (B[2] - A[2]) * t) + ")";
+  }
+
+  function ease(k){
+    return k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+  }
+
+  /* 自动演示时，t 时刻的动画进度 0..1 */
+  function autoProgress(t){
+    var seg = Math.floor(t / PERIOD);
+    var to = (seg % 2 === 0) ? 1 : 0;
+    var from = 1 - to;
+    var k = clamp((t - seg * PERIOD) / state.duration, 0, 1);
+    return from + (to - from) * ease(k);
+  }
+
+  /* 手动切换时，基于时间差插值 */
+  function manualProgress(now){
+    var k = clamp((now - anim.start) / state.duration, 0, 1);
+    return anim.from + (anim.to - anim.from) * ease(k);
+  }
+
+  function progressAt(tMs){
+    return state.auto ? autoProgress(tMs) : manualProgress(performance.now());
+  }
+
+  function metrics(){
+    return { w: state.w, h: state.h };
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c, tMs){
+    var W = state.w, H = state.h;
+    var p = progressAt(tMs);
+    var pad = Math.max(2, H * 0.12);
+    var kr = Math.max(1, Math.min(H, W) / 2 - pad);
+    var x0 = pad + kr;
+    var x1 = Math.max(x0, W - pad - kr);
+    var cy = H / 2;
+    var cx = x0 + (x1 - x0) * p;
+
+    c.clearRect(0, 0, W, H);
+
+    /* 轨道：胶囊 */
+    var track = mixColor(state.off, state.on, p);
+    if(state.pressed) track = mixColor("#ffffff", track, 0.82);   // 按下略压暗
+    if(state.disabled) track = mixColor("#ffffff", track, 0.55);  // 禁用泛白
+
+    roundRect(c, 0, 0, W, H, H / 2);
+    c.fillStyle = track;
+    c.fill();
+
+    /* 滑块：随进度移动 */
+    c.save();
+    c.shadowColor = "rgba(0,0,0,.22)";
+    c.shadowBlur = Math.max(2, H * 0.12) * (state.pressed ? 0.5 : 1);
+    c.shadowOffsetY = Math.max(1, H * 0.03);
+    c.beginPath();
+    c.arc(cx, cy, kr * (state.pressed ? 0.92 : 1), 0, Math.PI * 2);
+    c.fillStyle = state.disabled ? mixColor("#ffffff", state.knob, 0.45) : state.knob;
+    c.fill();
+    c.restore();
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var m = metrics();
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = m.w * dpr;
+    canvas.height = m.h * dpr;
+    canvas.style.width = m.w + "px";
+    canvas.style.height = m.h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvas.style.cursor = "pointer";
+  }
+
+  function syncSeg(){
+    var btns = document.getElementById("state").querySelectorAll("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].classList.toggle("active", btns[i].dataset.state === (state.checked ? "on" : "off"));
+    }
+  }
+
+  function loop(now){
+    var t = now - t0;
+    if(t < 0) t = 0;
+    if(state.auto){
+      var on = autoProgress(t) > 0.5;
+      if(on !== state.checked){
+        state.checked = on;
+        syncSeg();
+        renderCode();
+      }
+    }
+    draw(ctx, t);
+    requestAnimationFrame(loop);
+  }
+
+  /* 用户主动设定状态：以当前视觉进度为动画起点 */
+  function userSet(on){
+    var now = performance.now();
+    var p = progressAt(now - t0);
+    state.auto = false;
+    autoEl.checked = false;
+    state.checked = !!on;
+    anim.from = p;
+    anim.to = on ? 1 : 0;
+    anim.start = now;
+    syncSeg();
+    renderCode();
+  }
+
+  /* ---------- 代码生成 ---------- */
+  function renderCode(){
+    var hex = function(c){ return "0x" + c.replace("#", ""); };
+    var L = [];
+
+    L.push('<span class="cm">/* 由页面参数实时生成 */</span>');
+    L.push('lv_obj_t * sw = <span class="fn">lv_switch_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_obj_set_size</span>(sw, <span class="num">' + state.w + '</span>, <span class="num">' + state.h + '</span>);');
+    L.push('<span class="fn">lv_obj_center</span>(sw);');
+    if(state.checked){
+      L.push('<span class="fn">lv_obj_add_state</span>(sw, LV_STATE_CHECKED);');
+    }
+    if(state.pressed) L.push('<span class="fn">lv_obj_add_state</span>(sw, LV_STATE_PRESSED);');
+    if(state.disabled) L.push('<span class="fn">lv_obj_add_state</span>(sw, LV_STATE_DISABLED);');
+    L.push('<span class="fn">lv_obj_set_style_bg_color</span>(sw, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.off) + '</span>), LV_PART_MAIN);');
+    L.push('<span class="fn">lv_obj_set_style_bg_color</span>(sw, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.on) + '</span>), LV_PART_INDICATOR);');
+    L.push('<span class="fn">lv_obj_set_style_bg_color</span>(sw, <span class="fn">lv_color_hex</span>(<span class="num">' + hex(state.knob) + '</span>), LV_PART_KNOB);');
+    L.push('<span class="fn">lv_obj_set_style_anim_duration</span>(sw, <span class="num">' + state.duration + '</span>, 0);');
+
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件绑定 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  document.getElementById("state").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    userSet(btn.dataset.state === "on");
+  });
+
+  document.getElementById("duration").addEventListener("input", function(){
+    state.duration = Number(this.value);
+    document.getElementById("o-duration").textContent = this.value + " ms";
+    renderCode();
+  });
+
+  (function(){
+    var ids = ["w", "h"];
+    var keys = ["w", "h"];
+    var outs = ["o-w", "o-h"];
+    for(var i = 0; i < ids.length; i++){
+      (function(id, key, outId){
+        var el = document.getElementById(id);
+        el.addEventListener("input", function(){
+          state[key] = Number(el.value);
+          document.getElementById(outId).textContent = el.value + " px";
+          fitCanvas();
+          renderCode();
+        });
+      })(ids[i], keys[i], outs[i]);
+    }
+  })();
+
+  document.getElementById("off").addEventListener("input", function(e){
+    state.off = e.target.value; renderCode();
+  });
+  document.getElementById("on").addEventListener("input", function(e){
+    state.on = e.target.value; renderCode();
+  });
+  document.getElementById("knob").addEventListener("input", function(e){
+    state.knob = e.target.value; renderCode();
+  });
+
+  ["pressed", "disabled"].forEach(function(k){
+    document.getElementById("st-" + k).addEventListener("change", function(e){
+      state[k] = e.target.checked;
+      renderCode();
+    });
+  });
+
+  autoEl.addEventListener("change", function(e){
+    var now = performance.now();
+    if(e.target.checked){
+      t0 = now;
+    }else{
+      var p = autoProgress(now - t0);
+      anim.from = p;
+      anim.to = p;
+      anim.start = now;
+      state.checked = p > 0.5;
+      syncSeg();
+      renderCode();
+    }
+    state.auto = e.target.checked;
+  });
+
+  /* ---------- 画布点击切换 ---------- */
+  canvas.addEventListener("pointerdown", function(){
+    if(state.disabled) return;
+    userSet(!state.checked);
+  });
+
+  /* ---------- 下载 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  /* ---------- GIF 导出 ---------- */
+  var gifLib = null;
+  function loadGif(){
+    if(gifLib) return Promise.resolve(gifLib);
+    return new Promise(function(resolve, reject){
+      var s = document.createElement("script");
+      s.src = "https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js";
+      s.onload = function(){ gifLib = window.GIF; resolve(gifLib); };
+      s.onerror = function(){ reject(new Error("gif.js 加载失败（需联网），可改用 WebM")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* gif.js 的 worker 必须与页面同源：file:// 下直接用 CDN 地址 new Worker
+     会抛 SecurityError 导致导出卡死，故用 blob 同源 worker 包裹 importScripts 加载 */
+  function gifWorkerScript(){
+    var src = 'importScripts("https://fastly.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js");';
+    return URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  }
+
+  document.getElementById("btn-gif").addEventListener("click", function(){
+    var btn = this;
+    btn.disabled = true;
+    setStatus("加载 GIF 编码器…");
+    var m = metrics();
+    loadGif().then(function(GIF){
+      var fps = 20;
+      var cycle = PERIOD * 2;
+      var frames = Math.max(2, Math.round(cycle / 1000 * fps));
+      var gif = new GIF({ workers: 2, quality: 10, width: m.w, height: m.h, workerScript: gifWorkerScript() });
+      var off = document.createElement("canvas");
+      off.width = m.w; off.height = m.h;
+      var octx = off.getContext("2d");
+      var i = 0;
+      var prevAuto = state.auto;
+      state.auto = true;
+
+      function step(){
+        if(i < frames){
+          draw(octx, i / fps * 1000);
+          gif.addFrame(off, { delay: Math.round(1000 / fps), copy: true });
+          setStatus("渲染帧 " + (i + 1) + "/" + frames);
+          i++;
+          setTimeout(step, 0);
+        }else{
+          gif.on("finished", function(blob){
+            state.auto = prevAuto;
+            download(blob, "switch.gif");
+            setStatus("GIF 已保存：" + frames + " 帧 / " + fps + "fps", true);
+            btn.disabled = false;
+          });
+          gif.on("progress", function(p){ setStatus("编码 GIF " + Math.round(p * 100) + "%"); });
+          function fail(msg){
+            state.auto = prevAuto;
+            setStatus(msg);
+            btn.disabled = false;
+          }
+          gif.on("abort", function(){ fail("GIF 编码被中止，可改用 WebM"); });
+          try {
+            gif.render();
+          } catch (err) {
+            fail("GIF 编码启动失败：" + err.message + "，可改用 WebM");
+          }
+        }
+      }
+      step();
+    }).catch(function(err){
+      setStatus(err.message);
+      btn.disabled = false;
+    });
+  });
+
+  /* ---------- WebM 录制（原生，离线可用） ---------- */
+  document.getElementById("btn-webm").addEventListener("click", function(){
+    var btn = this;
+    if(!canvas.captureStream || typeof MediaRecorder === "undefined"){
+      setStatus("当前浏览器不支持 MediaRecorder，请用 Chrome/Edge");
+      return;
+    }
+    btn.disabled = true;
+    var prevAuto = state.auto;
+    state.auto = true;
+    t0 = performance.now();
+    var cycle = PERIOD * 2;
+
+    var stream = canvas.captureStream(30);
+    var rec = new MediaRecorder(stream, { mimeType: "video/webm" });
+    var chunks = [];
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      state.auto = prevAuto;
+      autoEl.checked = prevAuto;
+      download(new Blob(chunks, { type: "video/webm" }), "switch.webm");
+      setStatus("WebM 已保存（一次往返 " + cycle + " ms）", true);
+      btn.disabled = false;
+    };
+    setStatus("录制中，约 " + Math.round(cycle / 1000) + " 秒…");
+    rec.start();
+    setTimeout(function(){ rec.stop(); }, cycle);
+  });
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIToggleButton 操作绑定 + 实时生成等价 C++ 代码
+   演示组件由 cmp2.js 自动挂进 #udemo（LV2.api.set）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  function $(id){ return document.getElementById(id); }
+  function api(){ return (window.LV2 && window.LV2.api) || {}; }
+
+  var u = { on: true };
+
+  function renderUCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 ui_toggle_button.h） */</span>');
+    L.push('UIToggleButton * toggle = <span class="fn">new</span> UIToggleButton();');
+    L.push('toggle-&gt;<span class="fn">SetState</span>(' + (u.on ? "true" : "false") + ');');
+    L.push('<span class="cm">/* 开 / 关为两张整图，无法分离轨道与滑块样式 */</span>');
+    L.push('toggle-&gt;<span class="fn">SetImages</span>(&amp;imgOff, &amp;imgOn);');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  $("umode").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    u.on = btn.getAttribute("data-v") === "on";
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    var a = api();
+    if(a.set) a.set(u.on);
+    renderUCode();
+  });
+
+  renderUCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

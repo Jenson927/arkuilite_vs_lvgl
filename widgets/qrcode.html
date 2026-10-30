@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QRCode：LVGL lv_qrcode vs ArkUI lite UIQRCode</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='4' fill='%23fff' stroke='%232b7de9' stroke-width='2'/%3E%3Cpath d='M8 8h6v6H8zM18 8h6v6h-6zM8 18h6v6H8z' fill='%231c2128'/%3E%3Cpath d='M18 18h2v2h-2zM22 18h2v2h-2zM20 20h2v2h-2zM18 22h2v2h-2zM22 22h2v2h-2z' fill='%231c2128'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>QRCode：lv_qrcode vs UIQRCode</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>（25×25 确定性示意矩阵 + 纠错级别 / 内嵌 Logo / 静区宽度可调），右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b>
+      源码 <code>ui_qrcode.cpp</code> 行为渲染的 UIQRCode。左右各自独立操作，页面最下方为差异对照。</p>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_qrcode</code>
+        <span class="cmp-tag lv">纠错 / Logo / 静区可配</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">图案由文本哈希确定性生成；切换纠错级别改变数据区密度，开启 Logo 后在矩阵中央叠加图案，静区宽度用滑杆实时调节。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>数据 set_data<span class="api">lv_qrcode_set_data(qr, data, len)</span></label>
+            <input type="text" id="text" value="https://lvgl.io" maxlength="40">
+          </div>
+
+          <div class="field">
+            <label>尺寸 set_size<output id="o-size">170 px</output><span class="api">lv_qrcode_set_size</span></label>
+            <input type="range" id="size" min="120" max="220" step="5" value="170">
+          </div>
+          <div class="field">
+            <label>边距 静区 quiet_zone<output id="o-quiet">4 模块</output><span class="api">lv_qrcode_set_quiet_zone（0~6 模块）</span></label>
+            <input type="range" id="quiet" min="0" max="6" step="1" value="4">
+          </div>
+
+          <div class="field">
+            <label>深色模块 set_dark_color<span class="api">lv_qrcode_set_dark_color</span></label>
+            <input type="color" id="dark" value="#1c2128">
+          </div>
+          <div class="field">
+            <label>浅色底 set_light_color<span class="api">lv_qrcode_set_light_color</span></label>
+            <input type="color" id="light" value="#ffffff">
+          </div>
+
+          <div class="field wide">
+            <label>纠错级别 ecc<span class="api">lv_qrcode 编码器按级别选择纠错码密度（L 7% / M 15% / Q 25% / H 30%）</span></label>
+            <div class="seg" id="ecc">
+              <button type="button" data-v="L">L</button>
+              <button type="button" data-v="M" class="active">M</button>
+              <button type="button" data-v="Q">Q</button>
+              <button type="button" data-v="H">H</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>内嵌 Logo（UIQRCode 无此能力）<span class="api">lv_qrcode 为普通对象，可在其上叠放 lv_image 子对象</span></label>
+            <div class="check"><input type="checkbox" id="logo"><span>在矩阵中央叠加 Logo 图案</span></div>
+          </div>
+
+          <div class="field wide">
+            <label>说明</label>
+            <div class="check"><span style="font-size:12px">图案由文本哈希确定性生成，仅为演示用示意矩阵，并非真实二维码编码，无法被扫码器识别。</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIQRCode</code>
+        <span class="cmp-tag ui">仅内容 / 尺寸 / 双色</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">UIQRCode 只接受内容字符串与前景 / 背景色；纠错级别、边距、Logo 叠加都没有接口。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>内容 text<span class="api">SetQrcodeInfo(QrcodeInfo)：val 为内容字符串，bg / qrColor 为双色</span></label>
+            <input type="text" id="utext" value="OpenHarmony" maxlength="40">
+          </div>
+        </div>
+
+        <div class="src-note">
+          渲染依据：<code>frameworks/components/ui_qrcode.cpp</code> ——
+          <code>SetQrcodeInfo</code> 一次性传入内容与前景 / 背景色，<code>SetWidth</code> / <code>SetHeight</code> 配尺寸；
+          没有纠错级别、静区宽度与 Logo 叠加接口，多版本容量控制也不开放。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照 ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列画布 320×240。图案为演示用示意矩阵，并非真实二维码编码，无法被扫码器识别。PNG 导出离线可用。右列渲染参数取自 foundation/arkui/ui_lite 源码。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL lv_qrcode 复刻（确定性矩阵 + 纠错级别 + Logo + 静区）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 320, H = 240;
+  var MOD = 25;
+  var MONO = 'ui-monospace, Consolas, "Liberation Mono", monospace';
+  var FAMILY = '-apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+  var THEME = { text: "#1c2128", muted: "#5b6470", faint: "#8a929c", primary: "#2b7de9" };
+
+  var state = {
+    text: "https://lvgl.io",
+    size: 170,
+    quiet: 4,          /* 静区模块数 0~6 */
+    dark: "#1c2128",
+    light: "#ffffff",
+    ecc: "M",
+    logo: false        /* 内嵌 Logo */
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var statusEl = document.getElementById("status");
+
+  /* ---------- 工具 ---------- */
+  function roundRectPath(c, x, y, w, h, r){
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+
+  function box(c, x, y, w, h, o){
+    o = o || {};
+    c.save();
+    if(o.shadow){
+      c.shadowColor = o.shadow;
+      c.shadowBlur = o.shadowBlur || 10;
+      c.shadowOffsetY = o.shadowY || 0;
+    }
+    if(o.bg){ roundRectPath(c, x, y, w, h, o.radius || 0); c.fillStyle = o.bg; c.fill(); }
+    c.shadowColor = "transparent"; c.shadowBlur = 0; c.shadowOffsetY = 0;
+    if(o.border){
+      roundRectPath(c, x + 0.5, y + 0.5, w - 1, h - 1, o.radius || 0);
+      c.strokeStyle = o.border; c.lineWidth = o.borderWidth || 1; c.stroke();
+    }
+    c.restore();
+  }
+
+  function text(c, s, x, y, o){
+    o = o || {};
+    c.save();
+    c.font = (o.weight ? o.weight + " " : "") + (o.size || 12) + "px " + (o.mono ? MONO : FAMILY);
+    c.fillStyle = o.color || THEME.text;
+    c.textAlign = o.align || "left";
+    c.textBaseline = "middle";
+    c.fillText(s, x, y);
+    c.restore();
+  }
+
+  function hexCode(hex){ return "0x" + hex.replace("#", ""); }
+
+  /* ---------- 确定性图案 ---------- */
+  function hashStr(s){
+    var h = 2166136261 % 2147483647;
+    for(var i = 0; i < s.length; i++){
+      h = (h * 131 + s.charCodeAt(i)) % 2147483647;
+    }
+    return h;
+  }
+
+  function prand(x, y, seed){
+    var n = ((x * 73856093) ^ (y * 19349663) ^ seed) & 0x7fffffff;
+    n = (n * 48271) % 2147483647;
+    n = (n * 48271) % 2147483647;
+    return n / 2147483647;
+  }
+
+  var DENSITY = { L: 0.40, M: 0.49, Q: 0.58, H: 0.67 };
+  var cache = { key: "", matrix: null };
+
+  function buildMatrix(){
+    var key = state.text + "|" + state.ecc;
+    if(cache.key === key) return cache.matrix;
+
+    var seed = hashStr(key);
+    var m = [], reserved = [], x, y, i;
+    for(y = 0; y < MOD; y++){
+      m.push([]);
+      reserved.push([]);
+      for(x = 0; x < MOD; x++){
+        m[y].push(false);
+        reserved[y].push(false);
+      }
+    }
+    function setv(px, py, v){
+      if(px < 0 || py < 0 || px >= MOD || py >= MOD) return;
+      m[py][px] = !!v;
+      reserved[py][px] = true;
+    }
+    function finder(ox, oy){
+      for(var yy = -1; yy <= 7; yy++){
+        for(var xx = -1; xx <= 7; xx++){
+          var edge = (xx === 0 || xx === 6 || yy === 0 || yy === 6);
+          var core = (xx >= 2 && xx <= 4 && yy >= 2 && yy <= 4);
+          setv(ox + xx, oy + yy, (xx >= 0 && xx <= 6 && yy >= 0 && yy <= 6) && (edge || core));
+        }
+      }
+    }
+
+    finder(0, 0);
+    finder(MOD - 7, 0);
+    finder(0, MOD - 7);
+
+    /* 时序线 */
+    for(i = 8; i <= MOD - 9; i++){
+      setv(i, 6, i % 2 === 0);
+      setv(6, i, i % 2 === 0);
+    }
+
+    /* 校正图案（5×5） */
+    for(y = -2; y <= 2; y++){
+      for(x = -2; x <= 2; x++){
+        var ring = Math.max(Math.abs(x), Math.abs(y));
+        setv(MOD - 9 + x, MOD - 9 + y, ring !== 1);
+      }
+    }
+
+    /* 数据区 */
+    var density = DENSITY[state.ecc] || 0.49;
+    for(y = 0; y < MOD; y++){
+      for(x = 0; x < MOD; x++){
+        if(reserved[y][x]) continue;
+        m[y][x] = prand(x, y, seed) < density;
+      }
+    }
+
+    cache.key = key;
+    cache.matrix = m;
+    return m;
+  }
+
+  /* ---------- Logo 图案 ---------- */
+  function drawLogo(c, cx, cy, s){
+    c.save();
+    /* 白色底衬 */
+    roundRectPath(c, cx - s / 2 - 3, cy - s / 2 - 3, s + 6, s + 6, 5);
+    c.fillStyle = state.light;
+    c.fill();
+    c.strokeStyle = "#d6d9df";
+    c.lineWidth = 1;
+    c.stroke();
+
+    /* 蓝色圆角方块 + 白色勾 */
+    roundRectPath(c, cx - s / 2, cy - s / 2, s, s, 4);
+    c.fillStyle = THEME.primary;
+    c.fill();
+    c.strokeStyle = "#ffffff";
+    c.lineWidth = Math.max(2, s * 0.12);
+    c.lineCap = "round";
+    c.lineJoin = "round";
+    c.beginPath();
+    c.moveTo(cx - s * 0.26, cy + s * 0.02);
+    c.lineTo(cx - s * 0.06, cy + s * 0.22);
+    c.lineTo(cx + s * 0.28, cy - s * 0.20);
+    c.stroke();
+    c.restore();
+  }
+
+  /* ---------- 绘制 ---------- */
+  function draw(c){
+    c.clearRect(0, 0, W, H);
+    box(c, 12, 8, W - 24, H - 16, {
+      bg: "#ffffff", radius: 14, borderWidth: 1, border: "#e7eaee",
+      shadow: "rgba(28,33,40,0.07)", shadowBlur: 14, shadowY: 4
+    });
+
+    var size = state.size;
+    var quiet = state.quiet;
+    var total = MOD + quiet * 2;
+    var unit = size / total;
+    var qx = (W - size) / 2;
+    var qy = 120 - size / 2;
+    var m = buildMatrix();
+
+    /* 对象边界 */
+    c.save();
+    c.setLineDash([3, 3]);
+    c.strokeStyle = "#cfd8e3";
+    c.lineWidth = 1;
+    roundRectPath(c, qx - 2.5, qy - 2.5, size + 5, size + 5, 6);
+    c.stroke();
+    c.restore();
+
+    c.fillStyle = state.light;
+    c.fillRect(qx, qy, size, size);
+
+    c.fillStyle = state.dark;
+    var ox = qx + quiet * unit, oy = qy + quiet * unit;
+    for(var y = 0; y < MOD; y++){
+      for(var x = 0; x < MOD; x++){
+        if(!m[y][x]) continue;
+        c.fillRect(ox + x * unit, oy + y * unit, unit + 0.25, unit + 0.25);
+      }
+    }
+
+    /* 内嵌 Logo */
+    if(state.logo){
+      drawLogo(c, qx + size / 2, qy + size / 2, Math.max(22, size * 0.20));
+    }
+
+    var capY = qy + size + 9;
+    if(capY < 231){
+      text(c, "示意矩阵 25×25 · 纠错 " + state.ecc + " · 静区 " + quiet + " 模块" +
+        (state.logo ? " · 含 Logo" : ""), W / 2, capY, {
+        size: 9.5, color: THEME.faint, align: "center"
+      });
+    }
+  }
+
+  /* ---------- 高清适配 + 主循环 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function loop(){
+    draw(ctx);
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 代码 ---------- */
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成；纠错等级 ' + state.ecc + ' 由 LVGL 编码器自动选择 */</span>');
+    L.push('lv_obj_t * qr = <span class="fn">lv_qrcode_create</span>(lv_screen_active());');
+    L.push('<span class="fn">lv_qrcode_set_size</span>(qr, <span class="num">' + state.size + '</span>);');
+    L.push('<span class="fn">lv_qrcode_set_dark_color</span>(qr, <span class="fn">lv_color_hex</span>(<span class="num">' + hexCode(state.dark) + '</span>));');
+    L.push('<span class="fn">lv_qrcode_set_light_color</span>(qr, <span class="fn">lv_color_hex</span>(<span class="num">' + hexCode(state.light) + '</span>));');
+    L.push('<span class="fn">lv_qrcode_set_quiet_zone</span>(qr, <span class="num">' + state.quiet + '</span>);   <span class="cm">/* 静区 ' + state.quiet + ' 模块 */</span>');
+    L.push('<span class="fn">lv_qrcode_set_data</span>(qr, ' + JSON.stringify(state.text || "") + ');');
+    L.push('<span class="fn">lv_obj_center</span>(qr);');
+    if(state.logo){
+      L.push('');
+      L.push('<span class="cm">/* 内嵌 Logo：qr 是普通对象，叠放 lv_image 子对象即可 */</span>');
+      L.push('lv_obj_t * logo = <span class="fn">lv_image_create</span>(qr);');
+      L.push('<span class="fn">lv_image_set_src</span>(logo, logo_src);');
+      L.push('<span class="fn">lv_obj_center</span>(logo);');
+    }
+    document.getElementById("code").innerHTML = L.join("\n");
+  }
+
+  /* ---------- 控件 ---------- */
+  function setStatus(msg, ok){
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (ok ? " ok" : "");
+  }
+
+  document.getElementById("text").addEventListener("input", function(e){
+    state.text = e.target.value;
+    renderCode();
+  });
+
+  (function(){
+    var el = document.getElementById("size");
+    var out = document.getElementById("o-size");
+    el.addEventListener("input", function(){
+      state.size = Number(el.value);
+      out.textContent = state.size + " px";
+      renderCode();
+    });
+  })();
+
+  (function(){
+    var el = document.getElementById("quiet");
+    var out = document.getElementById("o-quiet");
+    el.addEventListener("input", function(){
+      state.quiet = Number(el.value);
+      out.textContent = state.quiet + " 模块";
+      renderCode();
+    });
+  })();
+
+  document.getElementById("dark").addEventListener("input", function(e){
+    state.dark = e.target.value;
+    renderCode();
+  });
+  document.getElementById("light").addEventListener("input", function(e){
+    state.light = e.target.value;
+    renderCode();
+  });
+  document.getElementById("logo").addEventListener("change", function(e){
+    state.logo = e.target.checked;
+    renderCode();
+  });
+
+  document.getElementById("ecc").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    state.ecc = btn.getAttribute("data-v");
+    var btns = this.getElementsByTagName("button");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].className = btns[i] === btn ? "active" : "";
+    }
+    renderCode();
+  });
+
+  /* ---------- PNG 导出 ---------- */
+  function download(blob, name){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  document.getElementById("btn-png").addEventListener("click", function(){
+    canvas.toBlob(function(blob){
+      if(blob){ download(blob, "qrcode.png"); setStatus("PNG 已保存", true); }
+    });
+  });
+
+  fitCanvas();
+  renderCode();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   右列：ArkUI lite UIQRCode 操作绑定 + 实时代码
+   演示本体由 cmp2.js 自动挂进 #udemo（DEMOS.qrcode）
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var u = { text: "OpenHarmony" };
+
+  function $(id){ return document.getElementById(id); }
+  function api(){ return window.LV2 && window.LV2.api; }
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成（见 frameworks/components/ui_qrcode.cpp） */</span>');
+    L.push('UIQRCode * qr = <span class="fn">new</span> UIQRCode();');
+    L.push('QrcodeInfo info;');
+    L.push('info.val = <span class="num">"' + (u.text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") + '"</span>;');
+    L.push('info.bg = <span class="num">0xffffff</span>;   <span class="cm">// 背景色</span>');
+    L.push('info.qrColor = <span class="num">0x000000</span>; <span class="cm">// 前景色</span>');
+    L.push('qr-&gt;<span class="fn">SetQrcodeInfo</span>(info);');
+    L.push('qr-&gt;<span class="fn">SetWidth</span>(<span class="num">126</span>);');
+    L.push('qr-&gt;<span class="fn">SetHeight</span>(<span class="num">126</span>);');
+    L.push('<span class="cm">/* 无纠错级别 / 静区宽度 / Logo 叠加接口 */</span>');
+    $("ucode").innerHTML = L.join("\n");
+  }
+
+  $("utext").addEventListener("input", function(e){
+    u.text = e.target.value;
+    var a = api();
+    if(a && a.setText) a.setText(u.text);
+    renderCode();
+  });
+
+  renderCode();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = ["纠错级别选择（编码细节）"];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>
