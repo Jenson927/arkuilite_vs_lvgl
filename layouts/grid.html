@@ -3,92 +3,147 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LVGL Grid 布局复刻与导出</title>
+<title>Grid 网格布局：LVGL vs ArkUI lite GridLayout</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Cpath d='M10 16l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
 </head>
 <body>
 <div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
-    <a class="back" href="../index.html">← 返回画廊</a>
-    <h1>LVGL Grid 布局本地复刻</h1>
-    <p>3×3 网格容器，实时修改列 / 行模板、间距与单元格跨度，参数对齐 <code>lv_obj_set_grid_dsc_array()</code> / <code>lv_obj_set_grid_cell()</code>，点击画布卡片可选中子项。</p>
+    <h1>Grid 网格布局：lv_obj+grid vs GridLayout</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+      <code>grid_layout.cpp</code> 真实算法忠实渲染的 GridLayout。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
-  <div class="stage">
-    <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_obj + grid</code>
+        <span class="cmp-tag lv">fr/px 模板 · colspan 跨格</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">3×3 网格容器，实时修改列 / 行模板、间距与单元格跨度，参数对齐 lv_obj_set_grid_dsc_array / lv_obj_set_grid_cell，点击画布卡片可选中子项。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field">
+            <label>列模板 cols_dsc<span class="api">lv_obj_set_grid_dsc_array</span></label>
+            <div class="seg" id="cols">
+              <button type="button" data-val="eq" class="active">1fr×3</button>
+              <button type="button" data-val="mid">1fr 2fr</button>
+              <button type="button" data-val="px">60 1fr 60</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>行模板 rows_dsc<span class="api">lv_obj_set_grid_dsc_array</span></label>
+            <div class="seg" id="rows">
+              <button type="button" data-val="eq" class="active">1fr×3</button>
+              <button type="button" data-val="mid">1fr 2fr</button>
+              <button type="button" data-val="px">60 1fr 60</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>间距 pad_row / column<output id="o-gap">8 px</output><span class="api">lv_obj_set_style_pad_row/column</span></label>
+            <input type="range" id="gap" min="0" max="24" step="1" value="8">
+          </div>
+          <div class="field">
+            <label>对齐 grid_cell align<span class="api">lv_obj_set_grid_cell 第 1/4 参</span></label>
+            <div class="seg" id="align">
+              <button type="button" data-val="STRETCH" class="active">拉伸</button>
+              <button type="button" data-val="START">起始</button>
+              <button type="button" data-val="CENTER">居中</button>
+              <button type="button" data-val="END">末端</button>
+            </div>
+          </div>
+          <div class="field wide">
+            <label>选中子项（点击画布卡片也可切换）<span class="api">lv_obj_set_grid_cell</span></label>
+            <div class="seg" id="sel">
+              <button type="button" data-val="0" class="active">1</button>
+              <button type="button" data-val="1">2</button>
+              <button type="button" data-val="2">3</button>
+              <button type="button" data-val="3">4</button>
+              <button type="button" data-val="4">5</button>
+              <button type="button" data-val="5">6</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>列 col<output id="o-col">0</output><span class="api">lv_obj_set_grid_cell 第 2 参</span></label>
+            <input type="range" id="col" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>行 row<output id="o-row">0</output><span class="api">lv_obj_set_grid_cell 第 5 参</span></label>
+            <input type="range" id="row" min="0" max="2" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>跨列 colspan<output id="o-cspan">1</output><span class="api">lv_obj_set_grid_cell 第 3 参</span></label>
+            <input type="range" id="cspan" min="1" max="3" step="1" value="1">
+          </div>
+          <div class="field">
+            <label>跨行 rowspan<output id="o-rspan">1</output><span class="api">lv_obj_set_grid_cell 第 6 参</span></label>
+            <input type="range" id="rspan" min="1" max="3" step="1" value="1">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>GridLayout</code>
+        <span class="cmp-tag ui">等分网格 · 溢出 RemoveAll</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">右列按 GridLayout::LayoutChildren 真实算法渲染：SetRows/SetCols 等分容器，每格居中摆放子项。无 fr/px 模板、无 gap、无 colspan；当 rows*cols &lt; 子项数时直接 RemoveAll() 不布局，画布会显示警告。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div id="upanel"></div>
+
+        <div class="src-note">
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/layout/grid_layout.cpp</code> 与
+          <code>interfaces/kits/layout/grid_layout.h</code>——
+          仅 SetRows / SetCols / SetLayoutDirection / LayoutChildren 四个接口；
+          LayoutHorizontal / LayoutVertical 等分居中摆放，按子项 margin 偏移；
+          <code>rows * cols &lt; childrenNum</code> 时调用 RemoveAll() 全部不布局。
+          ace_engine_lite 没有 grid 组件，要做网格只能用 div + flex-wrap 模拟。
+        </div>
+      </section>
+    </section>
   </div>
 
-  <section class="panel">
-    <h2>参数（对应 LVGL 接口）</h2>
-    <div class="grid">
-      <div class="field">
-        <label>列模板 cols_dsc</label>
-        <div class="seg" id="cols">
-          <button type="button" data-val="eq" class="active">1fr×3</button>
-          <button type="button" data-val="mid">1fr 2fr</button>
-          <button type="button" data-val="px">60 1fr 60</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>行模板 rows_dsc</label>
-        <div class="seg" id="rows">
-          <button type="button" data-val="eq" class="active">1fr×3</button>
-          <button type="button" data-val="mid">1fr 2fr</button>
-          <button type="button" data-val="px">60 1fr 60</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>间距 pad_row / column <output id="o-gap">8 px</output></label>
-        <input type="range" id="gap" min="0" max="24" step="1" value="8">
-      </div>
-      <div class="field">
-        <label>对齐 grid_cell align</label>
-        <div class="seg" id="align">
-          <button type="button" data-val="STRETCH" class="active">拉伸</button>
-          <button type="button" data-val="START">起始</button>
-          <button type="button" data-val="CENTER">居中</button>
-          <button type="button" data-val="END">末端</button>
-        </div>
-      </div>
-      <div class="field wide">
-        <label>选中子项（点击画布卡片也可切换）</label>
-        <div class="seg" id="sel">
-          <button type="button" data-val="0" class="active">1</button>
-          <button type="button" data-val="1">2</button>
-          <button type="button" data-val="2">3</button>
-          <button type="button" data-val="3">4</button>
-          <button type="button" data-val="4">5</button>
-          <button type="button" data-val="5">6</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>列 col <output id="o-col">0</output></label>
-        <input type="range" id="col" min="0" max="2" step="1" value="0">
-      </div>
-      <div class="field">
-        <label>行 row <output id="o-row">0</output></label>
-        <input type="range" id="row" min="0" max="2" step="1" value="0">
-      </div>
-      <div class="field">
-        <label>跨列 colspan <output id="o-cspan">1</output></label>
-        <input type="range" id="cspan" min="1" max="3" step="1" value="1">
-      </div>
-      <div class="field">
-        <label>跨行 rowspan <output id="o-rspan">1</output></label>
-        <input type="range" id="rspan" min="1" max="3" step="1" value="1">
-      </div>
-    </div>
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
 
-    <div class="actions">
-      <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
-    </div>
-    <div class="status" id="status"></div>
-  </section>
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
 
-  <pre class="code" id="code"></pre>
-
-  <footer>画布尺寸 320×240。Grid 布局为静态演示，仅导出 PNG，完全离线可用。</footer>
+  <footer>左列画布尺寸 320×240。右列渲染参数全部取自 foundation/arkui/ui_lite 源码。</footer>
 </div>
 
 <script src="../assets/widget-kit.js"></script>
@@ -359,5 +414,9 @@
   renderCode();
 })();
 </script>
+
+<script>window.LV_PAGE_LVGAPS = ["等分网格（无 fr/px 模板）", "无 colspan / rowspan 跨格", "无 gap 间距", "溢出 RemoveAll() 全部不布局", "ace_engine_lite 无 grid 组件"];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
 </body>
 </html>
