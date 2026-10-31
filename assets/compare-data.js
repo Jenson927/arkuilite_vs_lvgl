@@ -621,6 +621,116 @@ window.LV_COMPARE_DATA = {
     ]
   },
 
+  flex: {
+    lv: "lv_obj + flex", ui: "FlexLayout", level: "partial", demo: "flex",
+    apis: ["SetLayoutDirection()", "SetMajorAxisAlign()", "SetSecondaryAxisAlign()", "SetFlexWrap()", "SetAlignContent()", "SetRowGap()", "SetColumnGap()", "UIView::SetFlexGrow()"],
+    note: "FlexLayout 基线（GRAPHIC_ENABLE_FLEX_LAYOUT_ENHANCEMENT=0）只有主/交叉轴对齐 + wrap + 方向，无 gap、无 align-content、无 flex-grow/shrink/basis；开启增强宏后补齐 gap（px/百分比）、align-content 五种、以及 UIView 子项的 flex-grow/shrink/basis/min/max/aspect-ratio/align-self/position-type。无 order、无 align-content space-evenly/around。",
+    gaps: ["order 顺序重排", "align-content space-around / space-evenly", "基线无 gap / grow / basis（需开宏）"],
+    diffs: [
+      ["主轴方向", "row / row-reverse / column / column-reverse / wrap 组合", "LAYOUT_HOR / HOR_R / VER / VER_R + SetFlexWrap(NOWRAP/WRAP)", "ok"],
+      ["主轴对齐", "start / center / end / between / around / evenly", "SetMajorAxisAlign：START / END / CENTER / EVENLY / AROUND / BETWEEN", "ok"],
+      ["交叉轴对齐", "start / center / end / stretch / baseline", "SetSecondaryAxisAlign：START / END / CENTER / STRETCH（无 baseline）", "part"],
+      ["换行", "nowrap / wrap / wrap-reverse", "SetFlexWrap(NOWRAP / WRAP)（无 wrap-reverse）", "part"],
+      ["多行分布", "start / center / end / between / around / evenly / stretch", "SetAlignContent：START / CENTER / END / STRETCH / BETWEEN（增强宏；无 around / evenly）", "part"],
+      ["gap 间距", "row-gap / column-gap 任意", "SetRowGap / SetColumnGap / SetGap（px）+ Percent 版本（增强宏）", "part"],
+      ["flex-grow", "任意权重", "UIView::SetFlexGrow(uint16_t)（增强宏）", "part"],
+      ["flex-shrink / basis", "支持", "SetFlexShrink / SetFlexBasis（增强宏）", "part"],
+      ["min/max 约束", "min-width/max-width 等", "SetMinWidth / SetMaxWidth / SetMinHeight / SetMaxHeight（增强宏）", "part"],
+      ["aspect-ratio", "支持", "SetAspectRatio(uint16_t)（增强宏）", "part"],
+      ["align-self", "每项覆盖父级对齐", "SetAlignSelf（增强宏，仅 AUTO/STRETCH 两值）", "part"],
+      ["position", "static / relative / absolute / sticky", "SetPositionType：STATIC / RELATIVE / ABSOLUTE（增强宏；无 sticky）", "part"],
+      ["order", "整数重排", "无", "none"],
+      ["JS 声明式", "—", "ace_engine_lite div 组件：flex-direction / justify-content / align-items / flex-wrap / align-content / gap", "ok"]
+    ],
+    points: [
+      "<b>基线 vs 增强：</b>默认构建（<code>GRAPHIC_ENABLE_FLEX_LAYOUT_ENHANCEMENT=0</code>）只有对齐与换行，gap / grow / basis / align-content 都没有；要打开 <code>ui_lite_enable_flex_layout_config</code> 才补齐，这是产品裁剪时最容易踩的坑。",
+      "<b>无 order：</b>LVGL 靠 flex_order 任意重排子项，FlexLayout 只能按 DOM 顺序排，要换序得改 Add() 顺序。",
+      "<b>align-content 缺两档：</b>即使开宏也只有 start/center/end/stretch/between，没有 around/evenly。",
+      "<b>JS 层等价：</b>ace_engine_lite 的 div 组件把这些 C++ 能力映射成 flex-direction / justify-content / align-items / flex-wrap / align-content / gap 样式，是实际应用开发的入口。"
+    ]
+  },
+
+  grid: {
+    lv: "lv_obj + grid", ui: "GridLayout", level: "partial", demo: "grid",
+    apis: ["SetRows()", "SetCols()", "SetLayoutDirection()", "LayoutChildren()"],
+    note: "GridLayout 只做等分网格：SetRows/SetCols 把容器均分，每个单元格居中摆放子项（含 margin）。无 fr/px 列模板、无 gap、无 colspan/rowspan、无 cell align、无 grid-area；当 rows*cols < 子项数时直接 RemoveAll() 不布局。",
+    gaps: ["fr / px 列行模板", "gap 间距", "colspan / rowspan 跨格", "单元格对齐", "grid-area 命名区域"],
+    diffs: [
+      ["行列定义", "lv_grid_dsc_array：fr / px / content 模板", "SetRows(n) / SetCols(n)：纯等分", "none"],
+      ["单元格跨度", "lv_obj_set_grid_cell(x, col, col_span, row, row_span)", "无，每格一个子项", "none"],
+      ["间距", "pad_row / pad_column", "无", "none"],
+      ["单元格对齐", "STRETCH / START / CENTER / END", "固定居中（按子项 margin 居中）", "part"],
+      ["方向", "按行 / 按列填充", "SetLayoutDirection(LAYOUT_HOR / VER)", "ok"],
+      ["溢出处理", "自动换行 / 隐藏", "rows*cols < 子项数 → RemoveAll() 全部不布局", "none"],
+      ["JS 声明式", "—", "ace_engine_lite 无 grid 组件，只能用 div + flex-wrap 模拟", "none"]
+    ],
+    points: [
+      "<b>能力差距最大的一对：</b>GridLayout 是等分网格，LVGL 的 fr/px 模板、跨格、gap 全都没有。",
+      "<b>溢出即全空：</b>子项数超过 rows*cols 时直接 RemoveAll()，不会自动加行也不会裁剪，应用层必须自己保证格子够用。",
+      "<b>无 grid DSL：</b>ace_engine_lite 也没有 grid 组件，要做网格只能用 div + flex-wrap + 固定子项宽度凑。",
+      "<b>仍可覆盖：</b>纯等分的图标墙、九宫格、固定行列的卡片矩阵。"
+    ]
+  },
+
+  "style-basic": {
+    lv: "lv_style_t", ui: "UIView + Style", level: "partial", demo: "stylebasic",
+    apis: ["SetStyle(key, value)", "SetOpaScale()", "Rotate()", "Scale()", "SetWidth()", "SetHeight()"],
+    note: "Style 是固定字段集合（背景色/背景透明度/圆角/边框色宽透明度/padding/margin/文字/线条/渐变），没有 shadow、没有 outline；transform 不在 Style 里，走 UIView::Rotate/Scale/Translate/Shear 方法。默认 bg=黑、bgOpa=255、borderRadius=0、borderWidth=0、textColor=白、font=16、lineWidth=2。",
+    gaps: ["shadow 阴影", "outline 外描边", "背景渐变（需开宏）", "任意自定义样式属性"],
+    diffs: [
+      ["尺寸", "lv_style_set_size / width / height", "SetWidth / SetHeight（不在 Style 里）", "ok"],
+      ["背景色", "bg_color + bg_opa", "STYLE_BACKGROUND_COLOR + STYLE_BACKGROUND_OPA（默认黑 / OPAQUE）", "ok"],
+      ["圆角", "radius 任意", "STYLE_BORDER_RADIUS（默认 0）", "ok"],
+      ["边框", "border_width / color / opa / side", "STYLE_BORDER_WIDTH / COLOR / OPA（无 side，四边同款）", "part"],
+      ["内边距", "pad_left/right/top/bottom/all", "STYLE_PADDING_LEFT/RIGHT/TOP/BOTTOM", "ok"],
+      ["整体透明度", "opa", "SetOpaScale(0~255)（独立于 bgOpa）", "ok"],
+      ["阴影", "shadow_width / color / offset / opa", "无", "none"],
+      ["outline", "outline_width / color / pad / opa", "无", "none"],
+      ["背景渐变", "linear / radial 任意", "STYLE_GRADIENT_BACKGROUND_COLOR / RADIAL（需 GRAPHIC_ENABLE_COMPONENT_GRADIENT_FLAG）", "part"],
+      ["旋转", "transform_rotation（0.1°）", "UIView::Rotate(angle, pivot)（int16_t 角度 + 锚点）", "ok"],
+      ["缩放", "transform_scale（256=1倍）", "UIView::Scale(Vector2<float>, pivot)", "ok"],
+      ["变换锚点", "transform-origin 任意", "pivot 参数显式传入（默认视图中心 0.5,0.5）", "ok"],
+      ["样式复用", "lv_style_t 多对象共享 + 本地覆盖", "Style 对象可拷贝赋值，但 UIView 持有自己的 style_ 副本", "part"],
+      ["状态选择器", "LV_STATE_xxx 选择器", "无（仅 UIButton 三态用 SetStyleForState）", "part"]
+    ],
+    points: [
+      "<b>最大缺口：</b>Style 没有 shadow 也没有 outline，LVGL 那套阴影 + 外描边在 lite 侧只能自绘或放弃。",
+      "<b>transform 不在 Style 里：</b>旋转 / 缩放 / 平移是 UIView 的方法，不通过 SetStyle 设置，与 LVGL 把 transform 放进 style 的模型不同。",
+      "<b>渐变要开宏：</b>linear / radial 渐变需要 <code>GRAPHIC_ENABLE_COMPONENT_GRADIENT_FLAG</code>，默认构建没有。",
+      "<b>边框无 side：</b>只能四边同款，不能只画某几条边。",
+      "<b>样式复用：</b>Style 可以拷贝赋值，但每个 UIView 持有自己的 style_ 副本，不像 lv_style_t 那样多对象共享同一份。"
+    ]
+  },
+
+  "style-states": {
+    lv: "lv_style_t + LV_STATE_*", ui: "UIView + UIButton ButtonState", level: "partial", demo: "stylestates",
+    apis: ["SetState()", "SetStyleForState()", "EnableButtonAnimation()", "SetFocusable()", "SetOpaScale()"],
+    note: "UIView 本身没有状态机，只有 visible/touchable/draggable/focusable 几个布尔标志；只有 UIButton 有 RELEASED/PRESSED/INACTIVE 三态且互斥，用 SetStyleForState 配每态样式。无 hover 态、无 checked 态、无 focus 描边样式、无 style transition（按下动画是 ButtonAnimator 写死的缩放+蒙层，不是样式过渡）。",
+    gaps: ["HOVERED 悬停态", "CHECKED 勾选态", "FOCUSED 焦点描边样式", "状态可叠加", "style transition 样式过渡"],
+    diffs: [
+      ["状态种类", "DEFAULT/PRESSED/CHECKED/FOCUSED/DISABLED/HOVERED 等，可叠加", "UIView 无状态机；UIButton 仅 RELEASED/PRESSED/INACTIVE 互斥", "part"],
+      ["每状态样式", "lv_style_set_*(style, value, LV_STATE_xxx)", "SetStyleForState(key, value, ButtonState)", "part"],
+      ["状态叠加", "add_state 可同时多个", "三态互斥，SetState 只取一个", "none"],
+      ["悬停 HOVERED", "支持", "无（无鼠标 hover 概念）", "none"],
+      ["勾选 CHECKED", "支持 + CHECKED 独立样式", "无（UICheckBox 用 SELECTED/UNSELECTED 两值，非按钮状态机）", "part"],
+      ["禁用 DISABLED", "支持 + 独立样式", "UIButton::INACTIVE（仅背景色不同，无 disabled 样式选择器）", "part"],
+      ["焦点 FOCUSED", "焦点描边 + 样式选择器", "SetFocusable + OnFocusListener 回调，无焦点描边样式", "part"],
+      ["样式过渡", "lv_style_transition_dsc：指定属性 + 时长 + 曲线", "无 style transition；UIButton 按下动画是写死的缩放 0.8/150ms + 白色蒙层 α25", "none"],
+      ["过渡属性白名单", "任意 LV_STYLE_*", "无过渡机制", "none"],
+      ["过渡曲线", "lv_anim_path_ease_out 等 7 + 自定义", "写死 bezier(0.2,0,0.2,1)，不可配", "none"],
+      ["过渡时长", "可配", "按下 150ms / 松开 200ms 写死", "none"],
+      ["可点击", "LV_OBJ_FLAG_CLICKABLE", "SetTouchable(bool)", "ok"],
+      ["可勾选", "LV_OBJ_FLAG_CHECKABLE", "UICheckBox / UIToggleButton 独立组件，非通用 flag", "part"]
+    ],
+    points: [
+      "<b>状态机只在 UIButton：</b>UIView 本身没有状态概念，要按状态切样式只能用 UIButton 的三态，且互斥不能叠加。",
+      "<b>无 hover：</b>lite 设备模型里没有鼠标悬停，整个 UI_Lite 没有 HOVERED 概念。",
+      "<b>过渡不是样式：</b>LVGL 的 lv_style_transition_dsc 是声明式样式过渡，lite 侧只有 UIButton 写死的按下缩放 + 蒙层动画，不能指定属性 / 时长 / 曲线。",
+      "<b>焦点只能听回调：</b>SetFocusable + OnFocusListener 能拿到焦点变化，但没有焦点描边样式，要画描边得自己在 OnDraw 里加。",
+      "<b>CHECKED 走另一条路：</b>勾选态不在 ButtonState 里，要用 UICheckBox（SELECTED/UNSELECTED）或 UIToggleButton，不是给任意按钮加 checked。"
+    ]
+  },
+
   animation: {
     lv: "lv_anim", ui: "CSS animation / transition", level: "partial", demo: "animation",
     apis: ["lv_anim_init()", "lv_anim_set_path_cb()", "lv_anim_timeline_add()", "lv_anim_pause()", "lv_obj_set_style_transition()"],
