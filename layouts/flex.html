@@ -3,98 +3,154 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LVGL Flex 布局复刻与导出</title>
+<title>Flex 弹性布局：LVGL vs ArkUI lite FlexLayout</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='5' fill='%23fbfcfe' stroke='%239aa4b2'/%3E%3Crect x='8' y='9' width='7' height='6' rx='2' fill='%232b7de9'/%3E%3Crect x='18' y='9' width='7' height='6' rx='2' fill='%231f9d66'/%3E%3Crect x='8' y='18' width='7' height='6' rx='2' fill='%23e6a23c'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
 </head>
 <body>
 <div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
-    <a class="back" href="../index.html">← 返回画廊</a>
-    <h1>LVGL Flex 弹性布局复刻</h1>
-    <p>6 个彩色子卡片在容器内实时重排，参数对齐 <code>lv_obj_set_flex_flow()</code> / <code>lv_obj_set_flex_align()</code>。点击卡片选中后可用滑杆调整该子项的 <code>flex_grow</code>。</p>
+    <h1>Flex 弹性布局：lv_obj+flex vs FlexLayout</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+      <code>flex_layout.cpp</code> 真实算法忠实渲染的 FlexLayout。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
-  <div class="stage">
-    <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_obj + flex</code>
+        <span class="cmp-tag lv">6 种主轴对齐 · grow/wrap 任意</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">6 个彩色子卡片在容器内实时重排，参数对齐 lv_obj_set_flex_flow / lv_obj_set_flex_align。点击卡片选中后可用滑杆调整该子项的 flex_grow。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>流向 flex_flow<span class="api">lv_obj_set_flex_flow</span></label>
+            <div class="seg" id="flow">
+              <button type="button" data-val="row" class="active">ROW</button>
+              <button type="button" data-val="col">COLUMN</button>
+              <button type="button" data-val="row-wrap">ROW_WRAP</button>
+              <button type="button" data-val="col-wrap">COLUMN_WRAP</button>
+            </div>
+          </div>
+          <div class="field wide">
+            <label>主轴对齐 main_place<span class="api">lv_obj_set_flex_align 第 1 参</span></label>
+            <div class="seg" id="main">
+              <button type="button" data-val="start" class="active">起</button>
+              <button type="button" data-val="center">中</button>
+              <button type="button" data-val="end">末</button>
+              <button type="button" data-val="between">两端</button>
+              <button type="button" data-val="around">环绕</button>
+              <button type="button" data-val="evenly">等距</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>交叉轴对齐 cross_place<span class="api">lv_obj_set_flex_align 第 2 参</span></label>
+            <div class="seg" id="cross">
+              <button type="button" data-val="start">起</button>
+              <button type="button" data-val="center" class="active">中</button>
+              <button type="button" data-val="end">末</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>行轨道对齐 track_place<span class="api">lv_obj_set_flex_align 第 3 参</span></label>
+            <div class="seg" id="track">
+              <button type="button" data-val="start" class="active">起</button>
+              <button type="button" data-val="center">中</button>
+              <button type="button" data-val="end">末</button>
+              <button type="button" data-val="between">两端</button>
+              <button type="button" data-val="evenly">等距</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>行间距 pad_row<output id="o-rowGap">8 px</output><span class="api">lv_obj_set_style_pad_row</span></label>
+            <input type="range" id="rowGap" min="0" max="20" step="1" value="8">
+          </div>
+          <div class="field">
+            <label>列间距 pad_column<output id="o-colGap">8 px</output><span class="api">lv_obj_set_style_pad_column</span></label>
+            <input type="range" id="colGap" min="0" max="20" step="1" value="8">
+          </div>
+          <div class="field">
+            <label>子项数量（增删子项）<span class="api">lv_obj_create 增删</span></label>
+            <div class="seg" id="count">
+              <button type="button" data-val="4">4</button>
+              <button type="button" data-val="5">5</button>
+              <button type="button" data-val="6" class="active">6</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>选中子项 <output id="o-sel">1</output></label>
+            <div class="check"><span style="font-size:12px" id="sel-info">点击画布卡片选择</span></div>
+          </div>
+          <div class="field wide">
+            <label>选中子项 flex_grow<output id="o-grow">0</output><span class="api">lv_obj_set_style_flex_grow</span></label>
+            <input type="range" id="grow" min="0" max="3" step="1" value="0">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>FlexLayout</code>
+        <span class="cmp-tag ui">基线仅对齐 · 增强宏补 gap/grow</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">右列按 FlexLayout::LayoutChildren 真实算法渲染：基线构建（GRAPHIC_ENABLE_FLEX_LAYOUT_ENHANCEMENT=0）只支持主/交叉轴对齐 + wrap + 方向；勾选「增强宏」后才出现 gap、align-content、flex-grow。点击卡片可选中。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div id="upanel"></div>
+
+        <div class="src-note">
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/layout/flex_layout.cpp</code> 与
+          <code>interfaces/kits/layout/flex_layout.h</code>——
+          主轴对齐映射 SetMajorAxisAlign（START/END/CENTER/EVENLY/AROUND/BETWEEN）、
+          交叉轴映射 SetSecondaryAxisAlign（START/END/CENTER/STRETCH）、
+          方向映射 SetLayoutDirection（LAYOUT_HOR/HOR_R/VER/VER_R）、
+          换行映射 SetFlexWrap（NOWRAP/WRAP，无 wrap-reverse）。
+          gap / align-content / grow 需开 <code>ui_lite_enable_flex_layout_config</code>。
+        </div>
+      </section>
+    </section>
   </div>
 
-  <section class="panel">
-    <h2>参数（对应 LVGL 接口）</h2>
-    <div class="grid">
-      <div class="field wide">
-        <label>流向 flex_flow</label>
-        <div class="seg" id="flow">
-          <button type="button" data-val="row" class="active">ROW</button>
-          <button type="button" data-val="col">COLUMN</button>
-          <button type="button" data-val="row-wrap">ROW_WRAP</button>
-          <button type="button" data-val="col-wrap">COLUMN_WRAP</button>
-        </div>
-      </div>
-      <div class="field wide">
-        <label>主轴对齐 main_place</label>
-        <div class="seg" id="main">
-          <button type="button" data-val="start" class="active">起</button>
-          <button type="button" data-val="center">中</button>
-          <button type="button" data-val="end">末</button>
-          <button type="button" data-val="between">两端</button>
-          <button type="button" data-val="around">环绕</button>
-          <button type="button" data-val="evenly">等距</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>交叉轴对齐 cross_place</label>
-        <div class="seg" id="cross">
-          <button type="button" data-val="start">起</button>
-          <button type="button" data-val="center" class="active">中</button>
-          <button type="button" data-val="end">末</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>行轨道对齐 track_place</label>
-        <div class="seg" id="track">
-          <button type="button" data-val="start" class="active">起</button>
-          <button type="button" data-val="center">中</button>
-          <button type="button" data-val="end">末</button>
-          <button type="button" data-val="between">两端</button>
-          <button type="button" data-val="evenly">等距</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>行间距 pad_row <output id="o-rowGap">8 px</output></label>
-        <input type="range" id="rowGap" min="0" max="20" step="1" value="8">
-      </div>
-      <div class="field">
-        <label>列间距 pad_column <output id="o-colGap">8 px</output></label>
-        <input type="range" id="colGap" min="0" max="20" step="1" value="8">
-      </div>
-      <div class="field">
-        <label>子项数量（增删子项）</label>
-        <div class="seg" id="count">
-          <button type="button" data-val="4">4</button>
-          <button type="button" data-val="5">5</button>
-          <button type="button" data-val="6" class="active">6</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>选中子项 <output id="o-sel">1</output></label>
-        <div class="check"><span style="font-size:12px" id="sel-info">点击画布卡片选择</span></div>
-      </div>
-      <div class="field wide">
-        <label>选中子项 flex_grow <output id="o-grow">0</output></label>
-        <input type="range" id="grow" min="0" max="3" step="1" value="0">
-      </div>
-    </div>
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
 
-    <div class="actions">
-      <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
-    </div>
-    <div class="status" id="status"></div>
-  </section>
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
 
-  <pre class="code" id="code"></pre>
-
-  <footer>画布尺寸 320×240。GIF 编码由 gif.js（jsDelivr CDN）完成，需联网；WebM 使用浏览器原生 MediaRecorder，离线可用。本页布局变化带 200ms 缓动，仅导出 PNG。</footer>
+  <footer>左列画布尺寸 320×240。右列渲染参数全部取自 foundation/arkui/ui_lite 源码。</footer>
 </div>
 
 <script src="../assets/widget-kit.js"></script>
@@ -461,5 +517,9 @@
   renderCode();
 })();
 </script>
+
+<script>window.LV_PAGE_LVGAPS = ["基线构建无 gap / grow / align-content（需开增强宏）", "无 align-content space-around / space-evenly", "无 order 顺序重排"];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
 </body>
 </html>
