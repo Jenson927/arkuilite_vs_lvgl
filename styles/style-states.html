@@ -3,84 +3,139 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LVGL 状态与过渡样式复刻与导出</title>
+<title>状态与过渡：LVGL vs ArkUI lite ButtonState</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Cpath d='M10 16l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
 </head>
 <body>
 <div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
-    <a class="back" href="../index.html">← 返回画廊</a>
-    <h1>LVGL 状态与过渡样式本地复刻</h1>
-    <p>按钮真实响鼠标悬停、按下、点击勾选、禁用与聚焦，四态颜色配合 <code>lv_style_transition_dsc_init()</code> 平滑过渡，画布顶部实时显示当前 <code>LV_STATE_*</code>。</p>
+    <h1>状态与过渡：lv_style_t+LV_STATE vs UIButton ButtonState</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+      <code>ui_button.cpp</code> 与 <code>button_animator.cpp</code> 忠实渲染的 UIButton 三态。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
-  <div class="stage">
-    <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_style_t + LV_STATE_*</code>
+        <span class="cmp-tag lv">状态可叠加 · style transition 可配</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">按钮真实响应鼠标悬停、按下、点击勾选、禁用与聚焦，四态颜色配合 lv_style_transition_dsc_init 平滑过渡，画布顶部实时显示当前 LV_STATE_*。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 状态与样式</h2>
+        <div class="grid">
+          <div class="field">
+            <label>常态色 bg_color<span class="api">lv_obj_set_style_bg_color</span></label>
+            <input type="color" id="c-normal" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>悬停色 HOVERED<span class="api">lv_style_set_bg_color(style, …, LV_STATE_HOVERED)</span></label>
+            <input type="color" id="c-hover" value="#1f6fd0">
+          </div>
+          <div class="field">
+            <label>按下色 PRESSED<span class="api">lv_style_set_bg_color(style, …, LV_STATE_PRESSED)</span></label>
+            <input type="color" id="c-press" value="#154f9b">
+          </div>
+          <div class="field">
+            <label>勾选色 CHECKED<span class="api">lv_style_set_bg_color(style, …, LV_STATE_CHECKED)</span></label>
+            <input type="color" id="c-checked" value="#1f9d66">
+          </div>
+          <div class="field">
+            <label>圆角 radius<output id="o-radius">12 px</output><span class="api">lv_obj_set_style_radius</span></label>
+            <input type="range" id="radius" min="0" max="30" step="1" value="12">
+          </div>
+          <div class="field">
+            <label>过渡时长 transition<output id="o-dur">200 ms</output><span class="api">lv_style_transition_dsc_init 第 3 参</span></label>
+            <input type="range" id="dur" min="0" max="600" step="20" value="200">
+          </div>
+          <div class="field wide">
+            <label>过渡属性 trans_props<span class="api">lv_style_transition_dsc_init 第 2 参</span></label>
+            <div style="display:flex;gap:18px;flex-wrap:wrap">
+              <div class="check"><input type="checkbox" id="t-bg" checked><span>background</span></div>
+              <div class="check"><input type="checkbox" id="t-color" checked><span>color</span></div>
+              <div class="check"><input type="checkbox" id="t-shadow" checked><span>shadow</span></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>禁用 LV_STATE_DISABLED<span class="api">lv_obj_add_state</span></label>
+            <div class="check"><input type="checkbox" id="disabled"><span>启用禁用态</span></div>
+          </div>
+          <div class="field">
+            <label>勾选 LV_STATE_CHECKED<span class="api">lv_obj_add_state</span></label>
+            <div class="check"><input type="checkbox" id="checked"><span>启用勾选态</span></div>
+          </div>
+          <div class="field">
+            <label>聚焦 LV_STATE_FOCUSED<span class="api">lv_obj_add_state</span></label>
+            <div class="check"><input type="checkbox" id="focus"><span>强制叠加聚焦态</span></div>
+          </div>
+          <div class="field">
+            <label>状态机说明<span class="api">画布显示说明文字</span></label>
+            <div class="check"><input type="checkbox" id="map" checked><span>在画布显示说明文字</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIView + UIButton ButtonState</code>
+        <span class="cmp-tag ui">三态互斥 · 写死动画 · 无 hover</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">右列按 UIButton 三态渲染：RELEASED / PRESSED / INACTIVE 互斥，SetStyleForState 配每态背景色；按下动画是 ButtonAnimator 写死的缩放 0.8/150ms + 白色蒙层 α25/255，松开 200ms 恢复，不是 style transition；无 hover、无 checked、焦点描边需自己在 OnDraw 画。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div id="upanel"></div>
+
+        <div class="src-note">
+          渲染依据：<code>foundation/arkui/ui_lite/frameworks/components/ui_button.cpp</code> 与
+          <code>graphic_utils_lite/frameworks/style.cpp</code>——
+          UIButton 仅 RELEASED / PRESSED / INACTIVE 三态互斥，<code>SetStyleForState(key, value, ButtonState)</code> 配每态样式；
+          按下动效 <code>EnableButtonAnimation(true)</code> 写死 SHRINK_SCALE 0.8、150ms、bezier(0.2,0,0.2,1)，松开 200ms，加白色蒙层 α25/255；
+          <b>无 HOVERED、无 CHECKED、无 FOCUSED 描边样式、无 style transition</b>；
+          焦点只能 <code>SetFocusable + OnFocusListener</code> 听回调自绘。
+        </div>
+      </section>
+    </section>
   </div>
 
-  <section class="panel">
-    <h2>参数（对应 LVGL 状态与样式）</h2>
-    <div class="grid">
-      <div class="field">
-        <label>常态色 bg_color</label>
-        <input type="color" id="c-normal" value="#2b7de9">
-      </div>
-      <div class="field">
-        <label>悬停色 HOVERED</label>
-        <input type="color" id="c-hover" value="#1f6fd0">
-      </div>
-      <div class="field">
-        <label>按下色 PRESSED</label>
-        <input type="color" id="c-press" value="#154f9b">
-      </div>
-      <div class="field">
-        <label>勾选色 CHECKED</label>
-        <input type="color" id="c-checked" value="#1f9d66">
-      </div>
-      <div class="field">
-        <label>圆角 radius <output id="o-radius">12 px</output></label>
-        <input type="range" id="radius" min="0" max="30" step="1" value="12">
-      </div>
-      <div class="field">
-        <label>过渡时长 transition <output id="o-dur">200 ms</output></label>
-        <input type="range" id="dur" min="0" max="600" step="20" value="200">
-      </div>
-      <div class="field wide">
-        <label>过渡属性 trans_props</label>
-        <div style="display:flex;gap:18px;flex-wrap:wrap">
-          <div class="check"><input type="checkbox" id="t-bg" checked><span>background</span></div>
-          <div class="check"><input type="checkbox" id="t-color" checked><span>color</span></div>
-          <div class="check"><input type="checkbox" id="t-shadow" checked><span>shadow</span></div>
-        </div>
-      </div>
-      <div class="field">
-        <label>禁用 LV_STATE_DISABLED</label>
-        <div class="check"><input type="checkbox" id="disabled"><span>启用禁用态</span></div>
-      </div>
-      <div class="field">
-        <label>勾选 LV_STATE_CHECKED</label>
-        <div class="check"><input type="checkbox" id="checked"><span>启用勾选态</span></div>
-      </div>
-      <div class="field">
-        <label>聚焦 LV_STATE_FOCUSED</label>
-        <div class="check"><input type="checkbox" id="focus"><span>强制叠加聚焦态</span></div>
-      </div>
-      <div class="field">
-        <label>状态机说明</label>
-        <div class="check"><input type="checkbox" id="map" checked><span>在画布显示说明文字</span></div>
-      </div>
-    </div>
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
 
-    <div class="actions">
-      <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
-    </div>
-    <div class="status" id="status"></div>
-  </section>
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
 
-  <pre class="code" id="code"></pre>
-
-  <footer>画布尺寸 320×240。可在画布上悬停 / 按下 / 点击按钮体验真实状态，仅导出 PNG，完全离线可用。</footer>
+  <footer>左列画布尺寸 320×240。右列渲染参数全部取自 foundation/arkui/ui_lite 源码。</footer>
 </div>
 
 <script src="../assets/widget-kit.js"></script>
@@ -338,5 +393,9 @@
   renderCode();
 })();
 </script>
+
+<script>window.LV_PAGE_LVGAPS = ["UIView 无状态机，仅 UIButton 三态", "三态互斥不能叠加", "无 HOVERED 悬停态", "无 CHECKED 勾选态（走 UICheckBox）", "无 FOCUSED 描边样式", "无 style transition，按下动画写死 0.8/150ms + 蒙层 α25"];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
 </body>
 </html>
