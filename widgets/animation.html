@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animation：lv_anim vs ArkUI lite CSS animation</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='9' width='26' height='14' rx='3' fill='none' stroke='%232b7de9' stroke-width='2'/%3E%3Ccircle cx='11' cy='16' r='3' fill='%232b7de9'/%3E%3Cpath d='M17 16h9' stroke='%23b9c3d1' stroke-width='2' stroke-dasharray='2 2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
+<style>
+  .tier-bar{
+    margin:14px 0 0;padding:10px 14px;border:1px solid #d7dee8;border-radius:10px;
+    background:#f8fafc;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;
+  }
+  .tier-bar b{font-size:13px}
+  .tier-bar small{color:#6b7280;line-height:1.5}
+  .tier-bar .seg{flex:0 0 auto}
+  .tier-bar .seg button{padding:5px 12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
+  <header>
+    <h1>Animation：lv_anim vs ArkUI lite 动效能力</h1>
+    <p class="lead">左列为 <b>LVGL 动画引擎</b>复刻演示（缓动曲线 / 时间轴 / 反向往复 / 缩放倾斜 / 状态过渡 / 路径动画 / 可中断），
+      右列按 <b>ArkUI lite 最新源码</b>复刻。最新代码新增了多段关键帧、scale、路径动画、元素过渡与页面转场，
+      但<b>全部是编译期开关且默认关闭</b>，所以右侧提供「默认基线 / 增强能力开启」两档对照。</p>
+    <div class="tier-bar">
+      <b>ArkUI lite 能力档位</b>
+      <div class="seg" id="tier">
+        <button type="button" data-val="base">默认基线（开关关闭）</button>
+        <button type="button" data-val="enhanced" class="active">增强能力开启</button>
+      </div>
+      <small>实际构建默认关闭；切到增强后可用：多段关键帧、scale、offset-path、显式元素过渡、页面/共享元素转场。</small>
+    </div>
+  </header>
+
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_anim</code>
+        <span class="cmp-tag lv">通用动画引擎 · 任意属性/变量</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">一个 <code>lv_anim_t</code> 驱动一个属性：逐帧回调写值 + 缓动函数映射进度。时间轴可串行/并行编排，反向往复与暂停都是一行接口，状态过渡可在样式里声明，手势类动画还能随时删掉重起。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 接口</h2>
+        <div class="grid">
+          <div class="field wide">
+            <label>动效场景 scene<span class="api">lv_anim / lv_anim_timeline / lv_obj_set_style_transition</span></label>
+            <div class="seg" id="scene">
+              <button type="button" data-val="easing" class="active">缓动曲线</button>
+              <button type="button" data-val="timeline" title="ArkUI lite 增强后只有单元素多段关键帧，无并行编排/seek">时间轴编排</button>
+              <button type="button" data-val="reverse" title="ArkUI lite 两档均无动画反向能力"><i class="lite-none"></i>反向往复</button>
+              <button type="button" data-val="transform" title="ArkUI lite 增强后支持 scale，但仍无 skew / 轴心">缩放倾斜</button>
+              <button type="button" data-val="state" title="ArkUI lite 增强后需显式 startTransition()，不会随状态自动补间">状态过渡</button>
+              <button type="button" data-val="path" title="ArkUI lite 增强后原生支持 offset-path / offset-rotate">路径动画</button>
+              <button type="button" data-val="interrupt" title="ArkUI lite 两档均无逐帧动画 API"><i class="lite-none"></i>可中断</button>
+            </div>
+            <div class="seg-legend"><i></i>红点 = 即使增强开启，ArkUI lite 仍无此能力</div>
+          </div>
+
+          <div class="field wide">
+            <label>可动画属性 property<span class="api">LVGL 任意属性/变量均可；右侧基线仅 7 类白名单，增强后多段关键帧支持 scale</span></label>
+            <div class="seg" id="prop">
+              <button type="button" data-val="x" class="active">x 位移</button>
+              <button type="button" data-val="opacity">opacity</button>
+              <button type="button" data-val="width">width</button>
+              <button type="button" data-val="bgColor">bgColor</button>
+              <button type="button" data-val="rotate">rotate</button>
+              <button type="button" data-val="scale">scale</button>
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label>缓动路径 path<span class="api">lv_anim_set_path_cb()：7 种内置 + 自定义 cubic-bezier</span></label>
+            <div class="seg" id="path">
+              <button type="button" data-val="linear" class="active">linear</button>
+              <button type="button" data-val="ease_in">ease_in</button>
+              <button type="button" data-val="ease_out">ease_out</button>
+              <button type="button" data-val="ease_in_out">ease_in_out</button>
+              <button type="button" data-val="overshoot">overshoot</button>
+              <button type="button" data-val="bounce">bounce</button>
+              <button type="button" data-val="step">step</button>
+              <button type="button" data-val="bezier">自定义贝塞尔</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>时长 duration<output id="o-dur">1200 ms</output><span class="api">lv_anim_set_duration()</span></label>
+            <input type="range" id="dur" min="200" max="3000" step="50" value="1200">
+          </div>
+          <div class="field">
+            <label>延迟 delay<output id="o-delay">0 ms</output><span class="api">lv_anim_set_delay()</span></label>
+            <input type="range" id="delay" min="0" max="1200" step="50" value="0">
+          </div>
+
+          <div class="field">
+            <label>无限循环 repeat<span class="api">lv_anim_set_repeat_count(LV_ANIM_REPEAT_INFINITE)</span></label>
+            <div class="check"><input type="checkbox" id="loop" checked><span>无限循环</span></div>
+          </div>
+          <div class="field">
+            <label>播放控制 pause / resume<span class="api">lv_anim_pause() / lv_anim_resume()</span></label>
+            <div class="actions" style="margin-top:6px">
+              <button type="button" class="btn" id="btn-pause">暂停</button>
+              <button type="button" class="btn" id="btn-replay">重播</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>CSS animation / transition</code>
+        <span class="cmp-tag ui" id="ui-tag">增强开启 · 多段 / scale / 路径 / 转场</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip" id="ui-tip">当前为<b>增强能力开启</b>档：@keyframes 可按 0%~100% 多段解析（最多 8 段、每段 5 个并行属性），关键帧支持 scale；另有独立的 offset-path 路径动画与显式 <code>startTransition()</code> 元素过渡。缓动仍只有 4 种，仍无反向、暂停、完成回调、skew/轴心与状态自动补间。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 CSS animation / transition</h2>
+        <div id="upanel"></div>
+
+        <div class="src-note">
+          渲染依据：<code>component.cpp</code>（属性白名单 / 缓动 / fill-mode）、<code>app_style.cpp</code>（多段关键帧解析，受增强开关控制）、
+          <code>keyframes_transition_impl.cpp</code>（≤8 段 / 5 属性并行）、<code>transition_impl.cpp</code>（offset-path 路径动画）、
+          <code>element_transition.cpp</code>（显式 startTransition）、<code>page_transition.cpp</code>（router.replace 页面转场）。
+          默认构建全部关闭；右列代码随参数与档位实时生成。
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
+
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
+
+  <footer>左列按 LVGL 10.x 的 lv_anim / lv_anim_timeline API 行为复刻；右列按 ace_engine_lite 最新源码的 CSS animation / transition 能力复刻。增强能力均为编译期开关，默认关闭，参数与档位取自源码常量。</footer>
+</div>
+
+<script>
+/* =====================================================================
+   左列：LVGL 动画引擎复刻
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var W = 360, H = 220;
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var codeEl = document.getElementById("code");
+  var COL = "#2b7de9";
+
+  /* 右侧能力档位：base = 编译期开关关闭（实际构建默认）；enhanced = 开关开启 */
+  var tier = "enhanced";
+  window.LV_ANIM_TIER = tier;
+
+  var state = { scene: "easing", prop: "x", path: "linear", dur: 1200, delay: 0, loop: true };
+
+  /* 可暂停时钟：pause 时冻结时间轴，resume 后扣掉暂停时长 */
+  var clock = { t0: performance.now(), paused: false, pauseStart: 0, pausedTotal: 0 };
+
+  /* 可中断场景的目标状态 */
+  var ip = { from: 44, to: 318, t0: 0, next: 1200, idx: 0 };
+
+  function nowMs(){
+    var n = clock.paused ? clock.pauseStart : performance.now();
+    return n - clock.t0 - clock.pausedTotal;
+  }
+  function restart(){
+    clock.t0 = performance.now();
+    clock.paused = false;
+    clock.pausedTotal = 0;
+    document.getElementById("btn-pause").textContent = "暂停";
+    ip.from = 44; ip.to = 318; ip.t0 = 0; ip.next = 1200; ip.idx = 0;
+  }
+
+  /* ---------- 数学 / 绘制工具 ---------- */
+  function cubicBezier(x1, y1, x2, y2){
+    function A(a, b){ return 1 - 3 * b + 3 * a; }
+    function B(a, b){ return 3 * b - 6 * a; }
+    function C(a){ return 3 * a; }
+    function calc(a, b, t){ return ((A(a, b) * t + B(a, b)) * t + C(a)) * t; }
+    function slope(a, b, t){ return 3 * A(a, b) * t * t + 2 * B(a, b) * t + C(a); }
+    return function(x){
+      if(x <= 0) return 0;
+      if(x >= 1) return 1;
+      var t = x;
+      for(var i = 0; i < 6; i++){
+        var s = slope(x1, x2, t);
+        if(Math.abs(s) < 1e-6) break;
+        t -= (calc(x1, x2, t) - x) / s;
+      }
+      return calc(y1, y2, t);
+    };
+  }
+  var customBezier = cubicBezier(0.34, 1.56, 0.64, 1);
+
+  function ease(name, p){
+    p = Math.max(0, Math.min(1, p));
+    switch(name){
+      case "ease_in": return p * p * p;
+      case "ease_out": return 1 - Math.pow(1 - p, 3);
+      case "ease_in_out": return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+      case "overshoot": {
+        var s = 1.70158;
+        return 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+      }
+      case "bounce": {
+        var n1 = 7.5625, d1 = 2.75;
+        if(p < 1 / d1) return n1 * p * p;
+        if(p < 2 / d1) { p -= 1.5 / d1; return n1 * p * p + 0.75; }
+        if(p < 2.5 / d1) { p -= 2.25 / d1; return n1 * p * p + 0.9375; }
+        p -= 2.625 / d1; return n1 * p * p + 0.984375;
+      }
+      case "step": return Math.floor(p * 4) / 4;
+      case "bezier": return customBezier(p);
+      default: return p;
+    }
+  }
+
+  function rr(c, x, y, w, h, r){
+    r = Math.max(0, Math.min(r, Math.min(w, h) / 2));
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r);
+    c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r);
+    c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+  }
+  function circle(c, x, y, r){
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+  }
+  function text(c, s, x, y, size, color, align, weight){
+    c.font = (weight || 400) + " " + size + "px -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif";
+    c.fillStyle = color || "#1c2128";
+    c.textAlign = align || "center";
+    c.textBaseline = "middle";
+    c.fillText(s, x, y);
+  }
+  function mix(a, b, p){ return a + (b - a) * p; }
+  function mixColor(c1, c2, p){
+    var a = parseInt(c1.slice(1), 16), b = parseInt(c2.slice(1), 16);
+    var r = Math.round(mix((a >> 16) & 255, (b >> 16) & 255, p));
+    var g = Math.round(mix((a >> 8) & 255, (b >> 8) & 255, p));
+    var bl = Math.round(mix(a & 255, b & 255, p));
+    return "rgb(" + r + "," + g + "," + bl + ")";
+  }
+  /* delay + 时长 + 循环：得到 0..1 的原始进度 */
+  function cycle(t){
+    var e = t - state.delay;
+    if(e < 0) return 0;
+    if(state.loop) return (e % state.dur) / state.dur;
+    return Math.min(1, e / state.dur);
+  }
+
+  /* ---------- 场景 1：缓动曲线（可动画属性可切换） ---------- */
+  var PROP_SET = {
+    x: "lv_obj_set_x",
+    opacity: "lv_obj_set_style_opa",
+    width: "lv_obj_set_width",
+    bgColor: "lv_obj_set_style_bg_color",
+    rotate: "lv_obj_set_style_transform_rotation",
+    scale: "lv_obj_set_style_transform_scale"
+  };
+  function propValue(p){
+    switch(state.prop){
+      case "opacity": return Math.round(255 * (0.15 + 0.85 * p)) + " / 255";
+      case "width": return Math.round(mix(70, 200, p)) + " px";
+      case "bgColor": return mixColor("#2b7de9", "#c23b3b", p);
+      case "rotate": return (30 * p).toFixed(1) + "°";
+      case "scale": return (1 + 0.38 * p).toFixed(2) + "x";
+      default: return Math.round(mix(84, 276, p)) + " px";
+    }
+  }
+  function drawEasing(t){
+    var raw = cycle(t);
+    var p = ease(state.path, raw);
+    var cx = W / 2, cy = 92, h = 54;
+    var w = state.prop === "width" ? mix(70, 200, p) : 132;
+    var x = state.prop === "x" ? mix(84, 276, p) : cx;
+    var col = state.prop === "bgColor" ? mixColor("#2b7de9", "#c23b3b", p) : COL;
+    var alpha = state.prop === "opacity" ? 0.15 + 0.85 * p : 1;
+    var rot = state.prop === "rotate" ? (30 * p) * Math.PI / 180 : 0;
+    var sc = state.prop === "scale" ? 1 + 0.38 * p : 1;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, cy);
+    ctx.rotate(rot);
+    ctx.scale(sc, sc);
+    ctx.fillStyle = col;
+    rr(ctx, -w / 2, -h / 2, w, h, 14); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.95)";
+    text(ctx, "obj", 0, 0, 13, "#ffffff", "center", 600);
+    ctx.restore();
+
+    /* 底部进度轨：显示原始线性进度，便于理解缓动对属性的映射 */
+    var x0 = 44, x1 = 316, y = 166;
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = "#cfd8e3";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = "#dfe7f1"; circle(ctx, x0, y, 5); ctx.fill();
+    circle(ctx, x1, y, 5); ctx.fill();
+    ctx.fillStyle = COL; circle(ctx, mix(x0, x1, raw), y, 4); ctx.fill();
+
+    text(ctx, "p = " + p.toFixed(2) + "   →   " + propValue(p), W / 2, 30, 13, "#1c2128", "center", 600);
+    text(ctx, PROP_SET[state.prop] + "()", W / 2, 50, 12, "#5b6472", "center", 400);
+    text(ctx, "同一组 from → to：LVGL 可驱动任意属性", W / 2, 196, 10.5, "#8b939d", "center", 400);
+  }
+
+  /* ---------- 场景 2：时间轴编排 ---------- */
+  function drawTimeline(t){
+    var d = state.dur, starts = [0, 320, 640], total = d + 640;
+    var e = t - state.delay;
+    var tt = e < 0 ? 0 : (state.loop ? e % total : Math.min(total, e));
+    var rows = [["card A", "start_time = 0"], ["card B", "start_time = 320"], ["card C", "start_time = 640"]];
+    for(var i = 0; i < 3; i++){
+      var p = ease(state.path, Math.min(1, Math.max(0, (tt - starts[i]) / d)));
+      var x = mix(-190, 54, p), y = 30 + i * 44;
+      ctx.save();
+      ctx.globalAlpha = 0.12 + 0.88 * p;
+      ctx.fillStyle = COL;
+      rr(ctx, x, y, 168, 34, 8); ctx.fill();
+      ctx.fillStyle = "#fff";
+      text(ctx, rows[i][0], x + 12, y + 17, 12, "#ffffff", "left", 600);
+      text(ctx, rows[i][1], x + 70, y + 17, 10, "rgba(255,255,255,.85)", "left", 400);
+      ctx.restore();
+    }
+    var px = 64, pw = 232, py = 182;
+    ctx.fillStyle = "#e5ebf3"; rr(ctx, px, py - 4, pw, 8, 4); ctx.fill();
+    ctx.fillStyle = COL; rr(ctx, px, py - 4, pw * (tt / total), 8, 4); ctx.fill();
+    text(ctx, "timeline 进度 " + Math.round(tt / total * 100) + "% · 串行/并行由 start_time 决定", W / 2, 204, 10.5, "#8b939d", "center", 400);
+    text(ctx, tier === "enhanced" ? "→ ArkUI lite 增强：单元素多段关键帧（≤8 段），无并行/seek" : "→ ArkUI lite 仅 from→to 两帧，多段编排无法表达", W / 2, 216, 10, tier === "enhanced" ? "#b07800" : "#c23b3b", "center", 600);
+  }
+
+  /* ---------- 场景 3：反向往复 ---------- */
+  function drawReverse(t){
+    var d = state.dur, e = t - state.delay, p;
+    if(e < 0) p = 0;
+    else if(state.loop){
+      var ph = (e % (2 * d)) / d;
+      p = ph < 1 ? ph : 2 - ph;
+    }else p = Math.min(1, e / d);
+    var v = ease(state.path, p);
+    var s = 0.72 + 0.5 * v;
+
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.6 * v;
+    ctx.fillStyle = "#e8f0fb";
+    rr(ctx, W / 2 - 70, 62, 140, 84, 16); ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(W / 2, 104);
+    ctx.scale(s, s);
+    ctx.fillStyle = COL;
+    rr(ctx, -52, -32, 104, 64, 14); ctx.fill();
+    ctx.fillStyle = "#fff";
+    text(ctx, "LVGL", 0, 0, 15, "#ffffff", "center", 600);
+    ctx.restore();
+
+    text(ctx, state.loop ? "reverse_duration 自动倒放 · 无限往复" : "reverse_duration 自动倒放", W / 2, 176, 11.5, "#5b6472", "center", 600);
+    text(ctx, "一次 anim 同时声明正向与反向，无需写两份 keyframes", W / 2, 196, 11, "#8b939d", "center", 400);
+  }
+
+  /* ---------- 场景 4：缩放 / 旋转 / 倾斜 ---------- */
+  function drawTransform(t){
+    var p = ease(state.path, cycle(t));
+    var cx = W / 2, cy = 100;
+    var sc = 0.72 + 0.55 * p;
+    var rot = (38 * p) * Math.PI / 180;
+    var skew = Math.tan((-18 * p) * Math.PI / 180);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.transform(1, 0, skew, 1, 0, 0);
+    ctx.scale(sc, sc);
+    var g = ctx.createLinearGradient(-60, -34, 60, 34);
+    g.addColorStop(0, "#2b7de9");
+    g.addColorStop(1, "#67a9ff");
+    ctx.fillStyle = g;
+    rr(ctx, -60, -34, 120, 68, 14); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    text(ctx, "transform", 0, 0, 14, "#ffffff", "center", 600);
+    ctx.restore();
+
+    ctx.save();
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = "rgba(194,59,59,.75)";
+    circle(ctx, cx - 40, cy + 28, 6); ctx.stroke();
+    ctx.restore();
+    text(ctx, "pivot", cx - 40, cy + 44, 9, "#c23b3b", "center", 600);
+
+    text(ctx, "scale / rotate / skew / pivot 可组合，一个回调全改", W / 2, 180, 11.5, "#5b6472", "center", 600);
+    text(ctx, tier === "enhanced" ? "→ ArkUI lite 增强后支持 scale，但仍无 skew / 轴心" : "→ ArkUI lite 默认只有 translate + rotate，无 scale", W / 2, 200, 11, tier === "enhanced" ? "#b07800" : "#c23b3b", "center", 600);
+  }
+
+  /* ---------- 场景 5：状态过渡 ---------- */
+  function drawState(t){
+    var period = 900, tt = Math.max(0, t - state.delay);
+    var pressed = Math.floor(tt / period) % 2 === 1;
+    var local = (tt % period) / period;
+    var v = ease("ease_out", Math.min(1, local * period / Math.min(600, state.dur)));
+    if(!pressed) v = 1 - v;
+
+    var w = 150 + 16 * v, h = 48 + 6 * v, dy = 4 * v;
+    var bg = mixColor("#2b7de9", "#0f5fc4", v);
+    ctx.save();
+    ctx.translate(W / 2, 92 + dy);
+    ctx.fillStyle = bg;
+    rr(ctx, -w / 2, -h / 2, w, h, Math.min(20, h / 2)); ctx.fill();
+    ctx.fillStyle = "#fff";
+    text(ctx, pressed ? "PRESSED" : "RELEASED", 0, 0, 13, "#ffffff", "center", 600);
+    ctx.restore();
+
+    text(ctx, "状态一变，LV_STYLE_TRANSITION 自动补间（颜色 / 尺寸 / 位移）", W / 2, 172, 11.5, "#5b6472", "center", 600);
+    text(ctx, tier === "enhanced" ? "→ ArkUI lite 增强后需显式 startTransition()，且不会随状态自动补间" : "→ ArkUI lite 默认无 transition-*，状态变化瞬间跳变", W / 2, 192, 10.5, tier === "enhanced" ? "#b07800" : "#c23b3b", "center", 600);
+  }
+
+  /* ---------- 场景 6：可中断 ---------- */
+  function interruptValue(t){
+    var p = (t - ip.t0) / state.dur;
+    if(p <= 0) return ip.from;
+    if(p >= 1) return ip.to;
+    return ip.from + (ip.to - ip.from) * ease("ease_out", p);
+  }
+  function drawInterrupt(t){
+    if(t >= ip.next){
+      ip.from = interruptValue(t);
+      ip.idx = (ip.idx + 1) % 3;
+      ip.to = [318, 74, 250][ip.idx];
+      ip.t0 = t;
+      ip.next = t + 1200;
+    }
+    var y = 112, x = interruptValue(t);
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = "#cfd8e3";
+    ctx.beginPath(); ctx.moveTo(44, y); ctx.lineTo(318, y); ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = "rgba(43,125,233,.5)";
+    circle(ctx, ip.to, y, 12); ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = "rgba(43,125,233,.16)";
+    circle(ctx, x, y, 18); ctx.fill();
+    ctx.fillStyle = COL; circle(ctx, x, y, 10); ctx.fill();
+    ctx.fillStyle = "#fff"; circle(ctx, x, y, 4); ctx.fill();
+
+    text(ctx, "当前 " + Math.round(x) + " px   →   新目标 " + ip.to + " px", W / 2, 56, 13, "#1c2128", "center", 600);
+    text(ctx, "随时改目标：lv_anim_delete() 后从当前值重新 lv_anim_start()", W / 2, 182, 11.5, "#5b6472", "center", 600);
+    text(ctx, "手势跟随 / 可打断动效的基础，ArkUI lite 无对应 API", W / 2, 202, 11, "#8b939d", "center", 400);
+  }
+
+  /* ---------- 场景 7：路径动画 ---------- */
+  function bezPoint(p0, p1, p2, p3, t){
+    var u = 1 - t;
+    return {
+      x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+      y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y
+    };
+  }
+  function bezTangent(p0, p1, p2, p3, t){
+    var u = 1 - t;
+    return {
+      x: 3 * u * u * (p1.x - p0.x) + 6 * u * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x),
+      y: 3 * u * u * (p1.y - p0.y) + 6 * u * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y)
+    };
+  }
+  function drawPath(t){
+    var raw = cycle(t);
+    var p = ease(state.path, raw);
+    var P0 = { x: 48, y: 140 }, P1 = { x: 96, y: 30 }, P2 = { x: 236, y: 156 }, P3 = { x: 300, y: 62 };
+
+    ctx.save();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = "#cfd8e3";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for(var i = 0; i <= 48; i++){
+      var q = bezPoint(P0, P1, P2, P3, i / 48);
+      if(i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    /* 控制点示意 */
+    ctx.fillStyle = "#e5ebf3";
+    [P1, P2].forEach(function(pt){ circle(ctx, pt.x, pt.y, 3); ctx.fill(); });
+
+    var pos = bezPoint(P0, P1, P2, P3, p);
+    var tan = bezTangent(P0, P1, P2, P3, p);
+    var ang = Math.atan2(tan.y, tan.x);
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.rotate(ang);
+    ctx.fillStyle = COL;
+    rr(ctx, -21, -10, 42, 20, 7); ctx.fill();
+    ctx.fillStyle = "#fff";
+    text(ctx, "→", 0, 0, 13, "#ffffff", "center", 600);
+    ctx.restore();
+
+    text(ctx, "offset-distance = " + Math.round(p * 100) + "%   ·   offset-rotate: auto", W / 2, 26, 12, "#1c2128", "center", 600);
+    text(ctx, "LVGL：自定义 exec_cb 按贝塞尔取点（无 offset-path 语法）", W / 2, 180, 11, "#5b6472", "center", 600);
+    text(ctx, tier === "enhanced" ? "→ ArkUI lite 增强后原生支持 offset-path / offset-rotate（≤32 采样点）" : "→ ArkUI lite 默认基线无 offset-path 能力", W / 2, 200, 10.5, tier === "enhanced" ? "#b07800" : "#c23b3b", "center", 600);
+  }
+
+  function draw(){
+    var t = nowMs();
+    ctx.clearRect(0, 0, W, H);
+    switch(state.scene){
+      case "timeline": drawTimeline(t); break;
+      case "reverse": drawReverse(t); break;
+      case "transform": drawTransform(t); break;
+      case "state": drawState(t); break;
+      case "path": drawPath(t); break;
+      case "interrupt": drawInterrupt(t); break;
+      default: drawEasing(t);
+    }
+  }
+
+  /* ---------- 高清适配 ---------- */
+  function fitCanvas(){
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  /* ---------- 等价 C 代码 ---------- */
+  var PATH_FN = {
+    linear: "lv_anim_path_linear", ease_in: "lv_anim_path_ease_in", ease_out: "lv_anim_path_ease_out",
+    ease_in_out: "lv_anim_path_ease_in_out", overshoot: "lv_anim_path_overshoot",
+    bounce: "lv_anim_path_bounce", step: "lv_anim_path_step", bezier: "lv_anim_path_custom_bezier3"
+  };
+
+  function baseAnim(execCb, from, to){
+    var L = [];
+    L.push('lv_anim_t a;');
+    L.push('<span class="fn">lv_anim_init</span>(&amp;a);');
+    L.push('<span class="fn">lv_anim_set_var</span>(&amp;a, obj);');
+    L.push('<span class="fn">lv_anim_set_exec_cb</span>(&amp;a, ' + execCb + ');');
+    L.push('<span class="fn">lv_anim_set_values</span>(&amp;a, <span class="num">' + from + '</span>, <span class="num">' + to + '</span>);');
+    L.push('<span class="fn">lv_anim_set_duration</span>(&amp;a, <span class="num">' + state.dur + '</span>);');
+    L.push('<span class="fn">lv_anim_set_delay</span>(&amp;a, <span class="num">' + state.delay + '</span>);');
+    L.push('<span class="fn">lv_anim_set_path_cb</span>(&amp;a, ' + PATH_FN[state.path] + ');');
+    if(state.path === "bezier"){
+      L.push('<span class="cm">/* 自定义 cubic-bezier：控制点 ×100 传入 */</span>');
+      L.push('<span class="fn">lv_anim_set_bezier3_param</span>(&amp;a, <span class="num">34</span>, <span class="num">156</span>, <span class="num">64</span>, <span class="num">100</span>);');
+    }
+    L.push('<span class="fn">lv_anim_set_repeat_count</span>(&amp;a, ' + (state.loop ? "LV_ANIM_REPEAT_INFINITE" : "<span class=\"num\">1</span>") + ');');
+    return L;
+  }
+
+  function renderCode(){
+    var L = [];
+    L.push('<span class="cm">/* 由页面参数实时生成 · LVGL 10.x */</span>');
+    L.push('lv_obj_t * obj = <span class="fn">lv_obj_create</span>(<span class="fn">lv_screen_active</span>());');
+    L.push('');
+
+    if(state.scene === "state"){
+      L.push('<span class="cm">/* 状态过渡：不需要 anim，样式里声明 transition，状态一变自动补间 */</span>');
+      L.push('static const lv_style_prop_t props[] = {');
+      L.push('    LV_STYLE_BG_COLOR, LV_STYLE_WIDTH, LV_STYLE_HEIGHT, LV_STYLE_TRANSLATE_Y, <span class="num">0</span>');
+      L.push('};');
+      L.push('static lv_style_transition_dsc_t trans;');
+      L.push('<span class="fn">lv_style_transition_dsc_init</span>(&amp;trans, props, lv_anim_path_ease_out, <span class="num">' +
+        Math.min(600, state.dur) + '</span>, <span class="num">' + state.delay + '</span>, NULL);');
+      L.push('<span class="fn">lv_obj_set_style_transition</span>(obj, &amp;trans, <span class="num">0</span>);');
+      L.push('<span class="fn">lv_obj_add_state</span>(obj, LV_STATE_PRESSED);   <span class="cm">/* 自动补间，无需 keyframes */</span>');
+    }else if(state.scene === "transform"){
+      L.push('<span class="cm">/* 一个 custom_exec_cb 同时改 scale / rotation / skew */</span>');
+      L.push('static void anim_transform_cb(void * var, int32_t v)');
+      L.push('{');
+      L.push('    lv_obj_t * o = (lv_obj_t *)var;');
+      L.push('    <span class="fn">lv_obj_set_style_transform_scale_x</span>(o, <span class="num">190</span> + v, <span class="num">0</span>);');
+      L.push('    <span class="fn">lv_obj_set_style_transform_scale_y</span>(o, <span class="num">190</span> + v, <span class="num">0</span>);');
+      L.push('    <span class="fn">lv_obj_set_style_transform_rotation</span>(o, v * <span class="num">6</span>, <span class="num">0</span>);   <span class="cm">/* 0.1° 单位 */</span>');
+      L.push('    <span class="fn">lv_obj_set_style_transform_skew_x</span>(o, -v, <span class="num">0</span>);');
+      L.push('}');
+      L.push('');
+      L = L.concat(baseAnim("anim_transform_cb", 0, 60));
+      L.push('<span class="fn">lv_anim_start</span>(&amp;a);');
+    }else if(state.scene === "timeline"){
+      L.push('<span class="cm">/* 时间轴：start_time 决定串行（依次）还是并行（相同时间） */</span>');
+      L.push('lv_anim_timeline_t * tl = <span class="fn">lv_anim_timeline_create</span>();');
+      L.push('');
+      L.push('lv_anim_t a1;');
+      L.push('<span class="fn">lv_anim_init</span>(&amp;a1);');
+      L.push('<span class="fn">lv_anim_set_var</span>(&amp;a1, cardA);');
+      L.push('<span class="fn">lv_anim_set_exec_cb</span>(&amp;a1, (lv_anim_exec_xcb_t)lv_obj_set_x);');
+      L.push('<span class="fn">lv_anim_set_values</span>(&amp;a1, <span class="num">-190</span>, <span class="num">54</span>);');
+      L.push('<span class="fn">lv_anim_set_duration</span>(&amp;a1, <span class="num">' + state.dur + '</span>);');
+      L.push('<span class="fn">lv_anim_timeline_add</span>(tl, <span class="num">0</span>, &amp;a1);     <span class="cm">/* card A */</span>');
+      L.push('');
+      L.push('<span class="cm">/* card B / card C 同构，start_time 分别为 320 / 640 */</span>');
+      L.push('<span class="fn">lv_anim_timeline_add</span>(tl, <span class="num">320</span>, &amp;a2);');
+      L.push('<span class="fn">lv_anim_timeline_add</span>(tl, <span class="num">640</span>, &amp;a3);');
+      L.push('');
+      L.push('<span class="fn">lv_anim_timeline_start</span>(tl);');
+      L.push('<span class="cm">/* 另有 set_progress 按 0~65535 任意 seek、set_reverse 整条反向 */</span>');
+    }else if(state.scene === "reverse"){
+      L = L.concat(baseAnim("(lv_anim_exec_xcb_t)lv_obj_set_x", 44, 316));
+      L.push('<span class="fn">lv_anim_set_reverse_duration</span>(&amp;a, <span class="num">' + state.dur + '</span>);');
+      L.push('<span class="fn">lv_anim_set_reverse_delay</span>(&amp;a, <span class="num">0</span>);');
+      L.push('<span class="fn">lv_anim_start</span>(&amp;a);   <span class="cm">/* 播完自动倒着播回去 */</span>');
+    }else if(state.scene === "path"){
+      L.push('<span class="cm">/* LVGL 没有 offset-path 语法：在 exec_cb 里按三次贝塞尔取点，并按切线转向 */</span>');
+      L.push('static void anim_path_cb(void * var, int32_t v)');
+      L.push('{');
+      L.push('    lv_obj_t * o = (lv_obj_t *)var;');
+      L.push('    float t = v / <span class="num">1000.0f</span>, u = <span class="num">1.0f</span> - t;');
+      L.push('    float x = u*u*u*<span class="num">48</span>  + 3*u*u*t*<span class="num">96</span>  + 3*u*t*t*<span class="num">236</span> + t*t*t*<span class="num">300</span>;');
+      L.push('    float y = u*u*u*<span class="num">140</span> + 3*u*u*t*<span class="num">30</span>  + 3*u*t*t*<span class="num">156</span> + t*t*t*<span class="num">62</span>;');
+      L.push('    float dx = 3*u*u*(<span class="num">96</span>-<span class="num">48</span>) + 6*u*t*(<span class="num">236</span>-<span class="num">96</span>) + 3*t*t*(<span class="num">300</span>-<span class="num">236</span>);');
+      L.push('    float dy = 3*u*u*(<span class="num">30</span>-<span class="num">140</span>) + 6*u*t*(<span class="num">156</span>-<span class="num">30</span>) + 3*t*t*(<span class="num">62</span>-<span class="num">156</span>);');
+      L.push('    <span class="fn">lv_obj_set_pos</span>(o, (int32_t)x, (int32_t)y);');
+      L.push('    <span class="fn">lv_obj_set_style_transform_rotation</span>(o, (int32_t)(atan2f(dy, dx) * <span class="num">572.9578f</span>), <span class="num">0</span>);');
+      L.push('}');
+      L.push('');
+      L = L.concat(baseAnim("anim_path_cb", 0, 1000));
+      L.push('<span class="fn">lv_anim_start</span>(&amp;a);');
+    }else if(state.scene === "interrupt"){
+      L = L.concat(baseAnim("(lv_anim_exec_xcb_t)lv_obj_set_x", 44, 318));
+      L.push('<span class="cm">/* 用户改了目标值：先删旧动画，再从当前位置重新起 */</span>');
+      L.push('<span class="fn">lv_anim_delete</span>(obj, NULL);');
+      L.push('<span class="fn">lv_anim_set_values</span>(&amp;a, <span class="fn">lv_obj_get_x</span>(obj), <span class="fn">new_target</span>);');
+      L.push('<span class="fn">lv_anim_start</span>(&amp;a);');
+    }else{
+      /* 缓动曲线场景：按「可动画属性」生成不同的 exec_cb 与取值 */
+      if(state.prop === "opacity"){
+        L.push('<span class="cm">/* 不透明度：任意属性都可用自定义 exec_cb 驱动 */</span>');
+        L.push('static void anim_opa_cb(void * var, int32_t v)');
+        L.push('{');
+        L.push('    <span class="fn">lv_obj_set_style_opa</span>((lv_obj_t *)var, v, <span class="num">0</span>);');
+        L.push('}');
+        L.push('');
+        L = L.concat(baseAnim("anim_opa_cb", 40, 255));
+      }else if(state.prop === "bgColor"){
+        L.push('<span class="cm">/* 背景色：exec_cb 里做颜色插值 */</span>');
+        L.push('static void anim_bg_cb(void * var, int32_t v)');
+        L.push('{');
+        L.push('    <span class="fn">lv_obj_set_style_bg_color</span>((lv_obj_t *)var,');
+        L.push('        <span class="fn">lv_color_mix</span>(lv_color_hex(<span class="num">0xc23b3b</span>), lv_color_hex(<span class="num">0x2b7de9</span>), v), <span class="num">0</span>);');
+        L.push('}');
+        L.push('');
+        L = L.concat(baseAnim("anim_bg_cb", 0, 255));
+      }else if(state.prop === "width"){
+        L = L.concat(baseAnim("(lv_anim_exec_xcb_t)lv_obj_set_width", 70, 200));
+      }else if(state.prop === "rotate"){
+        L.push('<span class="cm">/* 旋转：0.1° 为单位，300 == 30° */</span>');
+        L.push('static void anim_rot_cb(void * var, int32_t v)');
+        L.push('{');
+        L.push('    <span class="fn">lv_obj_set_style_transform_rotation</span>((lv_obj_t *)var, v, <span class="num">0</span>);');
+        L.push('}');
+        L.push('');
+        L = L.concat(baseAnim("anim_rot_cb", 0, 300));
+      }else if(state.prop === "scale"){
+        L.push('<span class="cm">/* 缩放：LVGL 以 256 == 100% */</span>');
+        L.push('static void anim_scale_cb(void * var, int32_t v)');
+        L.push('{');
+        L.push('    <span class="fn">lv_obj_set_style_transform_scale_x</span>((lv_obj_t *)var, v, <span class="num">0</span>);');
+        L.push('    <span class="fn">lv_obj_set_style_transform_scale_y</span>((lv_obj_t *)var, v, <span class="num">0</span>);');
+        L.push('}');
+        L.push('');
+        L = L.concat(baseAnim("anim_scale_cb", 256, 354));
+      }else{
+        L = L.concat(baseAnim("(lv_anim_exec_xcb_t)lv_obj_set_x", 84, 276));
+      }
+      L.push('<span class="fn">lv_anim_start</span>(&amp;a);');
+    }
+
+    codeEl.innerHTML = L.join("\n");
+  }
+
+  /* ---------- 交互 ---------- */
+  function bindSeg(id, key, onChange){
+    var el = document.getElementById(id);
+    el.addEventListener("click", function(e){
+      var btn = e.target.closest ? e.target.closest("button") : null;
+      if(!btn || btn.parentNode !== el) return;
+      state[key] = btn.getAttribute("data-val");
+      var btns = el.getElementsByTagName("button");
+      for(var i = 0; i < btns.length; i++){
+        btns[i].className = btns[i] === btn ? "active" : "";
+      }
+      if(onChange) onChange();
+      renderCode();
+    });
+  }
+
+  bindSeg("scene", "scene", function(){ restart(); });
+  bindSeg("prop", "prop");
+  bindSeg("path", "path");
+
+  var durEl = document.getElementById("dur");
+  durEl.addEventListener("input", function(e){
+    state.dur = Number(e.target.value);
+    document.getElementById("o-dur").textContent = state.dur + " ms";
+    renderCode();
+  });
+  var delayEl = document.getElementById("delay");
+  delayEl.addEventListener("input", function(e){
+    state.delay = Number(e.target.value);
+    document.getElementById("o-delay").textContent = state.delay + " ms";
+    renderCode();
+  });
+  document.getElementById("loop").addEventListener("change", function(e){
+    state.loop = e.target.checked;
+    renderCode();
+  });
+
+  var pauseBtn = document.getElementById("btn-pause");
+  pauseBtn.addEventListener("click", function(){
+    var n = performance.now();
+    if(clock.paused){
+      clock.pausedTotal += n - clock.pauseStart;
+      clock.paused = false;
+      pauseBtn.textContent = "暂停";
+    }else{
+      clock.pauseStart = n;
+      clock.paused = true;
+      pauseBtn.textContent = "继续";
+    }
+  });
+  document.getElementById("btn-replay").addEventListener("click", function(){
+    restart();
+  });
+
+  /* ---------- 能力档位切换：只影响右侧 ArkUI lite，左侧 LVGL 不变 ---------- */
+  function sceneNeedsEnhanced(scene){
+    return scene === "timeline" || scene === "transform" || scene === "state" || scene === "path";
+  }
+  function setDot(btn, on){
+    var dot = btn.querySelector(".lite-none");
+    if(on && !dot){
+      dot = document.createElement("i");
+      dot.className = "lite-none";
+      btn.insertBefore(dot, btn.firstChild);
+    }else if(!on && dot){
+      dot.parentNode.removeChild(dot);
+    }
+  }
+  function applyTier(t){
+    tier = t;
+    window.LV_ANIM_TIER = t;
+    var sceneEl = document.getElementById("scene");
+    Array.prototype.forEach.call(sceneEl.querySelectorAll("button"), function(btn){
+      var s = btn.getAttribute("data-val");
+      var unsupported = s === "reverse" || s === "interrupt" || (t === "base" && sceneNeedsEnhanced(s));
+      setDot(btn, unsupported);
+    });
+    var legend = document.querySelector(".seg-legend");
+    if(legend){
+      legend.innerHTML = "<i></i>" + (t === "enhanced"
+        ? "红点 = 即使增强开启，ArkUI lite 仍无此能力"
+        : "红点 = 默认基线不支持，切到「增强能力开启」后可用");
+    }
+    var tag = document.getElementById("ui-tag");
+    if(tag){
+      tag.textContent = t === "enhanced"
+        ? "增强开启 · 多段 / scale / 路径 / 转场"
+        : "默认基线 · 两帧 / 7 类属性 / 4 种缓动";
+    }
+    var tip = document.getElementById("ui-tip");
+    if(tip){
+      tip.innerHTML = t === "enhanced"
+        ? "当前为<b>增强能力开启</b>档：@keyframes 可按 0%~100% 多段解析（最多 8 段、每段 5 个并行属性），关键帧支持 scale；另有独立的 offset-path 路径动画与显式 <code>startTransition()</code> 元素过渡。缓动仍只有 4 种，仍无反向、暂停、完成回调、skew/轴心与状态自动补间。"
+        : "当前为<b>默认基线</b>档：编译期开关全部关闭，@keyframes 只取 from/to 两帧，可动画属性 7 类，缓动 4 种（<code>ease</code> 退化为 linear），没有 transition-*、scale、offset-path、页面转场。";
+    }
+    var tierEl = document.getElementById("tier");
+    if(tierEl){
+      Array.prototype.forEach.call(tierEl.getElementsByTagName("button"), function(b){
+        b.className = b.getAttribute("data-val") === t ? "active" : "";
+      });
+    }
+    if(window.LV2 && window.LV2.api && window.LV2.api.update){
+      window.LV2.api.update({ tier: t });
+    }
+  }
+  document.getElementById("tier").addEventListener("click", function(e){
+    var btn = e.target.closest ? e.target.closest("button") : null;
+    if(!btn || btn.parentNode !== this) return;
+    applyTier(btn.getAttribute("data-val"));
+  });
+
+  fitCanvas();
+  renderCode();
+  (function loop(){
+    draw();
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+
+<script>window.LV_PAGE_LVGAPS = [];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
+</body>
+</html>

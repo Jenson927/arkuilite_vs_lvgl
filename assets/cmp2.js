@@ -527,6 +527,426 @@
     }
   };
 
+  /* ---------- 动效：ArkUI lite 的 CSS animation 子集 ---------- */
+  DEMOS.animation = {
+    defaults: { tier: (window.LV_ANIM_TIER || "base"), scene: "easing", prop: "translateX", timing: "linear", duration: 1200, delay: 0,
+      iter: "infinite", fill: true },
+    controls: [
+      { k: "scene", t: "seg", wide: true, label: "动效场景 scene", def: "easing",
+        api: "增强开启后：多段关键帧 / scale / offset-path / 显式元素过渡；反向与可中断两档都没有",
+        opts: [["easing", "缓动曲线"], ["timeline", "时间轴编排"], ["reverse", "反向往复", true],
+               ["transform", "缩放倾斜"], ["state", "状态过渡"], ["path", "路径动画"],
+               ["interrupt", "可中断", true]] },
+      { k: "prop", t: "seg", wide: true, label: "可动画属性 animation property", def: "translateX",
+        api: "基线白名单 7 类；增强后多段关键帧支持 translateX/Y、rotate、scale、opacity（每段最多 5 个）",
+        opts: [["translateX", "translateX"], ["rotate", "rotate"], ["opacity", "opacity"],
+               ["width", "width"], ["bgColor", "backgroundColor"], ["scale", "scale"]] },
+      { k: "timing", t: "seg", wide: true, label: "缓动路径 animationTimingFunction", def: "linear",
+        api: "仅 linear / ease-in / ease-out / ease-in-out；源码里写 ease 也会退化为 linear",
+        opts: [["linear", "linear"], ["ease-in", "ease-in"], ["ease-out", "ease-out"], ["ease-in-out", "ease-in-out"]] },
+      { k: "duration", t: "range", label: "时长 duration", api: "animationDuration：ms / s / 纯数字按 ms", min: 200, max: 2400, def: 1200, unit: " ms" },
+      { k: "delay", t: "range", label: "延迟 delay", api: "animationDelay", min: 0, max: 1200, def: 0, unit: " ms" },
+      { k: "iter", t: "seg", label: "迭代 iteration", def: "infinite", api: "animationIterationCount：基线 1~127；增强后允许 0 与 infinite",
+        opts: [["1", "1 次"], ["3", "3 次"], ["infinite", "infinite"]] },
+      { k: "fill", t: "check", label: "保留终点 fill-mode", def: true,
+        api: "仅 forwards / none，没有 backwards / both", text: "forwards" }
+    ],
+    create: function(box, state){
+      var v = mk(box, 300, 180);
+      var start = performance.now(), raf = 0;
+
+      function ease(name, p){
+        if(p <= 0) return 0;
+        if(p >= 1) return 1;
+        if(name === "ease-in") return p * p * p;
+        if(name === "ease-out") return 1 - Math.pow(1 - p, 3);
+        if(name === "ease-in-out") return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+        return p;
+      }
+      function mix(a, b, p){ return a + (b - a) * p; }
+      function mixColor(c1, c2, p){
+        var a = parseInt(c1.slice(1), 16), b = parseInt(c2.slice(1), 16);
+        var r = Math.round(mix((a >> 16) & 255, (b >> 16) & 255, p));
+        var g = Math.round(mix((a >> 8) & 255, (b >> 8) & 255, p));
+        var bl = Math.round(mix(a & 255, b & 255, p));
+        return "rgb(" + r + "," + g + "," + bl + ")";
+      }
+      /* 与 transition_impl.cpp 同型的计时：delay → duration × iteration，结束后由 fill 决定停在终点还是回初值 */
+      function progress(s, now){
+        var e = now - start - s.delay;
+        if(e < 0) return 0;
+        var dur = Math.max(1, s.duration);
+        var ratio = e / dur;
+        var iter = s.iter === "infinite" ? Infinity : Number(s.iter);
+        var idx = Math.floor(ratio);
+        if(idx >= iter) return s.fill ? 1 : 0;
+        return ease(s.timing, ratio - idx);
+      }
+      /* 原始线性进度：给底部进度轨用，便于和左列对照缓动的作用 */
+      function rawProgress(s, now){
+        var e = now - start - s.delay;
+        if(e < 0) return 0;
+        var dur = Math.max(1, s.duration);
+        var ratio = e / dur;
+        var iter = s.iter === "infinite" ? Infinity : Number(s.iter);
+        var idx = Math.floor(ratio);
+        if(idx >= iter) return s.fill ? 1 : 0;
+        return ratio - idx;
+      }
+      function isEnh(s){ return s.tier === "enhanced"; }
+      function pill(c, W, text, bg, fg){
+        var w = text.length * 6 + 16;
+        c.fillStyle = bg;
+        rr(c, W - w - 8, 8, w, 18, 9); c.fill();
+        txt(c, text, W - 8 - w / 2, 17, 10, fg);
+      }
+      function bezPoint(p0, p1, p2, p3, t){
+        var u = 1 - t;
+        return {
+          x: u*u*u*p0.x + 3*u*u*t*p1.x + 3*u*t*t*p2.x + t*t*t*p3.x,
+          y: u*u*u*p0.y + 3*u*u*t*p1.y + 3*u*t*t*p2.y + t*t*t*p3.y
+        };
+      }
+      function bezTangent(p0, p1, p2, p3, t){
+        var u = 1 - t;
+        return {
+          x: 3*u*u*(p1.x-p0.x) + 6*u*t*(p2.x-p1.x) + 3*t*t*(p3.x-p2.x),
+          y: 3*u*u*(p1.y-p0.y) + 6*u*t*(p2.y-p1.y) + 3*t*t*(p3.y-p2.y)
+        };
+      }
+      function noApi(c, W, H, s){
+        txt(c, "✗", W / 2, 58, 32, "#c23b3b");
+        txt(c, s.scene === "reverse" ? "无 animation-direction" : "无逐帧动画 API", W / 2, 96, 13, "#b52a2a");
+        txt(c, "默认基线与增强开启两档均不支持", W / 2, 118, 11, "#8b939d");
+        hint(c, s.scene === "reverse" ? "只能手写一段反向关键帧硬凑" : "无法跟随手势 / 运行中改目标值", W, H);
+      }
+      function drawEasing(c, W, H, s, now){
+        var raw = rawProgress(s, now);
+        var p = progress(s, now);
+        var trackX0 = 37, trackX1 = W - 37, trackY = H - 52;
+        var bw = s.prop === "width" ? mix(58, 167, p) : 110;
+        var bh = 44, cx = W / 2, cy = 76;
+        var px = s.prop === "translateX" ? mix(70, 230, p) : cx;
+        var rot = s.prop === "rotate" ? (30 * p) * Math.PI / 180 : 0;
+        var opa = s.prop === "opacity" ? mix(1, 0.2, p) : 1;
+        var bg = s.prop === "bgColor" ? mixColor("#007dff", "#c23b3b", p) : "#007dff";
+        var sc = s.prop === "scale" ? (isEnh(s) ? 1 + 0.38 * p : 1) : 1;
+        var val, label = { translateX: "translateX", rotate: "rotate", opacity: "opacity",
+                           width: "width", bgColor: "backgroundColor", scale: "scale" }[s.prop];
+        if(s.prop === "translateX") val = Math.round(px) + " px";
+        else if(s.prop === "rotate") val = (30 * p).toFixed(1) + "°";
+        else if(s.prop === "opacity") val = Math.round(mix(100, 20, p)) + "%";
+        else if(s.prop === "width") val = Math.round(bw) + " px";
+        else if(s.prop === "scale") val = sc.toFixed(2) + "x";
+        else val = bg;
+
+        txt(c, "p = " + p.toFixed(2) + "   →   " + val, W / 2, 20, 12, "#1c2128");
+        txt(c, "animation: " + label, W / 2, 38, 11, "#5b6472");
+
+        c.save();
+        c.globalAlpha = opa;
+        c.translate(px, cy);
+        c.rotate(rot);
+        c.scale(sc, sc);
+        c.fillStyle = bg;
+        rr(c, -bw / 2, -bh / 2, bw, bh, 12);
+        c.fill();
+        c.fillStyle = "#ffffff";
+        c.font = "600 11px -apple-system, 'Microsoft YaHei', sans-serif";
+        c.textAlign = "center";
+        c.textBaseline = "middle";
+        c.fillText("ArkUI lite", 0, 0);
+        c.restore();
+
+        c.save();
+        c.setLineDash([4, 4]);
+        c.strokeStyle = "#cfd8e3";
+        c.lineWidth = 1;
+        c.beginPath(); c.moveTo(trackX0, trackY); c.lineTo(trackX1, trackY); c.stroke();
+        c.restore();
+        c.fillStyle = "#dfe7f1";
+        c.beginPath(); c.arc(trackX0, trackY, 4, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.arc(trackX1, trackY, 4, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "#007dff";
+        c.beginPath(); c.arc(mix(trackX0, trackX1, raw), trackY, 4, 0, Math.PI * 2); c.fill();
+
+        txt(c, "animation: " + label + " · " + s.timing + " · " + s.duration + " ms", W / 2, H - 30, 11, "#8b939d");
+        hint(c, isEnh(s) ? "增强后仍只有 4 种缓动，无 cubic-bezier / steps" : "两帧关键帧 · 7 类属性 · 4 种缓动", W, H);
+        if(s.prop === "scale" && !isEnh(s)) pill(c, W, "scale 需增强开启", "#fdecec", "#b52a2a");
+      }
+      function drawTimeline(c, W, H, s, now){
+        var KF = [
+          { p: 0.00, x: 50,  y: 78, sc: 1.00, rot: 0,  opa: 1.00 },
+          { p: 0.25, x: 220, y: 62, sc: 1.20, rot: 10, opa: 1.00 },
+          { p: 0.50, x: 220, y: 112, sc: 1.35, rot: 0, opa: 1.00 },
+          { p: 0.75, x: 140, y: 96, sc: 1.10, rot: -10, opa: 0.75 },
+          { p: 1.00, x: 250, y: 78, sc: 1.00, rot: 0,  opa: 1.00 }
+        ];
+        var raw = rawProgress(s, now);
+        var x, y, sc, rot, opa, seg = 0;
+        if(isEnh(s)){
+          while(seg < KF.length - 2 && raw > KF[seg + 1].p) seg++;
+          var a = KF[seg], b = KF[seg + 1];
+          var local = Math.max(0, Math.min(1, (raw - a.p) / (b.p - a.p || 1)));
+          var e = ease(s.timing, local);
+          x = mix(a.x, b.x, e); y = mix(a.y, b.y, e);
+          sc = mix(a.sc, b.sc, e); rot = mix(a.rot, b.rot, e); opa = mix(a.opa, b.opa, e);
+        }else{
+          var p = progress(s, now);
+          x = mix(KF[0].x, KF[KF.length - 1].x, p); y = KF[0].y;
+          sc = 1; rot = 0; opa = 1;
+        }
+
+        txt(c, isEnh(s) ? ("keyframe " + Math.round(raw * 100) + "% · 第 " + (seg + 1) + "/4 段")
+                       : "from → to（中间 3 帧被丢弃）", W / 2, 20, 11, "#1c2128");
+        txt(c, isEnh(s) ? "0% → 25% → 50% → 75% → 100%" : "基线只解析首尾两帧", W / 2, 38, 10.5, "#5b6472");
+
+        c.save();
+        c.globalAlpha = opa;
+        c.translate(x, y);
+        c.rotate(rot * Math.PI / 180);
+        c.scale(sc, sc);
+        c.fillStyle = "#007dff";
+        rr(c, -48, -19, 96, 38, 11); c.fill();
+        c.fillStyle = "#ffffff";
+        c.font = "600 11px -apple-system, 'Microsoft YaHei', sans-serif";
+        c.textAlign = "center"; c.textBaseline = "middle";
+        c.fillText("multi-keyframe", 0, 0);
+        c.restore();
+
+        var bx = 30, bw = W - 60, by = H - 48;
+        c.fillStyle = "#e5ebf3"; rr(c, bx, by - 3, bw, 6, 3); c.fill();
+        c.fillStyle = "#007dff"; rr(c, bx, by - 3, bw * raw, 6, 3); c.fill();
+        if(isEnh(s)){
+          for(var i = 1; i < KF.length; i++){
+            c.fillStyle = "#ffffff";
+            c.beginPath(); c.arc(bx + bw * KF[i].p, by, 2.5, 0, Math.PI * 2); c.fill();
+          }
+        }
+        txt(c, isEnh(s) ? "多段关键帧 ≤8 段 · 每段 5 属性并行" : "基线只有 from → to 两帧", W / 2, H - 30, 10.5, "#8b939d");
+        hint(c, isEnh(s) ? "无并行时间轴 / seek；多对象仍靠 animation-delay 排队" : "切到「增强能力开启」可看多段效果", W, H);
+      }
+      function drawTransform(c, W, H, s, now){
+        var p = progress(s, now);
+        var sc = isEnh(s) ? 1 + 0.4 * p : 1;
+        var rot = (30 * p) * Math.PI / 180;
+        var cx = W / 2, cy = 82;
+
+        c.save();
+        c.setLineDash([4, 4]);
+        c.strokeStyle = "rgba(194,59,59,.7)";
+        c.beginPath(); c.arc(cx, cy, 7, 0, Math.PI * 2); c.stroke();
+        c.restore();
+        txt(c, "pivot 固定中心", cx, cy + 24, 9, "#c23b3b");
+
+        c.save();
+        c.translate(cx, cy);
+        c.rotate(rot);
+        c.scale(sc, sc);
+        c.fillStyle = "#007dff";
+        rr(c, -55, -25, 110, 50, 13); c.fill();
+        c.fillStyle = "#ffffff";
+        c.font = "600 12px -apple-system, 'Microsoft YaHei', sans-serif";
+        c.textAlign = "center"; c.textBaseline = "middle";
+        c.fillText("transform", 0, 0);
+        c.restore();
+
+        txt(c, isEnh(s) ? ("scale = " + sc.toFixed(2) + "x · rotate = " + (30 * p).toFixed(0) + "°")
+                       : ("translate + rotate = " + (30 * p).toFixed(0) + "°"), W / 2, 158, 11, "#5b6472");
+        hint(c, isEnh(s) ? "增强支持 scale；仍无 skew / 轴心配置" : "基线无 scale / skew / 轴心", W, H);
+      }
+      function drawState(c, W, H, s, now){
+        var e = Math.max(0, now - start - s.delay);
+        var half = 700;
+        var pressed = Math.floor(e / half) % 2 === 1;
+        var local = (e % half) / half;
+        var q = Math.min(1, local * half / Math.max(1, Math.min(600, s.duration)));
+        var v = isEnh(s) ? (pressed ? ease("ease-out", q) : 1 - ease("ease-out", q)) : (pressed ? 1 : 0);
+        var w = 150 + 18 * v, h = 48 + 6 * v;
+        var bg = mixColor("#007dff", "#0f5fc4", v);
+
+        txt(c, isEnh(s) ? "startTransition() · 显式触发" : "瞬间跳变 · 无 transition", W / 2, 20, 11, "#1c2128");
+        c.save();
+        c.fillStyle = bg;
+        rr(c, W / 2 - w / 2, 82 - h / 2, w, h, Math.min(20, h / 2)); c.fill();
+        c.fillStyle = "#ffffff";
+        c.font = "600 12px -apple-system, 'Microsoft YaHei', sans-serif";
+        c.textAlign = "center"; c.textBaseline = "middle";
+        c.fillText(pressed ? "PRESSED" : "RELEASED", W / 2, 82);
+        c.restore();
+
+        txt(c, isEnh(s) ? "fade / slide 四向 / scale / shared-element" : "状态变化没有补间，只能瞬间切换", W / 2, 158, 10.5, "#5b6472");
+        hint(c, isEnh(s) ? "需显式调用；不会随状态变化自动补间" : "切到增强可看显式过渡", W, H);
+      }
+      function drawPath(c, W, H, s, now){
+        var P0 = { x: 38, y: 142 }, P1 = { x: 88, y: 26 }, P2 = { x: 214, y: 168 }, P3 = { x: 262, y: 56 };
+        c.save();
+        c.setLineDash([4, 4]);
+        c.strokeStyle = "#cfd8e3";
+        c.lineWidth = 1.2;
+        c.beginPath();
+        for(var i = 0; i <= 40; i++){
+          var q = bezPoint(P0, P1, P2, P3, i / 40);
+          if(i === 0) c.moveTo(q.x, q.y); else c.lineTo(q.x, q.y);
+        }
+        c.stroke();
+        c.restore();
+
+        if(!isEnh(s)){
+          c.fillStyle = "#dfe7f1"; c.beginPath(); c.arc(P0.x, P0.y, 5, 0, Math.PI * 2); c.fill();
+          txt(c, "默认基线无 offset-path", W / 2, 90, 12, "#b52a2a");
+          txt(c, "只能按 x / y 两个属性分别做动画", W / 2, 112, 10.5, "#8b939d");
+          hint(c, "切到「增强能力开启」可演示原生路径动画", W, H);
+          return;
+        }
+
+        var p = progress(s, now);
+        var pos = bezPoint(P0, P1, P2, P3, p);
+        var tan = bezTangent(P0, P1, P2, P3, p);
+        c.save();
+        c.translate(pos.x, pos.y);
+        c.rotate(Math.atan2(tan.y, tan.x));
+        c.fillStyle = "#007dff";
+        rr(c, -18, -9, 36, 18, 6); c.fill();
+        c.fillStyle = "#ffffff";
+        c.font = "600 11px -apple-system, 'Microsoft YaHei', sans-serif";
+        c.textAlign = "center"; c.textBaseline = "middle";
+        c.fillText("→", 0, 0);
+        c.restore();
+
+        txt(c, "offset-distance = " + Math.round(p * 100) + "% · offset-rotate: auto", W / 2, 20, 11, "#1c2128");
+        txt(c, "offset-path: path(\"M 38 142 C 88 26, 214 168, 262 56\")", W / 2, 38, 9.5, "#5b6472");
+        txt(c, "原生路径动画，按弧长推进", W / 2, 158, 10.5, "#5b6472");
+        hint(c, "路径子集 M/L/Q/C/Z · 最多 32 采样点", W, H);
+      }
+      function draw(s, now){
+        var c = v.c, W = v.w, H = v.h;
+        screen(c, W, H);
+        if(s.scene === "timeline") drawTimeline(c, W, H, s, now);
+        else if(s.scene === "transform") drawTransform(c, W, H, s, now);
+        else if(s.scene === "state") drawState(c, W, H, s, now);
+        else if(s.scene === "path") drawPath(c, W, H, s, now);
+        else if(s.scene === "reverse" || s.scene === "interrupt") noApi(c, W, H, s);
+        else drawEasing(c, W, H, s, now);
+      }
+      function loop(now){
+        draw(state, now);
+        raf = requestAnimationFrame(loop);
+      }
+      raf = requestAnimationFrame(loop);
+      return {
+        render: function(s){ start = performance.now(); draw(s, start); }
+      };
+    },
+    code: function(s){
+      var enh = s.tier === "enhanced";
+      var L = [];
+      function kfBlock(pairs){
+        L.push('@keyframes demoAnim {');
+        pairs.forEach(function(kv){
+          L.push('  ' + kv[0] + ' { <span class="fn">' + kv[1] + '</span> }');
+        });
+        L.push('}');
+      }
+      function animBlock(extraComment){
+        L.push('');
+        L.push('.anim-box {');
+        L.push('  animation-name: demoAnim;');
+        L.push('  animation-duration: <span class="num">' + s.duration + '</span>ms;');
+        L.push('  animation-delay: <span class="num">' + s.delay + '</span>ms;');
+        L.push('  animation-timing-function: <span class="fn">' + s.timing + '</span>;  <span class="cm">/* 仅 4 种 */</span>');
+        L.push('  animation-iteration-count: <span class="fn">' + (s.iter === "infinite" ? "infinite" : s.iter) + '</span>;');
+        L.push('  animation-fill-mode: <span class="fn">' + (s.fill ? "forwards" : "none") + '</span>;  <span class="cm">/* 仅 forwards / none */</span>');
+        L.push('}');
+        if(extraComment) L.push('<span class="cm">/* ' + extraComment + ' */</span>');
+      }
+
+      if(s.scene === "timeline"){
+        if(enh){
+          L.push('<span class="cm">/* 增强开启：0%~100% 多段关键帧，最多 8 段，每段最多 5 个属性并行 */</span>');
+          kfBlock([
+            ["0%",   "transform: translateX(-100px) translateY(0px) rotate(0deg) scale(1); opacity: 1;"],
+            ["25%",  "transform: translateX(70px) translateY(-16px) rotate(10deg) scale(1.2); opacity: 1;"],
+            ["50%",  "transform: translateX(70px) translateY(34px) rotate(0deg) scale(1.35); opacity: 1;"],
+            ["75%",  "transform: translateX(-10px) translateY(18px) rotate(-10deg) scale(1.1); opacity: 0.75;"],
+            ["100%", "transform: translateX(100px) translateY(0px) rotate(0deg) scale(1); opacity: 1;"]
+          ]);
+          animBlock("所有段共用一条缓动；无并行时间轴 / seek，多对象仍靠 animation-delay");
+        }else{
+          L.push('<span class="cm">/* 默认基线：app_style.cpp 只取第一帧与最后一帧，中间百分比帧被丢弃 */</span>');
+          kfBlock([
+            ["from", "transform: translateX(-100px); opacity: 1;"],
+            ["to",   "transform: translateX(100px); opacity: 1;"]
+          ]);
+          animBlock("中间 3 帧不会生效；需要开启 FEATURE_TRANSITION_ANIMATOR");
+        }
+      }else if(s.scene === "transform"){
+        L.push('<span class="cm">/* ' + (enh ? "增强开启：scale 可参与关键帧，并与 translate / rotate 并行" : "默认基线：transform 只有 translate + rotate，无 scale / skew / pivot") + ' */</span>');
+        kfBlock(enh ? [
+          ["from", "transform: translateX(-40px) rotate(0deg) scale(1);"],
+          ["to",   "transform: translateX(40px) rotate(30deg) scale(1.4);"]
+        ] : [
+          ["from", "transform: translateX(-40px) rotate(0deg);"],
+          ["to",   "transform: translateX(40px) rotate(30deg);"]
+        ]);
+        animBlock(enh ? "仍无 skew，也没有 transform-origin / 轴心配置" : "scale 需开启增强能力");
+      }else if(s.scene === "state"){
+        if(enh){
+          L.push('<span class="cm">/* 增强开启：元素过渡，需显式 startTransition()，不会随状态自动补间 */</span>');
+          L.push('.anim-box {');
+          L.push('  transition-duration: <span class="num">' + Math.min(600, s.duration) + '</span>ms;');
+          L.push('  transition-delay: <span class="num">' + s.delay + '</span>ms;');
+          L.push('  transition-timing-function: <span class="fn">ease-out</span>;');
+          L.push('  transition-effect: <span class="fn">slide-up</span>;  <span class="cm">/* fade / slide 四向 / scale / shared-element */</span>');
+          L.push('}');
+          L.push('');
+          L.push('<span class="fn">this.$element</span>(\'animBox\').<span class="fn">startTransition</span>();');
+          L.push('<span class="cm">/* 共享元素：startTransition({ sharedElement, sharedStartRect, sharedEndRect }) */</span>');
+          L.push('<span class="cm">/* 页面转场：router.replace({ animation: { type: "slide-left", duration: 300 } }) */</span>');
+        }else{
+          L.push('<span class="cm">/* 默认基线：没有 transition-*，状态变化只能瞬间跳变 */</span>');
+          L.push('.anim-box { background-color: <span class="fn">#0f5fc4</span>; }');
+          L.push('<span class="cm">/* 无 transition，也没有 startTransition() */</span>');
+        }
+      }else if(s.scene === "path"){
+        if(enh){
+          L.push('<span class="cm">/* 增强开启：原生路径动画，offset-distance 支持 0%~100% */</span>');
+          kfBlock([
+            ["from", "offset-distance: 0%;"],
+            ["to",   "offset-distance: 100%;"]
+          ]);
+          L.push('');
+          L.push('.anim-box {');
+          L.push('  offset-path: <span class="fn">path("M 38 142 C 88 26, 214 168, 262 56")</span>;');
+          L.push('  offset-rotate: <span class="fn">auto</span>;  <span class="cm">/* 或固定角度 / reverse（auto+180°） */</span>');
+          L.push('  animation: demoAnim <span class="num">' + s.duration + '</span>ms <span class="fn">' + s.timing + '</span> infinite;');
+          L.push('}');
+          L.push('<span class="cm">/* 路径子集 M/L/Q/C/Z，最多 32 个采样点；小写命令也按绝对坐标处理 */</span>');
+        }else{
+          L.push('<span class="cm">/* 默认基线：无 offset-path / offset-distance，路径动画无法表达 */</span>');
+          L.push('<span class="cm">/* 只能拆成 translateX + translateY 两段动画，无法自动沿切线转向 */</span>');
+        }
+      }else if(s.scene === "reverse" || s.scene === "interrupt"){
+        L.push('<span class="cm">/* ' + (s.scene === "reverse" ? "两档均无 animation-direction，无法原生反向/交替播放" : "两档均无逐帧动画 API，无法跟随手势或运行中改目标值") + ' */</span>');
+      }else{
+        var kf = {
+          translateX: ["transform: translateX(-80px);", "transform: translateX(80px);"],
+          rotate: ["transform: rotate(0deg);", "transform: rotate(30deg);"],
+          opacity: ["opacity: 1;", "opacity: 0.2;"],
+          width: ["width: 58px;", "width: 167px;"],
+          bgColor: ["background-color: #007dff;", "background-color: #c23b3b;"],
+          scale: ["transform: scale(1);", "transform: scale(1.38);"]
+        }[s.prop];
+        L.push('<span class="cm">/* ArkUI lite：animationName + @keyframes；缓动固定 4 种 */</span>');
+        kfBlock([["from", kf[0]], ["to", kf[1]]]);
+        animBlock(s.prop === "scale" && !enh
+          ? "scale 关键字需 FEATURE_TRANSITION_ANIMATOR=1，默认构建不生效"
+          : "两帧足够表达单属性过渡；多段 / scale / 路径需开启增强能力");
+      }
+      return L;
+    }
+  };
+
   /* ---------- UILabel + SpannableString ---------- */
   DEMOS.span = {
     defaults: { size: 18, on: true, bgSpan: true },
@@ -2007,11 +2427,19 @@
       }else if(cf.t === "seg"){
         var seg = el("div", "seg");
         cf.opts.forEach(function(o){
-          var b = el("button", state[cf.k] === o[0] ? "active" : "", o[1]);
+          var disabled = o[2] === true;
+          var b = el("button", (state[cf.k] === o[0] ? "active" : "") + (disabled ? " is-disabled" : ""), o[1]);
           b.type = "button";
+          if(disabled){
+            b.disabled = true;
+            b.title = "ArkUI lite 无此能力";
+          }
           b.addEventListener("click", function(){
+            if(disabled) return;
             state[cf.k] = o[0];
-            Array.prototype.forEach.call(seg.children, function(x){ x.className = ""; });
+            Array.prototype.forEach.call(seg.children, function(x){
+              x.className = x.disabled ? "is-disabled" : "";
+            });
             b.className = "active";
             apply();
           });

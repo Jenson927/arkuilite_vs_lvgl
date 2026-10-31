@@ -72,6 +72,19 @@
 }
 .field label output{margin-left:8px}
 
+/* 左列：LVGL 独有能力（ArkUI lite 无）在场景按钮上用红点强调 */
+.seg button .lite-none{
+  display:inline-block;width:6px;height:6px;border-radius:50%;background:#d64545;
+  margin-right:5px;vertical-align:middle;transform:translateY(-1px);
+}
+.seg-legend{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-3);margin-top:6px}
+.seg-legend i{width:6px;height:6px;border-radius:50%;background:#d64545;display:inline-block;flex:none}
+
+/* 右列：ArkUI lite 不支持的能力在分段控件中灰显不可选 */
+.seg button.is-disabled,.seg button.is-disabled:hover{
+  background:#f6f7f9;color:#aeb6c0;cursor:not-allowed;
+}
+
 .src-note{
   margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);
   font-size:12px;color:var(--ink-3);line-height:1.7;

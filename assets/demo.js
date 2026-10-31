@@ -51,7 +51,8 @@ var LV_WIDGETS = [
   { id: "lottie",      name: "Lottie 动画",      group: "扩展控件", ready: true, desc: "矢量动画、播放速度",          freq: "低频",   rate: "~4%",  rank: 30, tob: true },
   { id: "barcode",     name: "Barcode 条形码",   group: "扩展控件", ready: true, desc: "条码生成、缩放、方向",        tob: true },
   { id: "object",      name: "Base Object 基类", group: "扩展控件", ready: true, desc: "基类对象、样式、拖动" },
-  { id: "toast",       name: "Toast 轻提示",     group: "扩展控件", ready: true, desc: "轻提示、自动消失、淡入上移" }
+  { id: "toast",       name: "Toast 轻提示",     group: "扩展控件", ready: true, desc: "轻提示、自动消失、淡入上移" },
+  { id: "animation",   name: "Animation 动效",   group: "扩展控件", ready: true, desc: "两档能力、多段关键帧、路径与转场" }
 ];
 
 var LV_LAYOUTS = [

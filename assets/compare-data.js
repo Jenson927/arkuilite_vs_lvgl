@@ -619,5 +619,38 @@ window.LV_COMPARE_DATA = {
       "<b>标准样式：</b>主题默认圆角 24 vp、最大宽度 400 vp、单行文本，高度超过屏高 65% 时截断。",
       "<b>lite 现状：</b>既没有 Toast 组件，也没有 overlay 层、安全区 / 键盘避让与无障碍播报；同样效果只能自绘 UIView，并自己实现计时销毁与顶层管理。"
     ]
+  },
+
+  animation: {
+    lv: "lv_anim", ui: "CSS animation / transition", level: "partial", demo: "animation",
+    apis: ["lv_anim_init()", "lv_anim_set_path_cb()", "lv_anim_timeline_add()", "lv_anim_pause()", "lv_obj_set_style_transition()"],
+    note: "ArkUI lite 分两档：默认构建只有 CSS animation 极小子集（两帧关键帧 + 7 类属性 + 4 种缓动，无 transition）；开启 FEATURE_TRANSITION_ANIMATOR / FEATURE_PATH_ANIMATOR / FEATURE_ELEMENT_TRANSITION 与页面转场开关后，可用多段关键帧（≤8 段）、scale、offset-path 路径动画、显式 startTransition() 与页面 / 共享元素转场，但这些开关默认全部关闭。LVGL 是通用动画引擎：任意变量 + 逐帧回调 + 时间轴编排 + 反向往复 + 暂停恢复 + 完成回调。",
+    gaps: ["并行时间轴 / seek", "反向 / 暂停 / 回调", "skew / 轴心", "缓动仅 4 种", "不能驱动任意变量"],
+    diffs: [
+      ["动画声明", "lv_anim_t：任意变量 + exec_cb 逐帧写值", "CSS animation 字符串 + 属性白名单；元素过渡另需显式 startTransition()", "part"],
+      ["可动画属性", "任意样式与自定义变量", "基线 7 类（translateX/Y、rotate、width、height、opacity、backgroundColor）；增强多段每段最多 5 个并行，含 scale", "part"],
+      ["关键帧", "逐帧插值，可自由定义路径", "基线只取首尾两帧；增强按 0%~100% 多段解析，最多 8 段", "part"],
+      ["缓动曲线", "7 种内置 + 24 个贝塞尔预设 + 自定义贝塞尔", "linear / ease-in / ease-out / ease-in-out（ease 退化为匀速），增强后仍是这 4 种", "part"],
+      ["多属性同步", "多个 anim 并行，或一个 custom_exec_cb 改多属性", "增强每段最多 5 个并行属性；backgroundColor 只能单段整段渐变", "part"],
+      ["时间轴编排", "lv_anim_timeline：串行 / 并行 / 按进度 seek", "无时间轴，只能各写一段动画加延迟硬凑", "none"],
+      ["反向 / 往复", "reverse_duration / reverse_delay 原生倒放", "无 animation-direction，只能手写反向关键帧", "none"],
+      ["暂停 / 恢复", "lv_anim_pause / resume / pause_for", "无 animation-play-state", "none"],
+      ["开始/完成回调", "start_cb / completed_cb / deleted_cb", "无（仅 image-animator 有 onstop）", "none"],
+      ["状态驱动过渡", "LV_STYLE_TRANSITION 状态变化自动补间", "基线无 transition；增强有 transition-*，但必须显式 startTransition()，不会随状态自动补间", "part"],
+      ["变换能力", "scale / skew / pivot 全支持，可组合", "基线仅 translate + rotate；增强加 scale，仍无 skew / transform-origin", "part"],
+      ["路径动画", "exec_cb 内按贝塞尔取点（无 offset-path 语法）", "基线无；增强 offset-path / offset-distance 0%~100% / offset-rotate（≤32 采样点）", "part"],
+      ["元素进出场", "任意属性动画自行组合", "增强 element-transition：fade / slide 四向 / scale / shared-element", "part"],
+      ["页面切换转场", "无内置页面栈与转场", "router.replace({ animation })：fade / scale / slide 四向 / slide-over 四向，默认 300ms、上限 5000ms", "ok"],
+      ["共享元素过渡", "需自行计算起止矩形并做两段动画", "增强 shared-element + sharedStartRect / sharedEndRect", "ok"],
+      ["帧动画", "lv_animimg 可循环、可反向", "image-animator 循环 / 反向 / 停留，但帧间隔统一", "part"],
+      ["驱动方式", "用户 tick + 定时器，默认 33ms（约 30fps）", "16ms 软件任务（约 60fps），无 vsync", "ok"],
+      ["可编程性", "可查询运行中的动画并随时删除、改目标值", "无 @ohos.animator / requestAnimationFrame；元素过渡也要显式调用", "none"]
+    ],
+    points: [
+      "<b>先分清两档：</b>默认构建的编译期开关全部关闭，能力仍是两帧关键帧 + 7 类属性 + 4 种缓动；页面上「增强能力开启」演示的是开启 <code>FEATURE_TRANSITION_ANIMATOR</code> 等开关后的行为，不能当作产品默认能力。",
+      "<b>增强后补上的：</b>多段关键帧（≤8 段、每段 5 个并行属性）、scale、offset-path 路径动画、显式元素过渡，以及 fade / scale / slide 四向 / slide-over 四向的页面转场与共享元素过渡。",
+      "<b>增强后仍在的短板：</b>没有并行时间轴与 seek、没有反向 / 暂停 / 完成回调、没有 skew 与 transform-origin、缓动仍只有 4 种，也不能像 lv_anim 那样驱动任意变量。",
+      "<b>仍可覆盖：</b>位移、旋转、透明度、尺寸、背景色这类轻量反馈，image-animator 帧动画，以及增强后的路径动效与页面转场。"
+    ]
   }
 };
