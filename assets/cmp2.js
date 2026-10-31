@@ -2119,6 +2119,471 @@
     }
   };
 
+  /* ---------- lv_obj flex → FlexLayout ---------- */
+  DEMOS.flex = {
+    defaults: {
+      dir: "row", main: "start", cross: "center", wrap: "nowrap",
+      rowGap: 0, colGap: 0, count: 6, sel: 0, grow: 0,
+      enhanced: true
+    },
+    controls: [
+      { k: "dir", t: "seg", wide: true, label: "主轴方向 direction", def: "row",
+        api: "SetLayoutDirection：LAYOUT_HOR / HOR_R / VER / VER_R",
+        opts: [["row", "ROW"], ["row-rev", "ROW_REVERSE"], ["col", "COLUMN"], ["col-rev", "COLUMN_REVERSE"]] },
+      { k: "main", t: "seg", wide: true, label: "主轴对齐 justify", def: "start",
+        api: "SetMajorAxisAlign：START/END/CENTER/EVENLY/AROUND/BETWEEN",
+        opts: [["start", "START"], ["center", "CENTER"], ["end", "END"], ["between", "BETWEEN"], ["around", "AROUND"], ["evenly", "EVENLY"]] },
+      { k: "cross", t: "seg", label: "交叉轴对齐 align-items", def: "center",
+        api: "SetSecondaryAxisAlign：START/END/CENTER/STRETCH（无 baseline）",
+        opts: [["start", "START"], ["center", "CENTER"], ["end", "END"], ["stretch", "STRETCH"]] },
+      { k: "wrap", t: "seg", label: "换行 flex-wrap", def: "nowrap",
+        api: "SetFlexWrap(NOWRAP / WRAP)（无 wrap-reverse）",
+        opts: [["nowrap", "NOWRAP"], ["wrap", "WRAP"]] },
+      { k: "rowGap", t: "range", label: "行间距 rowGap", api: "SetRowGap(int16_t)（增强宏）", min: 0, max: 20, def: 0, unit: " px" },
+      { k: "colGap", t: "range", label: "列间距 colGap", api: "SetColumnGap(int16_t)（增强宏）", min: 0, max: 20, def: 0, unit: " px" },
+      { k: "count", t: "seg", label: "子项数量", def: "6",
+        api: "flex->Add(child) 顺序决定排列",
+        opts: [["4", "4"], ["5", "5"], ["6", "6"]] },
+      { k: "sel", t: "seg", label: "选中子项", def: "0",
+        api: "点击画布卡片选中后调 grow",
+        opts: [["0", "1"], ["1", "2"], ["2", "3"], ["3", "4"], ["4", "5"], ["5", "6"]] },
+      { k: "grow", t: "range", label: "选中子项 flex-grow", api: "UIView::SetFlexGrow(uint16_t)（增强宏；基线无）", min: 0, max: 3, def: 0 },
+      { k: "enhanced", t: "check", label: "增强宏 GRAPHIC_ENABLE_FLEX_LAYOUT_ENHANCEMENT", def: true,
+        api: "ui_lite_enable_flex_layout_config；关闭后 gap/grow/align-content 全部失效",
+        text: "开启" }
+    ],
+    create: function(box, state){
+      var v = mk(box, 300, 240);
+      var COLORS = ["#2b7de9", "#1f9d66", "#e6a23c", "#e04b4b", "#7b61ff", "#00a6a6"];
+      var BASE_MAIN = [40, 52, 36, 44, 58, 40];
+      var BASE_CROSS = [38, 50, 32, 44, 56, 40];
+      var CONT = { x: 20, y: 30, w: 260, h: 188 };
+
+      function isRow(){ return state.dir === "row" || state.dir === "row-rev"; }
+      function isRev(){ return state.dir === "row-rev" || state.dir === "col-rev"; }
+      function isWrap(){ return state.wrap === "wrap"; }
+
+      function layout(){
+        var n = state.count, rowFlow = isRow(), wrap = isWrap();
+        var inner = { x: CONT.x + 8, y: CONT.y + 8, w: CONT.w - 16, h: CONT.h - 16 };
+        var gapMain = rowFlow ? state.colGap : state.rowGap;
+        var gapCross = rowFlow ? state.rowGap : state.colGap;
+        var mainAvail = rowFlow ? inner.w : inner.h;
+        var growArr = [];
+        var i;
+        for (i = 0; i < n; i++) growArr.push(i === state.sel ? state.grow : 0);
+
+        function baseMain(idx){ return rowFlow ? BASE_MAIN[idx] : BASE_CROSS[idx]; }
+        function baseCross(idx){ return rowFlow ? BASE_CROSS[idx] : BASE_MAIN[idx]; }
+
+        var lines = [];
+        if (!wrap){
+          lines.push([]);
+          for (i = 0; i < n; i++) lines[0].push(i);
+        } else {
+          var cur = [], used = 0;
+          for (i = 0; i < n; i++){
+            var add = (cur.length ? gapMain : 0) + baseMain(i);
+            if (cur.length && used + add > mainAvail){ lines.push(cur); cur = []; used = 0; add = baseMain(i); }
+            cur.push(i); used += add;
+          }
+          if (cur.length) lines.push(cur);
+        }
+        var lineCross = [];
+        for (i = 0; i < lines.length; i++){
+          var mx = 0;
+          for (var k = 0; k < lines[i].length; k++) mx = Math.max(mx, baseCross(lines[i][k]));
+          lineCross.push(mx);
+        }
+        var totalCross = 0;
+        for (i = 0; i < lineCross.length; i++) totalCross += lineCross[i];
+        totalCross += gapCross * Math.max(0, lines.length - 1);
+        var crossAvail = rowFlow ? inner.h : inner.w;
+        var trackFree = Math.max(0, crossAvail - totalCross);
+        /* align-content: lite 仅 start/center/end/stretch/between；这里用 start */
+        var trackOff = 0;
+
+        var targets = [];
+        for (i = 0; i < n; i++) targets.push({ x: inner.x, y: inner.y, w: 0, h: 0 });
+        var crossCursor = (rowFlow ? inner.y : inner.x) + trackOff;
+        for (var li = 0; li < lines.length; li++){
+          var line = lines[li], lc = lineCross[li];
+          var sumBase = 0, growSum = 0;
+          for (k = 0; k < line.length; k++){ sumBase += baseMain(line[k]); growSum += growArr[line[k]]; }
+          var gaps = gapMain * Math.max(0, line.length - 1);
+          var sizes = [], sum = 0;
+          for (k = 0; k < line.length; k++){ sizes.push(baseMain(line[k])); sum += sizes[k]; }
+          var free = Math.max(0, mainAvail - sum - gaps);
+          if (state.enhanced && growSum > 0 && free > 0){
+            for (k = 0; k < line.length; k++) sizes[k] += free * (growArr[line[k]] / growSum);
+            free = 0;
+          }
+          var off = 0, extra = 0;
+          if (state.main === "center") off = free / 2;
+          else if (state.main === "end") off = free;
+          else if (state.main === "between") extra = line.length > 1 ? free / (line.length - 1) : 0;
+          else if (state.main === "around"){ var ga = free / line.length; off = ga / 2; extra = ga; }
+          else if (state.main === "evenly"){ var ge = free / (line.length + 1); off = ge; extra = ge; }
+          var cursor = (rowFlow ? inner.x : inner.y) + off;
+          if (isRev()) cursor = (rowFlow ? inner.x + inner.w : inner.y + inner.h) - off - (sum + gaps);
+          for (k = 0; k < line.length; k++){
+            var idx = line[k];
+            var cw = rowFlow ? sizes[k] : baseCross(idx);
+            var ch = rowFlow ? baseCross(idx) : sizes[k];
+            if (state.cross === "stretch"){ if (rowFlow) ch = lc; else cw = lc; }
+            var crossOff = 0;
+            if (state.cross === "center") crossOff = (lc - (rowFlow ? ch : cw)) / 2;
+            else if (state.cross === "end") crossOff = lc - (rowFlow ? ch : cw);
+            var mainPos = cursor;
+            if (isRev()) mainPos = cursor + (sum + gaps) - sizes[k] - (k * (sizes[k] + gapMain));
+            targets[idx] = rowFlow
+              ? { x: isRev() ? (inner.x + inner.w - (cursor - inner.x) - sizes[k]) : mainPos, y: crossCursor + crossOff, w: cw, h: ch }
+              : { x: crossCursor + crossOff, y: isRev() ? (inner.y + inner.h - (cursor - inner.y) - sizes[k]) : mainPos, w: cw, h: ch };
+            cursor += sizes[k] + gapMain + extra;
+          }
+          crossCursor += lc + gapCross;
+        }
+        return targets;
+      }
+
+      function render(s){
+        var c = v.c, W = v.w, H = v.h;
+        screen(c, W, H);
+        txt(c, "FlexLayout 容器 " + CONT.w + "×" + CONT.h, 14, 16, 11, "#8b939d");
+        rr(c, CONT.x, CONT.y, CONT.w, CONT.h, 8);
+        c.strokeStyle = "#9aa4b2"; c.lineWidth = 1; c.setLineDash([5, 4]); c.stroke(); c.setLineDash([]);
+        if (!s.enhanced){
+          txt(c, "✗ 基线模式：gap/grow/align-content 已禁用", W / 2, H - 12, 10.5, "#b52a2a");
+        }
+        var t = layout(), i;
+        for (i = 0; i < t.length; i++){
+          var col = COLORS[i % COLORS.length];
+          rr(c, t[i].x, t[i].y, Math.max(2, t[i].w), Math.max(2, t[i].h), 6);
+          c.fillStyle = col; c.fill();
+          txt(c, String(i + 1), t[i].x + t[i].w / 2, t[i].y + t[i].h / 2,
+            Math.min(15, Math.max(10, Math.min(t[i].w, t[i].h) * 0.4)), "#ffffff");
+          if (i === s.sel){
+            c.strokeStyle = "#1c2128"; c.lineWidth = 2;
+            rr(c, t[i].x - 2, t[i].y - 2, t[i].w + 4, t[i].h + 4, 8); c.stroke();
+          }
+        }
+      }
+      v.cv.style.cursor = "pointer";
+      v.cv.addEventListener("pointerdown", function(e){
+        var r = v.cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+        var t = layout();
+        for (var i = t.length - 1; i >= 0; i--){
+          if (x >= t[i].x && x <= t[i].x + t[i].w && y >= t[i].y && y <= t[i].y + t[i].h){
+            state.sel = i; syncPanel("sel", i); refreshRight(); return;
+          }
+        }
+      });
+      return { render: render };
+    },
+    code: function(s){
+      var L = [], i;
+      L.push('<span class="cm">/* flex_layout.h / layout.h：FlexLayout 是 UIViewGroup 派生的布局容器 */</span>');
+      L.push('FlexLayout *flex = <span class="fn">new</span> FlexLayout();');
+      var dirConst = { "row": "LAYOUT_HOR", "row-rev": "LAYOUT_HOR_R", "col": "LAYOUT_VER", "col-rev": "LAYOUT_VER_R" }[s.dir];
+      L.push('flex-&gt;<span class="fn">SetLayoutDirection</span>(' + dirConst + ');');
+      var mainConst = { start: "ALIGN_START", center: "ALIGN_CENTER", end: "ALIGN_END", between: "ALIGN_BETWEEN", around: "ALIGN_AROUND", evenly: "ALIGN_EVENLY" }[s.main];
+      L.push('flex-&gt;<span class="fn">SetMajorAxisAlign</span>(OHOS::' + mainConst + ');');
+      var crossConst = { start: "ALIGN_START", center: "ALIGN_CENTER", end: "ALIGN_END", stretch: "ALIGN_STRETCH" }[s.cross];
+      L.push('flex-&gt;<span class="fn">SetSecondaryAxisAlign</span>(OHOS::' + crossConst + ');');
+      L.push('flex-&gt;<span class="fn">SetFlexWrap</span>(FlexLayout::' + (s.wrap === "wrap" ? "WRAP" : "NOWRAP") + ');');
+      if (s.enhanced){
+        L.push('<span class="cm">/* 以下需要 GRAPHIC_ENABLE_FLEX_LAYOUT_ENHANCEMENT == 1 */</span>');
+        if (s.rowGap > 0) L.push('flex-&gt;<span class="fn">SetRowGap</span>(<span class="num">' + s.rowGap + '</span>);');
+        if (s.colGap > 0) L.push('flex-&gt;<span class="fn">SetColumnGap</span>(<span class="num">' + s.colGap + '</span>);');
+      } else {
+        L.push('<span class="cm">/* 基线模式：SetRowGap/SetColumnGap/SetAlignContent 不可用 */</span>');
+      }
+      L.push('flex-&gt;<span class="fn">SetPosition</span>(20, 30);  flex-&gt;<span class="fn">SetWidth</span>(260);  flex-&gt;<span class="fn">SetHeight</span>(188);');
+      L.push('');
+      var COLORS = ["#2b7de9", "#1f9d66", "#e6a23c", "#e04b4b", "#7b61ff", "#00a6a6"];
+      for (i = 0; i < s.count; i++){
+        L.push('UIView *c' + (i + 1) + ' = <span class="fn">new</span> UIView();');
+        L.push('c' + (i + 1) + '-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(' + rgbArgs(COLORS[i]) + ').full);');
+        if (s.enhanced && i === s.sel && s.grow > 0){
+          L.push('c' + (i + 1) + '-&gt;<span class="fn">SetFlexGrow</span>(<span class="num">' + s.grow + '</span>);  <span class="cm">// 增强宏</span>');
+        }
+        L.push('flex-&gt;<span class="fn">Add</span>(c' + (i + 1) + ');');
+      }
+      L.push('flex-&gt;<span class="fn">LayoutChildren</span>(true);');
+      return L;
+    }
+  };
+
+  /* ---------- lv_obj grid → GridLayout ---------- */
+  DEMOS.grid = {
+    defaults: { rows: 3, cols: 3, dir: "hor", count: 6, gap: 0, align: "center" },
+    controls: [
+      { k: "rows", t: "range", label: "行数 rows", api: "SetRows(uint16_t)", min: 1, max: 5, def: 3 },
+      { k: "cols", t: "range", label: "列数 cols", api: "SetCols(uint16_t)", min: 1, max: 5, def: 3 },
+      { k: "dir", t: "seg", label: "填充方向", def: "hor",
+        api: "SetLayoutDirection(LAYOUT_HOR / VER)",
+        opts: [["hor", "按行"], ["ver", "按列"]] },
+      { k: "count", t: "range", label: "子项数量", api: "Add(child)；rows*cols < 子项数 → RemoveAll() 不布局", min: 1, max: 12, def: 6 },
+      { k: "gap", t: "range", label: "间距 gap", api: "✗ GridLayout 无 gap（仅作演示对照）", min: 0, max: 16, def: 0, unit: " px" },
+      { k: "align", t: "seg", label: "单元格对齐", def: "center",
+        api: "✗ 固定居中，无 cell align（仅作演示对照）",
+        opts: [["center", "居中(固定)"], ["stretch", "拉伸(演示)"]] }
+    ],
+    create: function(box, state){
+      var v = mk(box, 300, 240);
+      var COLORS = ["#2b7de9", "#1f9d66", "#e6a23c", "#e04b4b", "#8e6fe0", "#2aa8a8", "#e88b2f", "#3aa6a6", "#b06bd8", "#45a5ff", "#1f7a4d", "#c25e00"];
+      var CONT = { x: 20, y: 30, w: 260, h: 188 };
+
+      function render(s){
+        var c = v.c, W = v.w, H = v.h;
+        screen(c, W, H);
+        txt(c, "GridLayout " + s.rows + "×" + s.cols + " 等分", 14, 16, 11, "#8b939d");
+        rr(c, CONT.x, CONT.y, CONT.w, CONT.h, 8);
+        c.strokeStyle = "#9aa4b2"; c.lineWidth = 1; c.setLineDash([5, 4]); c.stroke(); c.setLineDash([]);
+        var cells = s.rows * s.cols;
+        if (cells < s.count){
+          txt(c, "✗ rows*cols(" + cells + ") < 子项数(" + s.count + ") → RemoveAll()", W / 2, H / 2, 12, "#b52a2a");
+          txt(c, "GridLayout 直接放弃布局，不会自动加行", W / 2, H / 2 + 20, 10.5, "#8b939d");
+          return;
+        }
+        var cellW = CONT.w / s.cols, cellH = CONT.h / s.rows;
+        var i, idx = 0;
+        if (s.dir === "hor"){
+          for (var r = 0; r < s.rows; r++){
+            for (var col = 0; col < s.cols; col++){
+              if (idx >= s.count) break;
+              drawCell(c, CONT.x + col * cellW, CONT.y + r * cellH, cellW, cellH, s.gap, s.align, idx);
+              idx++;
+            }
+          }
+        } else {
+          for (col = 0; col < s.cols; col++){
+            for (r = 0; r < s.rows; r++){
+              if (idx >= s.count) break;
+              drawCell(c, CONT.x + col * cellW, CONT.y + r * cellH, cellW, cellH, s.gap, s.align, idx);
+              idx++;
+            }
+          }
+        }
+      }
+      function drawCell(c, cx, cy, cw, ch, gap, align, idx){
+        var pad = gap / 2;
+        var innerW = cw - gap, innerH = ch - gap;
+        var col = COLORS[idx % COLORS.length];
+        var w = innerW, h = innerH, x = cx + pad, y = cy + pad;
+        if (align !== "stretch"){
+          /* GridLayout 固定居中：按 0.7 倍单元格画 */
+          w = Math.min(innerW, innerH) * 0.7; h = w;
+          x = cx + (cw - w) / 2; y = cy + (ch - h) / 2;
+        }
+        rr(c, x, y, w, h, 6);
+        c.fillStyle = col; c.fill();
+        txt(c, String(idx + 1), x + w / 2, y + h / 2, Math.min(14, w * 0.4), "#ffffff");
+      }
+      return { render: render };
+    },
+    code: function(s){
+      var L = [], i;
+      L.push('<span class="cm">/* grid_layout.h：纯等分网格，无模板 / gap / 跨格 */</span>');
+      L.push('GridLayout *grid = <span class="fn">new</span> GridLayout();');
+      L.push('grid-&gt;<span class="fn">SetRows</span>(<span class="num">' + s.rows + '</span>);  grid-&gt;<span class="fn">SetCols</span>(<span class="num">' + s.cols + '</span>);');
+      L.push('grid-&gt;<span class="fn">SetLayoutDirection</span>(' + (s.dir === "hor" ? "LAYOUT_HOR" : "LAYOUT_VER") + ');');
+      L.push('grid-&gt;<span class="fn">SetPosition</span>(20, 30);  grid-&gt;<span class="fn">SetWidth</span>(260);  grid-&gt;<span class="fn">SetHeight</span>(188);');
+      if (s.gap > 0) L.push('<span class="cm">/* ✗ 无 gap 接口；要靠子项 SetStyle(STYLE_MARGIN_*) 凑间距 */</span>');
+      var COLORS = ["#2b7de9", "#1f9d66", "#e6a23c", "#e04b4b", "#8e6fe0", "#2aa8a8"];
+      var cells = s.rows * s.cols;
+      for (i = 0; i < Math.min(s.count, cells); i++){
+        L.push('UIView *c' + (i + 1) + ' = <span class="fn">new</span> UIView();');
+        L.push('c' + (i + 1) + '-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(' + rgbArgs(COLORS[i % COLORS.length]) + ').full);');
+        if (s.gap > 0) L.push('c' + (i + 1) + '-&gt;<span class="fn">SetStyle</span>(STYLE_MARGIN_LEFT, <span class="num">' + (s.gap / 2) + '</span>);  <span class="cm">// 用 margin 凑 gap</span>');
+        L.push('grid-&gt;<span class="fn">Add</span>(c' + (i + 1) + ');');
+      }
+      if (cells < s.count) L.push('<span class="cm">/* ✗ rows*cols(' + cells + ') < 子项数(' + s.count + ') → LayoutChildren 调 RemoveAll()，全部不布局 */</span>');
+      L.push('grid-&gt;<span class="fn">LayoutChildren</span>(true);');
+      return L;
+    }
+  };
+
+  /* ---------- lv_style_t 基础样式 → UIView + Style ---------- */
+  DEMOS.stylebasic = {
+    defaults: {
+      w: 180, h: 110, radius: 12, pad: 12,
+      bg: "#007dff", bgOpa: 255,
+      bw: 2, bc: "#1f6fd0",
+      opa: 255, rot: 0, scale: 100
+    },
+    controls: [
+      { k: "w", t: "range", label: "宽度 width", api: "SetWidth(int16_t)（不在 Style 里）", min: 80, max: 220, step: 2, def: 180, unit: " px" },
+      { k: "h", t: "range", label: "高度 height", api: "SetHeight(int16_t)", min: 60, max: 150, step: 2, def: 110, unit: " px" },
+      { k: "radius", t: "range", label: "圆角 borderRadius", api: "SetStyle(STYLE_BORDER_RADIUS)：默认 0", min: 0, max: 40, def: 12, unit: " px" },
+      { k: "pad", t: "range", label: "内边距 pad", api: "SetStyle(STYLE_PADDING_*)", min: 0, max: 30, def: 12, unit: " px" },
+      { k: "bg", t: "color", label: "背景色 bg", api: "SetStyle(STYLE_BACKGROUND_COLOR)：默认黑", def: "#007dff" },
+      { k: "bgOpa", t: "range", label: "背景不透明度 bgOpa", api: "SetStyle(STYLE_BACKGROUND_OPA)：0~255", min: 0, max: 255, def: 255 },
+      { k: "bw", t: "range", label: "边框宽 borderWidth", api: "SetStyle(STYLE_BORDER_WIDTH)：默认 0", min: 0, max: 8, def: 2, unit: " px" },
+      { k: "bc", t: "color", label: "边框色 borderColor", api: "SetStyle(STYLE_BORDER_COLOR)：默认黑", def: "#1f6fd0" },
+      { k: "opa", t: "range", label: "整体不透明度 opaScale", api: "SetOpaScale(0~255)：独立于 bgOpa", min: 0, max: 255, def: 255 },
+      { k: "rot", t: "range", label: "旋转 rotate", api: "UIView::Rotate(angle, pivot)：不在 Style 里", min: -180, max: 180, def: 0, unit: "°" },
+      { k: "scale", t: "range", label: "缩放 scale", api: "UIView::Scale(Vector2<float>, pivot)", min: 50, max: 180, def: 100, unit: " %" }
+    ],
+    create: function(box, state){
+      var v = mk(box, 300, 240);
+      var CX = 150, CY = 130;
+      function render(s){
+        var c = v.c, W = v.w, H = v.h;
+        screen(c, W, H);
+        txt(c, "UIView + Style 样式试验台", 14, 16, 11.5, "#8b939d");
+        txt(c, "✗ 无 shadow / outline（变换走 UIView 方法）", W - 14, 16, 10.5, "#b52a2a", "right");
+        var w = s.w, h = s.h, x = CX - w / 2, y = CY - h / 2;
+        c.save();
+        c.globalAlpha = s.opa / 255;
+        c.translate(CX, CY);
+        c.rotate(s.rot * Math.PI / 180);
+        c.scale(s.scale / 100, s.scale / 100);
+        c.translate(-CX, -CY);
+        rr(c, x, y, w, h, s.radius);
+        c.fillStyle = rgba(s.bg, s.bgOpa / 255); c.fill();
+        if (s.bw > 0){ c.strokeStyle = s.bc; c.lineWidth = s.bw; c.stroke(); }
+        var pad = Math.min(s.pad, Math.max(0, Math.min(w, h) / 2 - 6));
+        var iw = w - pad * 2, ih = h - pad * 2;
+        if (iw > 8 && ih > 8){
+          rr(c, x + pad, y + pad, iw, ih, Math.max(0, s.radius - 4));
+          c.fillStyle = "rgba(255,255,255,0.70)"; c.fill();
+          c.strokeStyle = "rgba(255,255,255,0.95)"; c.lineWidth = 1; c.setLineDash([4, 3]); c.stroke(); c.setLineDash([]);
+          if (iw > 54 && ih > 34){
+            txt(c, "子对象", CX, CY - 7, 12, "#5b6470");
+            txt(c, "pad " + s.pad, CX, CY + 9, 9.5, "#8a929c");
+          }
+        }
+        c.restore();
+      }
+      return { render: render };
+    },
+    code: function(s){
+      var L = [];
+      L.push('<span class="cm">/* ui_view.h + style.h：Style 固定字段，transform 走 UIView 方法 */</span>');
+      L.push('UIView *view = <span class="fn">new</span> UIView();');
+      L.push('view-&gt;<span class="fn">SetPosition</span>(60, 65);');
+      L.push('view-&gt;<span class="fn">SetWidth</span>(<span class="num">' + s.w + '</span>);  view-&gt;<span class="fn">SetHeight</span>(<span class="num">' + s.h + '</span>);');
+      L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(' + rgbArgs(s.bg) + ').full);');
+      if (s.bgOpa !== 255) L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_BACKGROUND_OPA, <span class="num">' + s.bgOpa + '</span>);  <span class="cm">// 0~255</span>');
+      if (s.radius) L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_BORDER_RADIUS, <span class="num">' + s.radius + '</span>);');
+      if (s.bw > 0){
+        L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_BORDER_WIDTH, <span class="num">' + s.bw + '</span>);');
+        L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_BORDER_COLOR, Color::<span class="fn">GetColorFromRGB</span>(' + rgbArgs(s.bc) + ').full);');
+      }
+      if (s.pad > 0){
+        L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_PADDING_LEFT, <span class="num">' + s.pad + '</span>);  view-&gt;<span class="fn">SetStyle</span>(STYLE_PADDING_RIGHT, <span class="num">' + s.pad + '</span>);');
+        L.push('view-&gt;<span class="fn">SetStyle</span>(STYLE_PADDING_TOP, <span class="num">' + s.pad + '</span>);  view-&gt;<span class="fn">SetStyle</span>(STYLE_PADDING_BOTTOM, <span class="num">' + s.pad + '</span>);');
+      }
+      if (s.opa !== 255) L.push('view-&gt;<span class="fn">SetOpaScale</span>(<span class="num">' + s.opa + '</span>);  <span class="cm">// 整体不透明度，独立于 bgOpa</span>');
+      if (s.rot) L.push('view-&gt;<span class="fn">Rotate</span>(<span class="num">' + s.rot + '</span>, Vector2&lt;float&gt;({0.5f, 0.5f}));  <span class="cm">// 角度 + 锚点，不在 Style 里</span>');
+      if (s.scale !== 100){
+        var sc = (s.scale / 100).toFixed(2);
+        L.push('view-&gt;<span class="fn">Scale</span>(Vector2&lt;float&gt;({' + sc + 'f, ' + sc + 'f}), Vector2&lt;float&gt;({0.5f, 0.5f}));');
+      }
+      L.push('<span class="cm">/* ✗ Style 无 shadow / outline 字段；要画阴影只能 OnDraw 自绘 */</span>');
+      return L;
+    }
+  };
+
+  /* ---------- lv_style_t 状态与过渡 → UIButton 三态 ---------- */
+  DEMOS.stylestates = {
+    defaults: {
+      state: "released", w: 150, h: 54, radius: 200,
+      bgNormal: "#007dff", bgPressed: "#1996ff", bgInactive: "#617e9d",
+      anim: true, mask: true, focus: false
+    },
+    controls: [
+      { k: "state", t: "seg", wide: true, label: "按钮状态 state（互斥）", def: "released",
+        api: "UIButton::SetState：RELEASED / PRESSED / INACTIVE（三态互斥，无 hover/checked/focused）",
+        opts: [["released", "RELEASED"], ["pressed", "PRESSED"], ["inactive", "INACTIVE"]] },
+      { k: "w", t: "range", label: "宽度 width", api: "SetWidth(int16_t)", min: 100, max: 220, def: 150, unit: " px" },
+      { k: "h", t: "range", label: "高度 height", api: "SetHeight(int16_t)", min: 40, max: 80, def: 54, unit: " px" },
+      { k: "radius", t: "range", label: "圆角 borderRadius", api: "SetStyleForState(STYLE_BORDER_RADIUS, …, state)：默认 200 收敛到短边一半", min: 0, max: 100, def: 200 },
+      { k: "bgNormal", t: "color", label: "RELEASED 背景", api: "SetStyleForState(STYLE_BACKGROUND_COLOR, …, RELEASED)：默认 #007dff", def: "#007dff" },
+      { k: "bgPressed", t: "color", label: "PRESSED 背景", api: "…, PRESSED：默认 #1996ff", def: "#1996ff" },
+      { k: "bgInactive", t: "color", label: "INACTIVE 背景", api: "…, INACTIVE：默认 #617e9d", def: "#617e9d" },
+      { k: "anim", t: "check", label: "按压缩放动画", api: "EnableButtonAnimation(bool)：1.0→0.8 / 150ms，恢复 200ms，bezier(.2,0,.2,1) 写死", def: true, text: "开启" },
+      { k: "mask", t: "check", label: "按下白色蒙层", api: "ButtonAnimator::DrawMask：白色 α25/255 写死", def: true, text: "开启" },
+      { k: "focus", t: "check", label: "FOCUSED 描边", api: "✗ 无焦点样式；SetFocusable 仅设回调，描边要自绘", def: false, text: "模拟自绘" }
+    ],
+    create: function(box, state){
+      var v = mk(box, 300, 200);
+      var scale = 1, raf = null, pressedNow = false;
+      function ease(p){ return p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2; }
+      function bg(s){
+        if (s.state === "pressed" || pressedNow) return s.bgPressed;
+        if (s.state === "inactive") return s.bgInactive;
+        return s.bgNormal;
+      }
+      function draw(){
+        var s = state, c = v.c, W = v.w, H = v.h;
+        screen(c, W, H);
+        var st = s.state === "pressed" || pressedNow ? "PRESSED" : s.state === "inactive" ? "INACTIVE" : "RELEASED";
+        txt(c, "状态 " + st + "（三态互斥，无 hover/checked）", W / 2, 16, 10.5, "#8b939d");
+        var sc = s.anim ? scale : (s.state === "pressed" || pressedNow ? 0.8 : 1);
+        c.save();
+        c.translate(W / 2, H / 2);
+        c.scale(sc, sc);
+        rr(c, -s.w / 2, -s.h / 2, s.w, s.h, s.radius);
+        c.fillStyle = bg(s); c.fill();
+        if ((s.state === "pressed" || pressedNow) && s.mask){
+          c.fillStyle = "rgba(255,255,255," + (25 / 255) + ")"; c.fill();
+        }
+        c.restore();
+        if (s.focus){
+          c.strokeStyle = "#2b7de9"; c.lineWidth = 2;
+          rr(c, W/2 - s.w/2 - 5, H/2 - s.h/2 - 5, s.w + 10, s.h + 10, s.radius + 5); c.stroke();
+          txt(c, "焦点描边需自绘（UIView::OnDraw）", W / 2, H - 14, 10, "#b52a2a");
+        } else {
+          txt(c, "✗ 无 style transition（动画写死，不可配属性/时长/曲线）", W / 2, H - 14, 10, "#b52a2a");
+        }
+      }
+      function animateTo(target, dur){
+        if (raf) cancelAnimationFrame(raf);
+        var s0 = scale, t0 = performance.now();
+        function step(now){
+          var p = Math.min(1, (now - t0) / dur);
+          scale = s0 + (target - s0) * ease(p);
+          draw();
+          raf = p < 1 ? requestAnimationFrame(step) : null;
+        }
+        raf = requestAnimationFrame(step);
+      }
+      function press(){ pressedNow = true; if (state.anim) animateTo(0.8, 150); else { scale = 0.8; draw(); } }
+      function release(){ pressedNow = false; if (state.anim) animateTo(1, 200); else { scale = 1; draw(); } }
+      v.cv.style.cursor = "pointer";
+      v.cv.addEventListener("pointerdown", function(){
+        if (state.state === "inactive") return;
+        press();
+      });
+      function up(){ if (pressedNow) release(); }
+      v.cv.addEventListener("pointerup", up);
+      v.cv.addEventListener("pointerleave", up);
+      return { render: function(){ draw(); } };
+    },
+    code: function(s){
+      var L = [];
+      L.push('<span class="cm">/* ui_button.h：仅 RELEASED/PRESSED/INACTIVE 三态互斥，无 hover/checked/focused */</span>');
+      L.push('UIButton *btn = <span class="fn">new</span> UIButton();');
+      L.push('btn-&gt;<span class="fn">SetPosition</span>(75, 73);');
+      L.push('btn-&gt;<span class="fn">SetWidth</span>(<span class="num">' + s.w + '</span>);  btn-&gt;<span class="fn">SetHeight</span>(<span class="num">' + s.h + '</span>);');
+      L.push('btn-&gt;<span class="fn">SetStyleForState</span>(STYLE_BORDER_RADIUS, <span class="num">' + s.radius + '</span>, UIButton::RELEASED);');
+      L.push('btn-&gt;<span class="fn">SetStyleForState</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(' + rgbArgs(s.bgNormal) + ').full, UIButton::RELEASED);');
+      L.push('btn-&gt;<span class="fn">SetStyleForState</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(' + rgbArgs(s.bgPressed) + ').full, UIButton::PRESSED);');
+      L.push('btn-&gt;<span class="fn">SetStyleForState</span>(STYLE_BACKGROUND_COLOR, Color::<span class="fn">GetColorFromRGB</span>(' + rgbArgs(s.bgInactive) + ').full, UIButton::INACTIVE);');
+      if (!s.anim) L.push('btn-&gt;<span class="fn">EnableButtonAnimation</span>(false);');
+      L.push('btn-&gt;<span class="fn">SetState</span>(UIButton::' + s.state.toUpperCase() + ');');
+      if (s.state === "inactive") L.push('<span class="cm">/* INACTIVE 等价 Disable()，不可点击 */</span>');
+      if (s.focus){
+        L.push('<span class="cm">/* ✗ 无焦点描边样式；只能 btn-&gt;SetFocusable(true) + 自绘 */</span>');
+        L.push('btn-&gt;<span class="fn">SetFocusable</span>(true);');
+      }
+      L.push('<span class="cm">/* ✗ 无 style transition：按下动画写死缩放 0.8/150ms + 蒙层 α25，不可配 */</span>');
+      return L;
+    }
+  };
+
   /* ---------- lv_line → UICanvas 折线 ---------- */
   DEMOS.line = {
     defaults: { count: 6, lineW: 2, color: "#45a5ff", closed: false, flip: true },
