@@ -3,108 +3,164 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LVGL 基础样式 lv_style_t 复刻与导出</title>
+<title>基础样式：LVGL lv_style_t vs ArkUI lite Style</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='6' fill='%232b7de9'/%3E%3Cpath d='M10 16l4 4 8-9' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../assets/panel.css">
+<link rel="stylesheet" href="../assets/cmp2.css">
 </head>
 <body>
 <div class="wrap">
+  <a class="back" href="../index.html">← 返回对比首页</a>
   <header>
-    <a class="back" href="../index.html">← 返回画廊</a>
-    <h1>LVGL 基础样式 lv_style_t 本地复刻</h1>
-    <p>一个矩形样式试验台：背景、透明度、圆角、边框、阴影、outline、内边距、旋转与缩放，逐项对齐 <code>lv_style_set_*()</code>，子对象随 padding 收缩。</p>
+    <h1>基础样式：lv_style_t vs UIView+Style</h1>
+    <p class="lead">左列为 <b>LVGL 复刻演示</b>，右列为按 <b>ArkUI lite（OpenHarmony small UI_Lite）</b> 源码
+      <code>style.cpp</code> 默认值忠实渲染的 UIView Style。左右各自独立操作，页面最下方为差异对照。</p>
   </header>
 
-  <div class="stage">
-    <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+  <div class="cmp-grid">
+    <!-- ==================== 左列：LVGL ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot lv"></span><b>LVGL</b><code>lv_style_t</code>
+        <span class="cmp-tag lv">shadow + outline · transform 入样式</span>
+      </div>
+
+      <div class="stage stage--lv">
+        <div class="stage-canvas-box"><canvas id="view"></canvas></div>
+        <div class="lv-gaps" id="lgaps"></div>
+      </div>
+      <p class="stage-tip">一个矩形样式试验台：背景、透明度、圆角、边框、阴影、outline、内边距、旋转与缩放，逐项对齐 lv_style_set_*，子对象随 padding 收缩。</p>
+
+      <section class="panel">
+        <h2>LVGL 操作（独立）· 参数对应 LVGL 样式属性</h2>
+        <div class="grid">
+          <div class="field">
+            <label>宽度 width<output id="o-w">180</output><span class="api">lv_style_set_size</span></label>
+            <input type="range" id="w" min="80" max="220" step="2" value="180">
+          </div>
+          <div class="field">
+            <label>高度 height<output id="o-h">110</output><span class="api">lv_style_set_size</span></label>
+            <input type="range" id="h" min="60" max="150" step="2" value="110">
+          </div>
+          <div class="field">
+            <label>圆角 radius<output id="o-radius">12 px</output><span class="api">lv_style_set_radius</span></label>
+            <input type="range" id="radius" min="0" max="40" step="1" value="12">
+          </div>
+          <div class="field">
+            <label>内边距 pad_all<output id="o-pad">12 px</output><span class="api">lv_style_set_pad_all</span></label>
+            <input type="range" id="pad" min="0" max="30" step="1" value="12">
+          </div>
+          <div class="field">
+            <label>背景色 bg_color<span class="api">lv_style_set_bg_color</span></label>
+            <input type="color" id="bg" value="#2b7de9">
+          </div>
+          <div class="field">
+            <label>背景不透明度 bg_opa<output id="o-bgopa">100 %</output><span class="api">lv_style_set_bg_opa</span></label>
+            <input type="range" id="bgopa" min="0" max="100" step="1" value="100">
+          </div>
+          <div class="field">
+            <label>边框宽 border_width<output id="o-bw">2 px</output><span class="api">lv_style_set_border_width</span></label>
+            <input type="range" id="bw" min="0" max="8" step="1" value="2">
+          </div>
+          <div class="field">
+            <label>边框色 border_color<span class="api">lv_style_set_border_color</span></label>
+            <input type="color" id="bc" value="#1f6fd0">
+          </div>
+          <div class="field">
+            <label>阴影宽 shadow_width<output id="o-sw">20</output><span class="api">lv_style_set_shadow_width</span></label>
+            <input type="range" id="sw" min="0" max="40" step="1" value="20">
+          </div>
+          <div class="field">
+            <label>阴影色 shadow_color<span class="api">lv_style_set_shadow_color</span></label>
+            <input type="color" id="sc" value="#8a929c">
+          </div>
+          <div class="field">
+            <label>阴影偏移 shadow_offset_y<output id="o-sy">8 px</output><span class="api">lv_style_set_shadow_offset_y</span></label>
+            <input type="range" id="sy" min="-10" max="24" step="1" value="8">
+          </div>
+          <div class="field">
+            <label>outline 宽<output id="o-ow">3 px</output><span class="api">lv_style_set_outline_width</span></label>
+            <input type="range" id="ow" min="0" max="8" step="1" value="3">
+          </div>
+          <div class="field">
+            <label>outline 色 outline_color<span class="api">lv_style_set_outline_color</span></label>
+            <input type="color" id="oc" value="#e6a23c">
+          </div>
+          <div class="field">
+            <label>outline 偏移 outline_pad<output id="o-op">4 px</output><span class="api">lv_style_set_outline_pad</span></label>
+            <input type="range" id="op" min="0" max="8" step="1" value="4">
+          </div>
+          <div class="field">
+            <label>整体不透明度 opa<output id="o-opa">100 %</output><span class="api">lv_style_set_opa</span></label>
+            <input type="range" id="opa" min="0" max="100" step="1" value="100">
+          </div>
+          <div class="field">
+            <label>旋转 transform_rotation<output id="o-rot">0 °</output><span class="api">lv_style_set_transform_rotation（0.1° 单位）</span></label>
+            <input type="range" id="rot" min="-180" max="180" step="1" value="0">
+          </div>
+          <div class="field">
+            <label>缩放 transform_scale<output id="o-scale">100 %</output><span class="api">lv_style_set_transform_scale（256=1倍）</span></label>
+            <input type="range" id="scale" min="50" max="180" step="1" value="100">
+          </div>
+          <div class="field">
+            <label>说明<span class="api">旋转 / 缩放以矩形中心为轴</span></label>
+            <div class="check"><span style="font-size:12px">旋转 / 缩放以矩形中心为轴</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
+        </div>
+        <div class="status" id="status"></div>
+      </section>
+    </section>
+
+    <!-- ==================== 右列：ArkUI lite ==================== -->
+    <section class="cmp-col">
+      <div class="cmp-colhead">
+        <span class="cmp-dot ui"></span><b>ArkUI lite</b><code>UIView + Style</code>
+        <span class="cmp-tag ui">无 shadow · 无 outline · transform 走方法</span>
+      </div>
+
+      <div class="stage stage--ui">
+        <div class="cmp-demo" id="udemo"></div>
+        <div class="ui-gaps" id="ugaps"></div>
+      </div>
+      <p class="stage-tip">右列按 Style 默认值渲染：背景色/透明度、圆角、边框（四边同款）、padding 都能配；阴影与 outline 字段不存在，画布以「灰色叉」标注缺失能力；旋转 / 缩放是 UIView::Rotate / Scale 方法，不在 Style 里。</p>
+
+      <section class="panel">
+        <h2>ArkUI lite 操作（独立）· 参数对应 UI_Lite 接口</h2>
+        <div id="upanel"></div>
+
+        <div class="src-note">
+          渲染依据：<code>foundation/graphic/graphic_utils_lite/interfaces/kits/gfx_utils/style.h</code> 与
+          <code>frameworks/style.cpp</code>—— Style 是固定字段集合（28 个 key）：
+          默认 bgColor=Black、bgOpa=OPA_OPAQUE(255)、borderRadius=0、borderWidth=0、textColor=White、font=16、lineWidth=2；
+          <b>无 shadow、无 outline</b>；
+          transform 走 <code>UIView::Rotate(int16_t angle, Vector2 pivot)</code> /
+          <code>Scale(Vector2, Vector2 pivot)</code> / <code>Translate</code> / <code>Shear</code> 方法，不通过 SetStyle。
+          渐变需 <code>GRAPHIC_ENABLE_COMPONENT_GRADIENT_FLAG</code>。
+        </div>
+      </section>
+    </section>
   </div>
 
-  <section class="panel">
-    <h2>参数（对应 LVGL 样式属性）</h2>
-    <div class="grid">
-      <div class="field">
-        <label>宽度 width <output id="o-w">180</output></label>
-        <input type="range" id="w" min="80" max="220" step="2" value="180">
-      </div>
-      <div class="field">
-        <label>高度 height <output id="o-h">110</output></label>
-        <input type="range" id="h" min="60" max="150" step="2" value="110">
-      </div>
-      <div class="field">
-        <label>圆角 radius <output id="o-radius">12 px</output></label>
-        <input type="range" id="radius" min="0" max="40" step="1" value="12">
-      </div>
-      <div class="field">
-        <label>内边距 pad_all <output id="o-pad">12 px</output></label>
-        <input type="range" id="pad" min="0" max="30" step="1" value="12">
-      </div>
-      <div class="field">
-        <label>背景色 bg_color</label>
-        <input type="color" id="bg" value="#2b7de9">
-      </div>
-      <div class="field">
-        <label>背景不透明度 bg_opa <output id="o-bgopa">100 %</output></label>
-        <input type="range" id="bgopa" min="0" max="100" step="1" value="100">
-      </div>
-      <div class="field">
-        <label>边框宽 border_width <output id="o-bw">2 px</output></label>
-        <input type="range" id="bw" min="0" max="8" step="1" value="2">
-      </div>
-      <div class="field">
-        <label>边框色 border_color</label>
-        <input type="color" id="bc" value="#1f6fd0">
-      </div>
-      <div class="field">
-        <label>阴影宽 shadow_width <output id="o-sw">20</output></label>
-        <input type="range" id="sw" min="0" max="40" step="1" value="20">
-      </div>
-      <div class="field">
-        <label>阴影色 shadow_color</label>
-        <input type="color" id="sc" value="#8a929c">
-      </div>
-      <div class="field">
-        <label>阴影偏移 shadow_offset_y <output id="o-sy">8 px</output></label>
-        <input type="range" id="sy" min="-10" max="24" step="1" value="8">
-      </div>
-      <div class="field">
-        <label>outline 宽 <output id="o-ow">3 px</output></label>
-        <input type="range" id="ow" min="0" max="8" step="1" value="3">
-      </div>
-      <div class="field">
-        <label>outline 色 outline_color</label>
-        <input type="color" id="oc" value="#e6a23c">
-      </div>
-      <div class="field">
-        <label>outline 偏移 outline_pad <output id="o-op">4 px</output></label>
-        <input type="range" id="op" min="0" max="8" step="1" value="4">
-      </div>
-      <div class="field">
-        <label>整体不透明度 opa <output id="o-opa">100 %</output></label>
-        <input type="range" id="opa" min="0" max="100" step="1" value="100">
-      </div>
-      <div class="field">
-        <label>旋转 transform_rotation <output id="o-rot">0 °</output></label>
-        <input type="range" id="rot" min="-180" max="180" step="1" value="0">
-      </div>
-      <div class="field">
-        <label>缩放 transform_scale <output id="o-scale">100 %</output></label>
-        <input type="range" id="scale" min="50" max="180" step="1" value="100">
-      </div>
-      <div class="field">
-        <label>说明</label>
-        <div class="check"><span style="font-size:12px">旋转 / 缩放以矩形中心为轴</span></div>
-      </div>
-    </div>
+  <!-- ==================== 差异对照（位于实时生成代码之前） ==================== -->
+  <section class="panel cmp-diff" id="diff"></section>
 
-    <div class="actions">
-      <button type="button" class="btn primary" id="btn-png">导出 PNG</button>
-    </div>
-    <div class="status" id="status"></div>
-  </section>
+  <!-- ==================== 实时生成代码 ==================== -->
+  <div class="code-grid">
+    <section class="code-col">
+      <h2>LVGL 实时生成代码</h2>
+      <pre class="code" id="code"></pre>
+    </section>
+    <section class="code-col">
+      <h2>ArkUI lite 实时生成代码</h2>
+      <pre class="code" id="ucode"></pre>
+    </section>
+  </div>
 
-  <pre class="code" id="code"></pre>
-
-  <footer>画布尺寸 320×240。样式为静态展示，可导出 PNG，完全离线可用。</footer>
+  <footer>左列画布尺寸 320×240。右列渲染参数全部取自 graphic_utils_lite 源码。</footer>
 </div>
 
 <script src="../assets/widget-kit.js"></script>
@@ -242,5 +298,9 @@
   renderCode();
 })();
 </script>
+
+<script>window.LV_PAGE_LVGAPS = ["无 shadow 阴影字段", "无 outline 外描边字段", "transform 走 UIView 方法不在 Style 里", "边框无 side 只能四边同款", "渐变需开 GRAPHIC_ENABLE_COMPONENT_GRADIENT_FLAG"];</script>
+<script src="../assets/compare-data.js"></script>
+<script src="../assets/cmp2.js"></script>
 </body>
 </html>
